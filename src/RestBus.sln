@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Examples", "Examples\Examples.csproj", "{C78C6BBB-F333-4163-9F07-D4FA7A7145DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestBus.RabbitMQ", "Brokers\RabbitMQ\RestBus.RabbitMQ\RestBus.RabbitMQ.csproj", "{91B9078A-9DC7-4CF9-9FF7-BB3E5CF6D8EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestBus.ServiceStack", "Frameworks\ServiceStack\RestBus.ServiceStack\RestBus.ServiceStack.csproj", "{E25D3130-4551-4CDE-8918-441367667E52}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C78C6BBB-F333-4163-9F07-D4FA7A7145DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C78C6BBB-F333-4163-9F07-D4FA7A7145DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C78C6BBB-F333-4163-9F07-D4FA7A7145DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C78C6BBB-F333-4163-9F07-D4FA7A7145DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91B9078A-9DC7-4CF9-9FF7-BB3E5CF6D8EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91B9078A-9DC7-4CF9-9FF7-BB3E5CF6D8EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91B9078A-9DC7-4CF9-9FF7-BB3E5CF6D8EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91B9078A-9DC7-4CF9-9FF7-BB3E5CF6D8EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E25D3130-4551-4CDE-8918-441367667E52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E25D3130-4551-4CDE-8918-441367667E52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E25D3130-4551-4CDE-8918-441367667E52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E25D3130-4551-4CDE-8918-441367667E52}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
