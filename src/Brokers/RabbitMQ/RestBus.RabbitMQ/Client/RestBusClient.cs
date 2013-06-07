@@ -33,6 +33,7 @@ namespace RestBus.RabbitMQ.Client
         readonly string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
         QueueingBasicConsumer callbackConsumer = null;
+        IConnection conn = null;
         readonly object callbackConsumerStartSync = new object();
         event Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> responseArrivalNotification = null;
 
@@ -77,8 +78,6 @@ namespace RestBus.RabbitMQ.Client
 
             //TODO: Check if client is disposed
 
-            IConnection conn = null;
-            IModel channel = null;
             Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival = null;
             ManualResetEventSlim receivedEvent = null;
 
@@ -95,14 +94,24 @@ namespace RestBus.RabbitMQ.Client
             }
 
 
+            IModel channel = null;
             try
             {
                 //TODO: Think about connection pooling
                 //or simply have one connection per client (since the consumer needs a connection anyway)
                 //And have SendAsync use the same connection
 
-                //TODO: Prepare for BrokerUnreachableException
-                conn = GetConnectionFromPool();
+                //TODO: If client is only sending one way messages, do we still need a consumer queue
+                //Note that consumer queue shares the same connection with the client in case you decide to implement this feature.
+
+                StartCallbackQueueConsumer();
+
+                //TODO: test if conn is null, then leave
+                if (conn == null)
+                {
+                    //TODO: Log this -- it technically shouldn't happen. Also translate to a HTTP Unreachable because it means StartCallbackQueueConsumer didn't create a connection
+                    throw new ApplicationException("This is Bad");
+                }
 
                 //P.S: Do not share channels across threads.
                 channel = conn.CreateModel();
@@ -116,13 +125,7 @@ namespace RestBus.RabbitMQ.Client
                     DeclareExchangeAndQueues(channel);
                 }
 
-                //TODO: If client is only sending one way messages, do we still need a consumer queue
-                //Note that consumer queue shares the same connection with the client in case you decide to implement this feature.
 
-                if (callbackConsumer == null || !callbackConsumer.IsRunning)
-                {
-                    StartCallbackQueueConsumer();
-                }
 
 
                 //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
@@ -255,15 +258,6 @@ namespace RestBus.RabbitMQ.Client
 
                                     try
                                     {
-                                        if (conn != null)
-                                        {
-                                            ReturnConnectionToPool(conn);
-                                        }
-                                    }
-                                    catch { }
-
-                                    try
-                                    {
                                         if (arrival != null)
                                         {
                                             responseArrivalNotification -= arrival;
@@ -305,11 +299,6 @@ namespace RestBus.RabbitMQ.Client
                 if (channel != null)
                 {
                     channel.Dispose();
-                }
-
-                if (conn != null)
-                {
-                    ReturnConnectionToPool(conn);
                 }
 
                 try
@@ -395,107 +384,119 @@ namespace RestBus.RabbitMQ.Client
         //Also note that connection is seperate from client connection
         private void StartCallbackQueueConsumer()
         {
-            lock (callbackConsumerStartSync)
+            //TODO: DOuble-checked locking -- make this better
+            if (callbackConsumer == null || conn == null || !callbackConsumer.IsRunning || !conn.IsOpen)
             {
-                if (callbackConsumer != null && callbackConsumer.IsRunning) return;
-
-                //This method waits on this signal to make sure the callbackprocessor thread either started successfully or failed.
-                ManualResetEventSlim consumerSignal = new ManualResetEventSlim(false);
-
-                Thread callBackProcessor = new Thread(p =>
+                lock (callbackConsumerStartSync)
                 {
+                    if (!(callbackConsumer == null || conn == null || !callbackConsumer.IsRunning || !conn.IsOpen)) return;
 
-                    IConnection conn = null;
-                    try
+                    //This method waits on this signal to make sure the callbackprocessor thread either started successfully or failed.
+                    ManualResetEventSlim consumerSignal = new ManualResetEventSlim(false);
+
+                    Thread callBackProcessor = new Thread(p =>
                     {
-                        try
-                        {
-                            conn = GetConnectionFromPool();
-                        }
-                        catch(global::RabbitMQ.Client.Exceptions.BrokerUnreachableException)
-                        {
-                            //TODO: Signal main thread that callbackqueue is dead
-                            //So that it may try again during the next send
-                            return;
-                        }
 
                         try
                         {
-                            using (IModel channel = conn.CreateModel())
+                            try
                             {
-                                //Declare call back queue
-                                var callbackQueueArgs = new System.Collections.Hashtable();
-                                callbackQueueArgs.Add("x-expires", (long)callbackQueueExpiry.TotalMilliseconds);
+                                //TODO: Prepare for BrokerUnreachableException - CreateConnection() can always throw BrokerUnreachableException
+                                //NOTE: This is the only place where connections are created in the client
+                                conn = connectionFactory.CreateConnection();
+                            }
+                            catch (global::RabbitMQ.Client.Exceptions.BrokerUnreachableException)
+                            {
+                                //TODO: Throw an exception here that translates to a 500
+                                return;
+                            }
 
-                                channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
-
-                                callbackConsumer = new QueueingBasicConsumer(channel);
-                                channel.BasicConsume(callbackQueueName, false, callbackConsumer);
-
-                                //Notify outer thread that channel has started consumption
-                                consumerSignal.Set();
-
-                                object obj;
-                                global::RabbitMQ.Client.Events.BasicDeliverEventArgs evt;
-
-                                while (true)
+                            try
+                            {
+                                using (IModel channel = conn.CreateModel())
                                 {
-                                    //TODO: Check for object disposal here and leave
-                                    //This means Dequeue will have to be changed to one that loops and checks for the disposed flag
+                                    //Declare call back queue
+                                    var callbackQueueArgs = new System.Collections.Hashtable();
+                                    callbackQueueArgs.Add("x-expires", (long)callbackQueueExpiry.TotalMilliseconds);
 
-                                    obj = callbackConsumer.Queue.Dequeue();
-                                    evt = (global::RabbitMQ.Client.Events.BasicDeliverEventArgs)obj;
+                                    channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 
-                                    try
+                                    callbackConsumer = new QueueingBasicConsumer(channel);
+                                    channel.BasicConsume(callbackQueueName, false, callbackConsumer);
+
+                                    //Notify outer thread that channel has started consumption
+                                    consumerSignal.Set();
+
+                                    object obj;
+                                    global::RabbitMQ.Client.Events.BasicDeliverEventArgs evt;
+
+                                    while (true)
                                     {
-                                        if (responseArrivalNotification != null)
+                                        //TODO: Check for object disposal here and leave
+                                        //This means Dequeue will have to be changed to one that loops and checks for the disposed flag
+
+                                        obj = callbackConsumer.Queue.Dequeue();
+                                        evt = (global::RabbitMQ.Client.Events.BasicDeliverEventArgs)obj;
+
+                                        try
                                         {
-                                            responseArrivalNotification(evt);
+                                            if (responseArrivalNotification != null)
+                                            {
+                                                responseArrivalNotification(evt);
+                                            }
                                         }
-                                    }
-                                    catch
-                                    {
-                                        //DO nothing
-                                    }
+                                        catch
+                                        {
+                                            //DO nothing
+                                        }
 
-                                    //Acknowledge receipt
-                                    channel.BasicAck(evt.DeliveryTag, false);
+                                        //Acknowledge receipt
+                                        channel.BasicAck(evt.DeliveryTag, false);
+
+                                    }
 
                                 }
-
                             }
+                            catch
+                            {
+                                //Notify outer thread, in case it's still waiting
+                                consumerSignal.Set();
+
+                                //TODO: Log error
+                                //TODO: Inform class that CallbackQueue is dead, so that it can try again on next send
+                            }
+
                         }
-                        catch
+                        finally
                         {
-                            //Notify outer thread, in case it's still waiting
-                            consumerSignal.Set();
 
-                            //TODO: Log error
-                            //TODO: Inform class that CallbackQueue is dead, so that it can try again on next send
+                            //TODO: Test if CallBackConsumer.IsRunning is true at this point
+
+                            if (conn != null)
+                            {
+                                //NOTE: This is the only place where connections are disposed
+                                try
+                                {
+                                    conn.Dispose();
+                                }
+                                catch
+                                {
+                                    //TODO: Log Error
+                                }
+                            }
+
                         }
 
-                    }
-                    finally
-                    {
+                    });
 
-                        //TODO: Test if CallBackConsumer.IsRunning is true at this point
+                    //Start Thread
+                    callBackProcessor.IsBackground = true;
+                    callBackProcessor.Start();
 
-                        if (conn != null)
-                        {
-                            ReturnConnectionToPool(conn);
-                        }
+                    //Wait for Thread to start consuming messages
+                    consumerSignal.Wait();
 
-                    }
-
-                });
-
-                //Start Thread
-                callBackProcessor.IsBackground = true;
-                callBackProcessor.Start();
-
-                //Wait for Thread to start consuming messages
-                consumerSignal.Wait();
-
+                }
             }
 
         }
@@ -552,26 +553,6 @@ namespace RestBus.RabbitMQ.Client
             base.Dispose(disposing);
 
             //Kill all connections in Pool
-        }
-
-        //TODO: GetConnectionFromPool can always throw BrokerUnreachableException so keep that in mind when calling
-        protected IConnection GetConnectionFromPool()
-        {
-            //TODO: It seems like connections can be shared across threads, in that case, simply create one connection and kill it only if it was created a long time ago
-            //TODO: If it's a brand new connection then DeclareExchangesAndQueues all over
-            return connectionFactory.CreateConnection();
-        }
-
-        protected void ReturnConnectionToPool(IConnection connection)
-        {
-            try
-            {
-                connection.Dispose();
-            }
-            catch
-            {
-                //TODO: Log Error
-            }
         }
 
         private void PrepareMessage(HttpRequestMessage request)

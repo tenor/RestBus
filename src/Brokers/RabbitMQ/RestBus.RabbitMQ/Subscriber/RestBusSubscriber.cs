@@ -99,7 +99,8 @@ namespace RestBus.RabbitMQ.Subscriber
                 }
             }
 
-           
+
+            //TODO: CreateConnection() can always throw BrokerUnreachableException so keep that in mind when calling
             conn = connectionFactory.CreateConnection();
 
             //Create shared queue
@@ -286,53 +287,30 @@ namespace RestBus.RabbitMQ.Subscriber
         {
             if (String.IsNullOrEmpty(context.ReplyToQueue)) return;
 
-            IConnection conn = null;
-            try
+            if (conn == null)
             {
-                //TODO: Use subscriber connection to send message
-                conn = GetConnectionFromPool();
-
-                //P.S: Do not share channels across threads.
-                using (IModel channel = conn.CreateModel())
-                {
-
-                    BasicProperties basicProperties = new BasicProperties { CorrelationId = context.CorrelationId };
-
-                    try
-                    {
-                        channel.BasicPublish(String.Empty,
-                                        context.ReplyToQueue,
-                                        basicProperties,
-                                        Utils.Serialize(response));
-                    }
-                    catch { }
-                }
-
-            }
-            finally
-            {
-                if (conn != null)
-                {
-                    ReturnConnectionToPool(conn);
-                }
-
+                //TODO: Log this -- it technically shouldn't happen. Also translate to a HTTP Unreachable because it means StartCallbackQueueConsumer didn't create a connection
+                throw new ApplicationException("This is Bad");
             }
 
+            //P.S: Do not share channels across threads.
+            using (IModel channel = conn.CreateModel())
+            {
+
+                BasicProperties basicProperties = new BasicProperties { CorrelationId = context.CorrelationId };
+
+                try
+                {
+                    channel.BasicPublish(String.Empty,
+                                    context.ReplyToQueue,
+                                    basicProperties,
+                                    Utils.Serialize(response));
+                }
+                catch { }
+            }
 
         }
 
-        //TODO: COmmonize the GetConnectionFromPool / ReturnConnectionToPool. It's also found in RestBusClient
-        //TODO: GetConnectionFromPool can always throw BrokerUnreachableException so keep that in mind when calling
-        protected IConnection GetConnectionFromPool()
-        {
-            //TODO: If it's a brand new connection then DeclareExchangesAndQueues all over
-            return connectionFactory.CreateConnection();
-        }
-
-        protected void ReturnConnectionToPool(IConnection connection)
-        {
-            connection.Dispose();
-        }
     
     }
 }

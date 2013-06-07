@@ -1,4 +1,4 @@
-using RestBus.RabbitMQ;
+﻿using RestBus.RabbitMQ;
 using RestBus.RabbitMQ.Subscriber;
 using ServiceStack.Messaging;
 using ServiceStack.WebHost.Endpoints;
@@ -165,7 +165,14 @@ namespace RestBus.ServiceStack
                     httpRes.Close();
                 }
 
-                subscriber.SendResponse(context, GetResponseEnvelopeFromWrapper(httpRes));
+                try
+                {
+                    subscriber.SendResponse(context, GetResponseEnvelopeFromWrapper(httpRes));
+                }
+                catch
+                {
+                    //Log SendResponse error
+                }
 
                 return;
             }
