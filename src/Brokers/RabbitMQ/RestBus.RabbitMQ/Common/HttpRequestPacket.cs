@@ -1,18 +1,16 @@
 using RestBus.RabbitMQ.Common;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Linq;
 
 namespace RestBus.RabbitMQ
 {
-    //TODO: This should be an internal class too.
     //TODO: Describe why this class exists
-    public class HttpRequestPacket
+    public class HttpRequestPacket : HttpPacket
     {
-        public byte[] Content;
-        public Dictionary<string, IEnumerable<string>> Headers;
         public string Method;
-        public string Version;
         public string Resource;
 
 
@@ -22,17 +20,16 @@ namespace RestBus.RabbitMQ
 
         public HttpRequestPacket(HttpRequestMessage request)
         {
-            Headers = new Dictionary<string, IEnumerable<string>>();
             foreach (var hdr in request.Headers)
             {
-                this.Headers.Add(hdr.Key, hdr.Value);
+                AddHttpRequestMessageHeader(hdr);
             }
 
             if (request.Content != null)
             {
                 foreach (var hdr in request.Content.Headers)
                 {
-                    this.Headers.Add(hdr.Key, hdr.Value);
+                    AddHttpRequestMessageHeader(hdr);
                 }
             }
 
@@ -50,6 +47,119 @@ namespace RestBus.RabbitMQ
             }
 
         }
+
+        private void AddHttpRequestMessageHeader(KeyValuePair<string, IEnumerable<string>> hdr)
+        {
+            if (this.Headers.ContainsKey(hdr.Key))
+            {
+                ((List<string>)this.Headers[hdr.Key]).Add(String.Join(", ", hdr.Value.ToArray()));
+            }
+            else
+            {
+                this.Headers.Add(hdr.Key, new List<string>() { String.Join(", ", hdr.Value.ToArray()) });
+            }
+        }
+
+
+        public override byte[] Serialize()
+        {
+            if (SerializeAsBson)
+            {
+                return Utils.SerializeAsBson(this);
+            }
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                var encoder = new System.Text.UTF8Encoding(false);
+
+                //Write Method Line
+                WriteText(ms, encoder, String.IsNullOrWhiteSpace(Method) ? "GET" : Method.Trim().ToUpperInvariant());
+                WriteSpace(ms);
+                WriteText(ms, encoder, String.IsNullOrWhiteSpace(Resource) ? "/" : Resource.Trim());
+                WriteSpace(ms);
+                WriteText(ms, encoder, "http/");
+                WriteText(ms, encoder, String.IsNullOrWhiteSpace(Version) ? "1.1" : Version.Trim());
+                WriteNewLine(ms);
+
+                //Write headers
+                WriteHeaders(ms, encoder);
+
+                //Write the new line that seperates headers from content
+                WriteNewLine(ms);
+
+                //Write Content
+                if (Content != null && Content.Length > 0)
+                {
+                    ms.Write(Content, 0, Content.Length);
+                }
+
+                return ms.ToArray();
+            }
+        }
+
+        public static HttpRequestPacket Deserialize(byte[] data)
+        {
+            if (data == null) throw new ArgumentNullException("data");
+
+            if (SerializeAsBson)
+            {
+                return Utils.DeserializeFromBson<HttpRequestPacket>(data);
+            }
+
+            HttpMessageReader reader = new HttpMessageReader(data);
+
+            HttpRequestPacket request = new HttpRequestPacket();
+
+            bool isFirstLine = true;
+            string text;
+            while ((text = reader.NextLine()) != null)
+            {
+                if (isFirstLine)
+                {
+                    isFirstLine = false;
+                    string[] components = text.Split(new char[]{' '}, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (components.Length < 3)
+                    {
+                        throw new InvalidOperationException("Unable to deserialize data into HttpPacket");
+                    }
+
+                    if (!components[components.Length - 1].ToUpperInvariant().StartsWith("HTTP/") || components[components.Length - 1].Length <= 5 )
+                    {
+                        throw new InvalidOperationException("Unable to deserialize data into HttpPacket");
+                    }
+
+                    request.Version = components[components.Length - 1].Substring(5).Trim();
+                    request.Method = components[0].ToUpperInvariant().Trim();
+
+                    string resource = components[1];
+                    for (int i = 2; i < components.Length - 1; i++)
+                    {
+                        //TODO: Should I convert this to a string builder. Is it worth it?
+                        resource += (" " + components[i]);
+                    }
+
+                    request.Resource = resource;
+                }
+                else
+                {
+                    ParseLineIntoHeaders(text, request.Headers);
+                }
+            }
+
+            if (isFirstLine || !reader.IsContentReady)
+            {
+                throw new InvalidOperationException("Unable to deserialize data into HttpPacket");
+            }
+
+            request.Content = reader.GetContent();
+
+            return request;
+
+        }
+
+
+
 
     }
 }

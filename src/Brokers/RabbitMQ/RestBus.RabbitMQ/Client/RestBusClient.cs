@@ -43,9 +43,6 @@ namespace RestBus.RabbitMQ.Client
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
 
-        static string[] contentHeaders = { "ALLOW", "CONTENT-DISPOSITION", "CONTENT-ENCODING", "CONTENT-LANGUAGE", "CONTENT-LOCATION", "CONTENT-MD5", 
-                                             "CONTENT-RANGE", "CONTENT-TYPE", "EXPIRES", "LAST-MODIFIED", "CONTENT-LENGTH"  };
-
         public RestBusClient(IExchangeMapper exchangeMapper) : base()
         {
             this.exchangeMapper = exchangeMapper;
@@ -78,9 +75,6 @@ namespace RestBus.RabbitMQ.Client
 
             //TODO: Check if client is disposed
 
-            Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival = null;
-            ManualResetEventSlim receivedEvent = null;
-
             PrepareMessage(request);
 
             //Get Request Options
@@ -93,27 +87,25 @@ namespace RestBus.RabbitMQ.Client
                 }
             }
 
-
+            //Declare messaging resources
+            Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival = null;
+            ManualResetEventSlim receivedEvent = null;
             IModel channel = null;
+
             try
             {
-                //TODO: Think about connection pooling
-                //or simply have one connection per client (since the consumer needs a connection anyway)
-                //And have SendAsync use the same connection
-
-                //TODO: If client is only sending one way messages, do we still need a consumer queue
-                //Note that consumer queue shares the same connection with the client in case you decide to implement this feature.
-
+                //Start Callback consumer if it hasn't started
                 StartCallbackQueueConsumer();
 
                 //TODO: test if conn is null, then leave
                 if (conn == null)
                 {
-                    //TODO: Log this -- it technically shouldn't happen. Also translate to a HTTP Unreachable because it means StartCallbackQueueConsumer didn't create a connection
+                    //TODO: This means a connection could not be created most likely because the server was Unreachable
+                    //TODO: Throw some kind of HTTP 500 (Unreachable) exception
                     throw new ApplicationException("This is Bad");
                 }
 
-                //P.S: Do not share channels across threads.
+                //NOTE: Do not share channels across threads.
                 channel = conn.CreateModel();
 
                 TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
@@ -126,16 +118,10 @@ namespace RestBus.RabbitMQ.Client
                 }
 
 
-
-
                 //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
 
                 string correlationId = Utils.GetRandomId();
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
-
-                //TODO: Check if it was 4 minutes since last callback queue was established and redeclare callbackqueue
-
-                //DO Sane for exchangeQueue
 
                 //TODO: Check if cancellation token was set before operation even began
 
@@ -143,14 +129,7 @@ namespace RestBus.RabbitMQ.Client
 
                 TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
 
-                if (requestTimeout == TimeSpan.Zero)
-                {
-                    //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before relying OK.
-
-                    //Zero timespan means the client isn't interested in a response
-                    taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK){ Content = new ByteArrayContent(new byte[0])});
-                }
-                else
+                if (requestTimeout != TimeSpan.Zero)
                 {
                     basicProperties.ReplyTo = callbackQueueName;
                     if (!IsRequestTimeoutInfinite(requestOptions) && exchangeMapper.GetExpires(request))
@@ -166,7 +145,7 @@ namespace RestBus.RabbitMQ.Client
                     }
 
                     //Message arrival event
-                    HttpResponsePacket responseEnv = null;
+                    HttpResponsePacket responsePacket = null;
                     bool deserializationError = false;
                     receivedEvent = new ManualResetEventSlim(false);
 
@@ -178,17 +157,19 @@ namespace RestBus.RabbitMQ.Client
                             HttpResponsePacket res = null;
                             try
                             {
-                                res = Utils.Deserialize<HttpResponsePacket>(a.Body);
+                                res = HttpResponsePacket.Deserialize(a.Body);
                             }
                             catch
                             {
                                 deserializationError = true;
                             }
+
                             //TODO: Add Content-Length Header
+                            //TODO: Add X-RestBus-Subscriber-Id header
 
                             if (!deserializationError)
                             {
-                                responseEnv = res;
+                                responsePacket = res;
                             }
                             receivedEvent.Set();
                             responseArrivalNotification -= arrival;
@@ -224,7 +205,7 @@ namespace RestBus.RabbitMQ.Client
 
                                         //TODO: How do we ensure that response (and deserializationError) is properly seen across different threads
                                         HttpResponseMessage msg;
-                                        if (!deserializationError && TryGetResponseFromEnvelope(responseEnv, out msg))
+                                        if (!deserializationError && responsePacket.TryGetHttpResponseMessage(out msg))
                                         {
                                             msg.RequestMessage = request;
                                             taskSource.SetResult(msg);
@@ -244,31 +225,7 @@ namespace RestBus.RabbitMQ.Client
                                 }
                                 finally
                                 {
-                                    //TODO: HAve a helper method that both dispose routines will call
-
-                                    try
-                                    {
-                                        if (channel != null)
-                                        {
-                                            channel.Dispose();
-                                        }
-
-                                    }
-                                    catch { }
-
-                                    try
-                                    {
-                                        if (arrival != null)
-                                        {
-                                            responseArrivalNotification -= arrival;
-                                        }
-                                    }
-                                    catch { }
-
-                                    if (receivedEvent != null)
-                                    {
-                                        receivedEvent.Dispose();
-                                    }
+                                    CleanupMessagingResources(channel, arrival, receivedEvent);
                                 }
                             },
                                 null,
@@ -280,14 +237,24 @@ namespace RestBus.RabbitMQ.Client
                     responseArrivalNotification += arrival;
                 }
 
+                //Send message
                 channel.BasicPublish(exchangeName,
                                 exchangeMapper.GetRoutingKey(request) ?? exchangeName,
                                 basicProperties,
-                                Utils.Serialize(new HttpRequestPacket(request)));
+                                (new HttpRequestPacket(request)).Serialize());
 
-                //TODO: Can you make calls to Wait() not loop for change and instead rely on Kernel for notification
 
-                //NOTE that once you leave this method, the callback queue is closed and client can not receive any message s on that queue.
+                if (requestTimeout == TimeSpan.Zero)
+                {
+                    //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before relying OK.
+
+                    //Zero timespan means the client isn't interested in a response
+                    taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[0]) });
+
+                    CleanupMessagingResources(channel, arrival, receivedEvent);
+                }
+
+                //TODO: Verify that calls to Wait() on the task do not loop for change and instead rely on Kernel for notification
 
                 return taskSource.Task;
 
@@ -296,30 +263,39 @@ namespace RestBus.RabbitMQ.Client
             {
                 //TODO: Log this
 
-                if (channel != null)
-                {
-                    channel.Dispose();
-                }
-
-                try
-                {
-                    if (arrival != null)
-                    {
-                        responseArrivalNotification -= arrival;
-                    }
-                }
-                catch { }
-
-                if (receivedEvent != null)
-                {
-                    receivedEvent.Dispose();
-                }
+                CleanupMessagingResources(channel, arrival, receivedEvent);
 
                 throw;
 
             }
 
 
+        }
+
+        private void CleanupMessagingResources(IModel channel, Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
+        {
+            if (channel != null)
+            {
+                try
+                {
+                    channel.Dispose();
+                }
+                catch { }
+            }
+
+            if (arrival != null)
+            {
+                try
+                {
+                    responseArrivalNotification -= arrival;
+                }
+                catch { }
+            }
+
+            if (receivedEvent != null)
+            {
+                receivedEvent.Dispose();
+            }
         }
 
         //TODO: Get a better name (SkipResponse maybe ??)
@@ -361,11 +337,13 @@ namespace RestBus.RabbitMQ.Client
 
         private void DeclareExchangeAndQueues(IModel channel)
         {
+            //TODO: IS the lock statement here necessary?
             lock (exchangeDeclareSync)
             {
                 if (exchangeInfo.Exchange != "")
                 {
-                    channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType);
+                    //TODO: If Queues are durable then exchange ought to be too.
+                    channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType, false, true, null);
                 }
 
                 var workQueueArgs = new System.Collections.Hashtable();
@@ -399,73 +377,66 @@ namespace RestBus.RabbitMQ.Client
 
                         try
                         {
-                            try
+
+                            //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
+                            //NOTE: This is the only place where connections are created in the client
+                            conn = connectionFactory.CreateConnection();
+
+                            using (IModel channel = conn.CreateModel())
                             {
-                                //TODO: Prepare for BrokerUnreachableException - CreateConnection() can always throw BrokerUnreachableException
-                                //NOTE: This is the only place where connections are created in the client
-                                conn = connectionFactory.CreateConnection();
-                            }
-                            catch (global::RabbitMQ.Client.Exceptions.BrokerUnreachableException)
-                            {
-                                //TODO: Throw an exception here that translates to a 500
-                                return;
-                            }
+                                //Declare call back queue
+                                var callbackQueueArgs = new System.Collections.Hashtable();
+                                callbackQueueArgs.Add("x-expires", (long)callbackQueueExpiry.TotalMilliseconds);
 
-                            try
-                            {
-                                using (IModel channel = conn.CreateModel())
-                                {
-                                    //Declare call back queue
-                                    var callbackQueueArgs = new System.Collections.Hashtable();
-                                    callbackQueueArgs.Add("x-expires", (long)callbackQueueExpiry.TotalMilliseconds);
+                                channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 
-                                    channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
+                                callbackConsumer = new QueueingBasicConsumer(channel);
+                                channel.BasicConsume(callbackQueueName, false, callbackConsumer);
 
-                                    callbackConsumer = new QueueingBasicConsumer(channel);
-                                    channel.BasicConsume(callbackQueueName, false, callbackConsumer);
-
-                                    //Notify outer thread that channel has started consumption
-                                    consumerSignal.Set();
-
-                                    object obj;
-                                    global::RabbitMQ.Client.Events.BasicDeliverEventArgs evt;
-
-                                    while (true)
-                                    {
-                                        //TODO: Check for object disposal here and leave
-                                        //This means Dequeue will have to be changed to one that loops and checks for the disposed flag
-
-                                        obj = callbackConsumer.Queue.Dequeue();
-                                        evt = (global::RabbitMQ.Client.Events.BasicDeliverEventArgs)obj;
-
-                                        try
-                                        {
-                                            if (responseArrivalNotification != null)
-                                            {
-                                                responseArrivalNotification(evt);
-                                            }
-                                        }
-                                        catch
-                                        {
-                                            //DO nothing
-                                        }
-
-                                        //Acknowledge receipt
-                                        channel.BasicAck(evt.DeliveryTag, false);
-
-                                    }
-
-                                }
-                            }
-                            catch
-                            {
-                                //Notify outer thread, in case it's still waiting
+                                //Notify outer thread that channel has started consumption
                                 consumerSignal.Set();
 
-                                //TODO: Log error
-                                //TODO: Inform class that CallbackQueue is dead, so that it can try again on next send
-                            }
+                                object obj;
+                                global::RabbitMQ.Client.Events.BasicDeliverEventArgs evt;
 
+                                while (true)
+                                {
+                                    //TODO: Check for object disposal here and leave
+                                    //This means Dequeue will have to be changed to one that loops and checks for the disposed flag
+
+                                    obj = callbackConsumer.Queue.Dequeue();
+                                    evt = (global::RabbitMQ.Client.Events.BasicDeliverEventArgs)obj;
+
+                                    try
+                                    {
+                                        if (responseArrivalNotification != null)
+                                        {
+                                            responseArrivalNotification(evt);
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        //DO nothing
+                                    }
+
+                                    //Acknowledge receipt
+                                    channel.BasicAck(evt.DeliveryTag, false);
+
+                                }
+
+                            }
+                        }
+                        catch
+                        {
+                            //Notify outer thread to move on, in case it's still waiting
+                            try
+                            {
+                                consumerSignal.Set();
+                            }
+                            catch { }
+
+                            //TODO: Log error
+                            //TODO: Inform class that CallbackQueue is dead, so that it can try again on next send
                         }
                         finally
                         {
@@ -500,51 +471,6 @@ namespace RestBus.RabbitMQ.Client
             }
 
         }
-
-        private static bool TryGetResponseFromEnvelope(HttpResponsePacket envelope, out HttpResponseMessage response)
-        {
-            try
-            {
-                response = new HttpResponseMessage
-                {
-                    Content = new ByteArrayContent(envelope.Content ?? new byte[0]),
-                    Version = new Version(envelope.Version),
-                    ReasonPhrase = envelope.StatusDescription,
-                    StatusCode = (System.Net.HttpStatusCode)envelope.StatusCode
-                };
-
-                string hdrKey;
-                foreach (var hdr in envelope.Headers)
-                {
-                    if(hdr.Key == null) continue;
-
-                    hdrKey = hdr.Key.Trim().ToUpperInvariant();
-
-                    if(hdrKey == "CONTENT-LENGTH") continue; //Content Length is automaitically calculated
-
-                    if (Array.IndexOf<String>(contentHeaders, hdrKey) >= 0)
-                    {
-                        response.Content.Headers.Add(hdr.Key.Trim(), hdr.Value);
-                    }
-                    else
-                    {
-                        response.Headers.Add(hdr.Key.Trim(), hdr.Value);
-                    }
-
-                    //TODO: Check if a string can be parsed properly into the typed header
-
-                    //Test adding multiple headers of the same name will do. // Look up the Add overload that takes an ienumerable<string> to figure out its purpose.
-                }
-            }
-            catch
-            {
-                response = null;
-                return false;
-            }
-
-            return true;
-        }
-
 
 
         protected override void Dispose(bool disposing)

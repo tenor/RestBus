@@ -193,7 +193,10 @@ namespace RestBus.RabbitMQ.Subscriber
 
             try
             {
-                request = Utils.Deserialize<HttpRequestPacket>(evt.Body);
+                request = HttpRequestPacket.Deserialize(evt.Body);
+
+                //TODO: Add Content-Length header
+                //TODO: Add X-RestBus-Subscriber-Id header
             }
             catch
             {
@@ -256,11 +259,13 @@ namespace RestBus.RabbitMQ.Subscriber
 
         private void DeclareExchangeAndQueues(IModel channel)
         {
+            //TODO: Should this method be moved to Common.Utils as it's shared by both Client and Subscriber
             lock (exchangeDeclareSync)
             {
                 if (exchangeInfo.Exchange != "")
                 {
-                    channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType);
+                    //TODO: If Queues are durable then exchange ought to be too.
+                    channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType, false, true, null);
                 }
 
                 var workQueueArgs = new System.Collections.Hashtable();
@@ -293,7 +298,7 @@ namespace RestBus.RabbitMQ.Subscriber
                 throw new ApplicationException("This is Bad");
             }
 
-            //P.S: Do not share channels across threads.
+            //Note: Do not share channels across threads.
             using (IModel channel = conn.CreateModel())
             {
 
@@ -304,7 +309,7 @@ namespace RestBus.RabbitMQ.Subscriber
                     channel.BasicPublish(String.Empty,
                                     context.ReplyToQueue,
                                     basicProperties,
-                                    Utils.Serialize(response));
+                                    response.Serialize());
                 }
                 catch { }
             }

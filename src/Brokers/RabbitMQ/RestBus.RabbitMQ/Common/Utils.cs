@@ -55,7 +55,7 @@ namespace RestBus.RabbitMQ.Common
             return TimeSpan.FromMinutes(1);
         }
 
-        public static byte[] Serialize(object obj)
+        public static byte[] SerializeAsBson(object obj)
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -70,7 +70,7 @@ namespace RestBus.RabbitMQ.Common
             }
         }
 
-        public static T Deserialize<T>(byte[] data)
+        public static T DeserializeFromBson<T>(byte[] data)
         {
             using (MemoryStream ms = new MemoryStream(data))
             {

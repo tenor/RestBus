@@ -167,7 +167,7 @@ namespace RestBus.ServiceStack
 
                 try
                 {
-                    subscriber.SendResponse(context, GetResponseEnvelopeFromWrapper(httpRes));
+                    subscriber.SendResponse(context, GetResponsePacketFromWrapper(httpRes));
                 }
                 catch
                 {
@@ -184,11 +184,13 @@ namespace RestBus.ServiceStack
 
 		}
 
-        private HttpResponsePacket GetResponseEnvelopeFromWrapper(ResponseWrapper wrapper)
+        private HttpResponsePacket GetResponsePacketFromWrapper(ResponseWrapper wrapper)
         {
             HttpResponsePacket response = new HttpResponsePacket();
             foreach (var key in wrapper.Headers.AllKeys)
             {
+                //TODO: Confirm if headers splits into comma here
+                //TODO: WHat happens in a set-cookie type of situation where you can have multiple headers of the same name?
                 response.Headers.Add(key, new string[]{ wrapper.Headers[key]});
             }
 

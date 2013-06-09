@@ -84,6 +84,8 @@
     <Compile Include="Client\RestBusClientExtensions.cs" />
     <Compile Include="Common\BasicExchangeMapper.cs" />
     <Compile Include="Common\ExchangeInfo.cs" />
+    <Compile Include="Common\HttpMessageReader.cs" />
+    <Compile Include="Common\HttpPacket.cs" />
     <Compile Include="Common\HttpRequestPacket.cs" />
     <Compile Include="Common\HttpResponsePacket.cs" />
     <Compile Include="Common\IExchangeMapper.cs" />
