@@ -29,6 +29,8 @@ namespace RestBus.ServiceStack
 
         public void AddHeader(string name, string value)
         {
+            //TODO: Make sure header name is valid
+
             headers.Add(name, value);
         }
 

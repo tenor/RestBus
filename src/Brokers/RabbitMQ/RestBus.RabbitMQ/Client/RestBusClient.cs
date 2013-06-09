@@ -164,8 +164,8 @@ namespace RestBus.RabbitMQ.Client
                                 deserializationError = true;
                             }
 
-                            //TODO: Add Content-Length Header
-                            //TODO: Add X-RestBus-Subscriber-Id header
+                            //Add/Update Content-Length Header
+                            res.Headers["Content-Length"] = new string[]{(res.Content == null ? 0 : res.Content.Length).ToString()};;
 
                             if (!deserializationError)
                             {

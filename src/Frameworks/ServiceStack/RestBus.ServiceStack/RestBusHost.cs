@@ -167,7 +167,7 @@ namespace RestBus.ServiceStack
 
                 try
                 {
-                    subscriber.SendResponse(context, GetResponsePacketFromWrapper(httpRes));
+                    subscriber.SendResponse(context, CreateResponsePacketFromWrapper(httpRes, subscriber));
                 }
                 catch
                 {
@@ -184,16 +184,34 @@ namespace RestBus.ServiceStack
 
 		}
 
-        private HttpResponsePacket GetResponsePacketFromWrapper(ResponseWrapper wrapper)
+        private static HttpResponsePacket CreateResponsePacketFromWrapper(ResponseWrapper wrapper, IRestBusSubscriber subscriber)
         {
             HttpResponsePacket response = new HttpResponsePacket();
-            foreach (var key in wrapper.Headers.AllKeys)
+
+            //TODO: Note that when implementing this in WebAPI/MVC the "responsewrapper" will most likely split headers into groups seperated by commas
+
+            string trimmedKey;
+            foreach (string key in wrapper.Headers.AllKeys)
             {
-                //TODO: Confirm if headers splits into comma here
-                //TODO: WHat happens in a set-cookie type of situation where you can have multiple headers of the same name?
-                response.Headers.Add(key, new string[]{ wrapper.Headers[key]});
+                foreach (string value in wrapper.Headers.GetValues(key))
+                {
+                    trimmedKey = key.Trim();
+                    if (trimmedKey != String.Empty)
+                    {
+                        if (response.Headers.ContainsKey(trimmedKey))
+                        {
+                            ((List<string>)response.Headers[trimmedKey]).Add(value);
+                        }
+                        else
+                        {
+                            response.Headers.Add(trimmedKey, new List<string> { value });
+                        }
+                    }
+                }
             }
 
+            //Add/Update Subscriber-Id header
+            response.Headers[RestBusSubscriber.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
 
             response.Content = (wrapper.OutputStream as System.IO.MemoryStream).ToArray();
             response.StatusCode = wrapper.StatusCode;

@@ -4,6 +4,7 @@ namespace RestBus.RabbitMQ.Subscriber
 {
     public interface IRestBusSubscriber : IDisposable
     {
+        string Id { get; }
         HttpContext Dequeue();
         void Start();
         void Restart();

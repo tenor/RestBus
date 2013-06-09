@@ -36,6 +36,8 @@ namespace RestBus.RabbitMQ.Subscriber
 
         readonly ConnectionFactory connectionFactory;
 
+        public const string SUBSCRIBER_ID_HEADER = "X-RestBus-Subscriber-Id";
+
         public RestBusSubscriber(IExchangeMapper exchangeMapper )
         {
 
@@ -49,6 +51,11 @@ namespace RestBus.RabbitMQ.Subscriber
 
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeInfo.ServerAddress;
+        }
+
+        public string Id
+        {
+            get { return subscriberId; }
         }
 
         public void Start()
@@ -195,8 +202,12 @@ namespace RestBus.RabbitMQ.Subscriber
             {
                 request = HttpRequestPacket.Deserialize(evt.Body);
 
-                //TODO: Add Content-Length header
-                //TODO: Add X-RestBus-Subscriber-Id header
+                //Add/Update Content-Length Header
+                request.Headers["Content-Length"] = new string[] { (request.Content == null ? 0 : request.Content.Length).ToString() };
+
+                //Add/Update Subscriber-Id header
+                request.Headers[SUBSCRIBER_ID_HEADER] = new string[] { this.subscriberId };
+
             }
             catch
             {
@@ -316,6 +327,5 @@ namespace RestBus.RabbitMQ.Subscriber
 
         }
 
-    
     }
 }

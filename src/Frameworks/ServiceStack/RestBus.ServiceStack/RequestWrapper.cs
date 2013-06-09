@@ -1,4 +1,4 @@
-using RestBus.RabbitMQ;
+﻿using RestBus.RabbitMQ;
 using ServiceStack.ServiceHost;
 using ServiceStack.WebHost.Endpoints;
 using System;
@@ -53,9 +53,10 @@ namespace RestBus.ServiceStack
 
         public IDictionary<string, System.Net.Cookie> Cookies
         {
+            
             get 
             {
-
+                //TODO: This is a good candidate to be cached
                 Dictionary<string, System.Net.Cookie> cookieJar = new Dictionary<string, System.Net.Cookie>();
                 var cookie = GetHeaderValues(request, "Cookie").FirstOrDefault() ?? String.Empty;
                 string[] cookies = cookie.Split(new char[]{';'}, StringSplitOptions.RemoveEmptyEntries);
@@ -75,6 +76,7 @@ namespace RestBus.ServiceStack
 
         public IFile[] Files
         {
+            //TODO: Can this be implemented?
             get { return new IFile[] { }; }
         }
 
@@ -103,24 +105,12 @@ namespace RestBus.ServiceStack
 
                 //TODO: If request is constant then this can be cached
                 System.Collections.Specialized.NameValueCollection headers = new System.Collections.Specialized.NameValueCollection();
-                StringBuilder sb;
                 foreach (var h in request.Headers)
                 {
-                    sb = new StringBuilder();
-                    bool hasAppended = false;
-                    foreach (var s in h.Value)
+                    foreach (var value in h.Value)
                     {
-                        if (hasAppended)
-                        {
-                            //TODO: Confirm that values are comma separated
-                            sb.Append(',');
-                        }
-
-                        sb.Append(s);
-                        hasAppended = true;
+                        headers.Add(h.Key, value);
                     }
-
-                    headers.Add(h.Key, sb.ToString());
                 }
 
                 return headers;
@@ -209,6 +199,7 @@ namespace RestBus.ServiceStack
         {
             get 
             {
+                //TODO: This is a good candidate to be cached
                 System.Collections.Specialized.NameValueCollection queryString = new System.Collections.Specialized.NameValueCollection();
 
                 var questionMarkIndex = request.Resource.IndexOf('?');
