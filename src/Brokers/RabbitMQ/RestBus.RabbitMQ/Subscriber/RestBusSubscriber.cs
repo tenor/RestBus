@@ -17,25 +17,16 @@ namespace RestBus.RabbitMQ.Subscriber
         IConnection conn;
         IModel workChannel;
         IModel subscriberChannel;
-        string exchangeName;
         QueueingBasicConsumer workConsumer;
         QueueingBasicConsumer subscriberConsumer;
-
-        readonly string workQueueName;
-        readonly string subscriberQueueName;
-        readonly TimeSpan workQueueExpiry;
-        readonly TimeSpan subscriberQueueExpiry;
-
-        object exchangeDeclareSync = new object();
-
         string subscriberId;
         ExchangeInfo exchangeInfo;
+        object exchangeDeclareSync = new object();
+
+        //TODO: Consider converting this to an int so that you can do Interlocked.Exchange here(Is that neccessary?)
         bool isStarted = false;
-
         global::RabbitMQ.Util.SharedQueue lastProcessedQueue = null;
-
         readonly ConnectionFactory connectionFactory;
-
         public const string SUBSCRIBER_ID_HEADER = "X-RestBus-Subscriber-Id";
 
         public RestBusSubscriber(IExchangeMapper exchangeMapper )
@@ -43,11 +34,6 @@ namespace RestBus.RabbitMQ.Subscriber
 
             exchangeInfo = exchangeMapper.GetExchangeInfo();
             subscriberId = Utils.GetRandomId();
-            exchangeName = Utils.GetExchangeName(exchangeInfo);
-            workQueueName = Utils.GetWorkQueueName(exchangeInfo);
-            subscriberQueueName = Utils.GetSubscriberQueueName(exchangeInfo, subscriberId);
-            workQueueExpiry = Utils.GetWorkQueueExpiry();
-            subscriberQueueExpiry = Utils.GetSubscriberQueueExpiry();
 
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeInfo.ServerAddress;
@@ -115,7 +101,7 @@ namespace RestBus.RabbitMQ.Subscriber
 
             //Create work channel and declare exchanges and queues
             workChannel = conn.CreateModel();
-            DeclareExchangeAndQueues(workChannel);
+            Utils.DeclareExchangeAndQueues(workChannel, exchangeInfo, exchangeDeclareSync, subscriberId);
 
             //Listen on work queue
             workConsumer = new QueueingBasicConsumer(workChannel, queue);
@@ -265,37 +251,6 @@ namespace RestBus.RabbitMQ.Subscriber
             if (conn != null)
             {
                 conn.Dispose();
-            }
-        }
-
-        private void DeclareExchangeAndQueues(IModel channel)
-        {
-            //TODO: Should this method be moved to Common.Utils as it's shared by both Client and Subscriber
-            lock (exchangeDeclareSync)
-            {
-                if (exchangeInfo.Exchange != "")
-                {
-                    //TODO: If Queues are durable then exchange ought to be too.
-                    channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType, false, true, null);
-                }
-
-                var workQueueArgs = new System.Collections.Hashtable();
-                workQueueArgs.Add("x-expires", (long)workQueueExpiry.TotalMilliseconds);
-
-                var subscriberQueueArgs = new System.Collections.Hashtable();
-                subscriberQueueArgs.Add("x-expires", (long)subscriberQueueExpiry.TotalMilliseconds);
-
-                //TODO: the line below can throw some kind of socket exception, so what do you do in that situation
-                //Bear in mind that Restart may call this code.
-                //The exception name is the OperationInterruptedException
-
-                //Declare work queue
-                channel.QueueDeclare(workQueueName, false, false, false, workQueueArgs);
-                channel.QueueBind(workQueueName, exchangeName, exchangeName);
-
-                //Declare subscriber queue
-                channel.QueueDeclare(subscriberQueueName, false, false, true, subscriberQueueArgs);
-
             }
         }
 

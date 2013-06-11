@@ -91,6 +91,7 @@ namespace RestBus.ServiceStack
 
 
             System.Threading.Thread msgLooper = new System.Threading.Thread(RunLoop);
+            msgLooper.Name = "RestBus ServiceStack Host";
             msgLooper.IsBackground = true;
             msgLooper.Start();
 
@@ -113,6 +114,9 @@ namespace RestBus.ServiceStack
             HttpContext context = null;
             while (true)
             {
+                //TODO: There should be a dispose check here, you could pass a disposeCheck delegate which is called by DeQueue
+                //or simply dispose subscriber and DeQueue should exit as soon as it's detected.
+
                 //TODO: Host shouldn't be aware of EndOfStreamException which belongs to RabbitMQ
 
                 try
@@ -122,6 +126,12 @@ namespace RestBus.ServiceStack
                 catch (System.IO.EndOfStreamException)
                 {
                     //TODO: Log this exception
+                    subscriber.Restart();
+                    continue;
+                }
+                catch (Exception e)
+                {
+                    //TODO: WHat happens when other kinds of exceptions take place, error should be logged and server restarted.
                     subscriber.Restart();
                     continue;
                 }

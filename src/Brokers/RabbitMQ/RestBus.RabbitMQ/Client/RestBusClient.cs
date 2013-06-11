@@ -29,17 +29,13 @@ namespace RestBus.RabbitMQ.Client
         readonly ExchangeInfo exchangeInfo;
         readonly string clientId;
         readonly string exchangeName;
-        readonly string workQueueName;
         readonly string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
         QueueingBasicConsumer callbackConsumer = null;
         IConnection conn = null;
-        readonly object callbackConsumerStartSync = new object();
         event Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> responseArrivalNotification = null;
 
-        readonly TimeSpan workQueueExpiry;
-        readonly TimeSpan callbackQueueExpiry;
-
+        readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
 
@@ -49,12 +45,8 @@ namespace RestBus.RabbitMQ.Client
             this.exchangeInfo = exchangeMapper.GetExchangeInfo();
             this.clientId = Utils.GetRandomId();
             this.exchangeName = Utils.GetExchangeName(exchangeInfo);
-            this.workQueueName = Utils.GetWorkQueueName(exchangeInfo);
             this.callbackQueueName = Utils.GetCallbackQueueName(exchangeInfo, clientId);
             this.WaitForResponse = true;
-
-            workQueueExpiry = Utils.GetWorkQueueExpiry();
-            callbackQueueExpiry = Utils.GetCallbackQueueExpiry();
 
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
@@ -114,7 +106,7 @@ namespace RestBus.RabbitMQ.Client
                     //Redeclare exchanges and queues every 30 seconds
 
                     Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
-                    DeclareExchangeAndQueues(channel);
+                    Utils.DeclareExchangeAndQueues(channel, exchangeInfo, exchangeDeclareSync, null);
                 }
 
 
@@ -239,7 +231,7 @@ namespace RestBus.RabbitMQ.Client
 
                 //Send message
                 channel.BasicPublish(exchangeName,
-                                exchangeMapper.GetRoutingKey(request) ?? exchangeName,
+                                exchangeMapper.GetRoutingKey(request) ?? Utils.GetWorkQueueRoutingKey(),
                                 basicProperties,
                                 (new HttpRequestPacket(request)).Serialize());
 
@@ -287,6 +279,7 @@ namespace RestBus.RabbitMQ.Client
             {
                 try
                 {
+                    //TODO: Investigate if removing/adding delegates is threadsafe.
                     responseArrivalNotification -= arrival;
                 }
                 catch { }
@@ -334,29 +327,6 @@ namespace RestBus.RabbitMQ.Client
             return timeout;
         }
 
-
-        private void DeclareExchangeAndQueues(IModel channel)
-        {
-            //TODO: IS the lock statement here necessary?
-            lock (exchangeDeclareSync)
-            {
-                if (exchangeInfo.Exchange != "")
-                {
-                    //TODO: If Queues are durable then exchange ought to be too.
-                    channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType, false, true, null);
-                }
-
-                var workQueueArgs = new System.Collections.Hashtable();
-                workQueueArgs.Add("x-expires", (long)workQueueExpiry.TotalMilliseconds);
-
-                //Declare work queue
-                channel.QueueDeclare(workQueueName, false, false, false, workQueueArgs);
-                channel.QueueBind(workQueueName, exchangeName, exchangeName);
-
-
-            }
-        }
-
         //TODO: If COnnection fails this needs to be restarted
         //Note that it creates a new background thread which would have to be stopped before restarting
         //Also note that connection is seperate from client connection
@@ -386,7 +356,7 @@ namespace RestBus.RabbitMQ.Client
                             {
                                 //Declare call back queue
                                 var callbackQueueArgs = new System.Collections.Hashtable();
-                                callbackQueueArgs.Add("x-expires", (long)callbackQueueExpiry.TotalMilliseconds);
+                                callbackQueueArgs.Add("x-expires", (long)Utils.GetCallbackQueueExpiry().TotalMilliseconds);
 
                                 channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 
@@ -461,6 +431,7 @@ namespace RestBus.RabbitMQ.Client
                     });
 
                     //Start Thread
+                    callBackProcessor.Name = "RestBus RabbitMQ Client Callback Queue Consumer";
                     callBackProcessor.IsBackground = true;
                     callBackProcessor.Start();
 
