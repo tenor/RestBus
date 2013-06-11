@@ -136,60 +136,67 @@ namespace RestBus.ServiceStack
                     continue;
                 }
 
-                //TODO: ProcessRequest should happen on the ThreadPool and there should be some sort of flow control
-                ProcessRequest(context);
+                System.Threading.ThreadPool.QueueUserWorkItem(ProcessRequest, context);
+
             }
         }
 
-        private void ProcessRequest(HttpContext context)
+        private void ProcessRequest(object state)
         {
-			//if (string.IsNullOrEmpty(context.Request.resource)) return;
+            //NOTE: This method is called on a background thread and must be protected by a big-try catch
 
-			//var operationName = context.Request.GetOperationName();
-
-			var httpReq = new RequestWrapper(context.Request);
-			var httpRes = new ResponseWrapper(context);
-			//var handler = ServiceStackHttpHandlerFactory.GetHandler(httpReq);
-
-            RestHandler handler = null;
-
-            var restPath = RestHandler.FindMatchingRestPath(httpReq.HttpMethod, httpReq.PathInfo);
-            if (restPath != null)
+            try
             {
-                handler = new RestHandler { RestPath = restPath, RequestName = restPath.RequestType.Name };
+                HttpContext context = (HttpContext)state;
 
-                string operationName;
-                httpReq.OperationName = operationName = handler.RestPath.RequestType.Name;
+                var httpReq = new RequestWrapper(context.Request);
+                var httpRes = new ResponseWrapper();
+                //var handler = ServiceStackHttpHandlerFactory.GetHandler(httpReq);
 
-                try
+                RestHandler handler = null;
+
+                var restPath = RestHandler.FindMatchingRestPath(httpReq.HttpMethod, httpReq.PathInfo);
+                if (restPath != null)
                 {
-                    handler.ProcessRequest(httpReq, httpRes, operationName);
-                }
-                catch
-                {
-                    //TODO: Send Exception details back to Queue
-                }
-                finally
-                {
-                    httpReq.InputStream.Close();
-                    httpRes.Close();
+                    handler = new RestHandler { RestPath = restPath, RequestName = restPath.RequestType.Name };
+
+                    string operationName;
+                    httpReq.OperationName = operationName = handler.RestPath.RequestType.Name;
+
+                    try
+                    {
+                        handler.ProcessRequest(httpReq, httpRes, operationName);
+                    }
+                    catch
+                    {
+                        //TODO: Send Exception details back to Queue
+                    }
+                    finally
+                    {
+                        httpReq.InputStream.Close();
+                        httpRes.Close();
+                    }
+
+                    try
+                    {
+                        subscriber.SendResponse(context, CreateResponsePacketFromWrapper(httpRes, subscriber));
+                    }
+                    catch
+                    {
+                        //Log SendResponse error
+                    }
+
+                    return;
                 }
 
-                try
-                {
-                    subscriber.SendResponse(context, CreateResponsePacketFromWrapper(httpRes, subscriber));
-                }
-                catch
-                {
-                    //Log SendResponse error
-                }
 
-                return;
+                //TODO: Send this exception back to Queue
+                throw new ApplicationException("The Resource cannot be found");
             }
-
-
-            //TODO: Send this exception back to Queue
-            throw new ApplicationException("The Resource cannot be found");
+            catch  (Exception ex)
+            {
+                //TODO: SHouldn't happen: Log execption
+            }
 
 
 		}

@@ -13,19 +13,12 @@ namespace RestBus.ServiceStack
     {
         //TODO: Fix this class -- See ServiceStacks HttpListenerResponseWrapper class
 
-        private HttpContext context;
         System.Collections.Specialized.NameValueCollection headers = new System.Collections.Specialized.NameValueCollection();
 
         public System.Collections.Specialized.NameValueCollection Headers
         {
             get { return headers; }
         } 
-
-        //TODO: Change response object to true ResponseWrapper object
-        public ResponseWrapper(HttpContext context)
-        {
-            this.context = context;
-        }
 
         public void AddHeader(string name, string value)
         {
