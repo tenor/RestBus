@@ -1,7 +1,7 @@
 using System.Net.Http;
 namespace RestBus.RabbitMQ.Common
 {
-    public interface IExchangeMapper
+    public interface IMessageMapper
     {
         ExchangeInfo GetExchangeInfo();
         string GetRoutingKey(HttpRequestMessage request);

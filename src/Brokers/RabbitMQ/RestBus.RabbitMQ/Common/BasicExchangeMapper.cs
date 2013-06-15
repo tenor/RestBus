@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Common
 {
-    public class BasicExchangeMapper : RestBus.RabbitMQ.Common.IExchangeMapper
+    public class BasicMessageMapper : RestBus.RabbitMQ.Common.IMessageMapper
     {
         string serviceName;
         string amqpHostUri;
 
-        public BasicExchangeMapper(string amqpHostUri, string serviceName)
+        public BasicMessageMapper(string amqpHostUri, string serviceName)
         {
             if(String.IsNullOrWhiteSpace(amqpHostUri))
             {

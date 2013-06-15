@@ -25,7 +25,7 @@ namespace RestBus.RabbitMQ.Client
     {
         const string REQUEST_OPTIONS_KEY = "_rb_options";
 
-        readonly IExchangeMapper exchangeMapper;
+        readonly IMessageMapper messageMapper;
         readonly ExchangeInfo exchangeInfo;
         readonly string clientId;
         readonly string exchangeName;
@@ -41,10 +41,10 @@ namespace RestBus.RabbitMQ.Client
 
         public const int HEART_BEAT = 30;
 
-        public RestBusClient(IExchangeMapper exchangeMapper) : base()
+        public RestBusClient(IMessageMapper messageMapper) : base()
         {
-            this.exchangeMapper = exchangeMapper;
-            this.exchangeInfo = exchangeMapper.GetExchangeInfo();
+            this.messageMapper = messageMapper;
+            this.exchangeInfo = messageMapper.GetExchangeInfo();
             this.clientId = Utils.GetRandomId();
             this.exchangeName = Utils.GetExchangeName(exchangeInfo);
             this.callbackQueueName = Utils.GetCallbackQueueName(exchangeInfo, clientId);
@@ -121,7 +121,7 @@ namespace RestBus.RabbitMQ.Client
                 if (requestTimeout != TimeSpan.Zero)
                 {
                     basicProperties.ReplyTo = callbackQueueName;
-                    if (!IsRequestTimeoutInfinite(requestOptions) && exchangeMapper.GetExpires(request))
+                    if (!IsRequestTimeoutInfinite(requestOptions) && messageMapper.GetExpires(request))
                     {
                         if (requestTimeout.TotalMilliseconds > Int32.MaxValue)
                         {
@@ -228,7 +228,7 @@ namespace RestBus.RabbitMQ.Client
 
                 //Send message
                 channel.BasicPublish(exchangeName,
-                                exchangeMapper.GetRoutingKey(request) ?? Utils.GetWorkQueueRoutingKey(),
+                                messageMapper.GetRoutingKey(request) ?? Utils.GetWorkQueueRoutingKey(),
                                 basicProperties,
                                 (new HttpRequestPacket(request)).Serialize());
 

@@ -29,10 +29,10 @@ namespace RestBus.RabbitMQ.Subscriber
         readonly ConnectionFactory connectionFactory;
         public const string SUBSCRIBER_ID_HEADER = "X-RestBus-Subscriber-Id";
 
-        public RestBusSubscriber(IExchangeMapper exchangeMapper )
+        public RestBusSubscriber(IMessageMapper messageMapper )
         {
 
-            exchangeInfo = exchangeMapper.GetExchangeInfo();
+            exchangeInfo = messageMapper.GetExchangeInfo();
             subscriberId = Utils.GetRandomId();
 
             this.connectionFactory = new ConnectionFactory();
