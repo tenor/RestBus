@@ -1,4 +1,4 @@
-﻿using RestBus.RabbitMQ;
+﻿using RestBus.RabbitMQ.Common;
 using RestBus.RabbitMQ.Subscriber;
 using ServiceStack.Messaging;
 using ServiceStack.WebHost.Endpoints;
@@ -126,80 +126,83 @@ namespace RestBus.ServiceStack
                 catch (System.IO.EndOfStreamException)
                 {
                     //TODO: Log this exception
+                    //DO not continue if dispose has been set
                     subscriber.Restart();
                     continue;
                 }
                 catch (Exception e)
                 {
                     //TODO: WHat happens when other kinds of exceptions take place, error should be logged and server restarted.
+                    //DO not continue if dispose has been set
                     subscriber.Restart();
                     continue;
                 }
 
-                System.Threading.ThreadPool.QueueUserWorkItem(ProcessRequest, context);
+                System.Threading.ThreadPool.QueueUserWorkItem(Process, context);
 
             }
         }
 
-        private void ProcessRequest(object state)
+        private void Process(object state)
         {
             //NOTE: This method is called on a background thread and must be protected by a big-try catch
 
             try
             {
-                HttpContext context = (HttpContext)state;
-
-                var httpReq = new RequestWrapper(context.Request);
-                var httpRes = new ResponseWrapper();
-                //var handler = ServiceStackHttpHandlerFactory.GetHandler(httpReq);
-
-                RestHandler handler = null;
-
-                var restPath = RestHandler.FindMatchingRestPath(httpReq.HttpMethod, httpReq.PathInfo);
-                if (restPath != null)
-                {
-                    handler = new RestHandler { RestPath = restPath, RequestName = restPath.RequestType.Name };
-
-                    string operationName;
-                    httpReq.OperationName = operationName = handler.RestPath.RequestType.Name;
-
-                    try
-                    {
-                        handler.ProcessRequest(httpReq, httpRes, operationName);
-                    }
-                    catch
-                    {
-                        //TODO: Send Exception details back to Queue
-                    }
-                    finally
-                    {
-                        httpReq.InputStream.Close();
-                        httpRes.Close();
-                    }
-
-                    try
-                    {
-                        subscriber.SendResponse(context, CreateResponsePacketFromWrapper(httpRes, subscriber));
-                    }
-                    catch
-                    {
-                        //Log SendResponse error
-                    }
-
-                    return;
-                }
-
-
-                //TODO: Send this exception back to Queue
-                throw new ApplicationException("The Resource cannot be found");
+                ProcessRequest((HttpContext)state);
             }
             catch  (Exception ex)
             {
                 //TODO: SHouldn't happen: Log execption
             }
-
-
 		}
+
+        private void ProcessRequest(HttpContext context)
+        {
+            var httpReq = new RequestWrapper(context.Request);
+            var httpRes = new ResponseWrapper();
+            //var handler = ServiceStackHttpHandlerFactory.GetHandler(httpReq);
+
+            RestHandler handler = null;
+
+            var restPath = RestHandler.FindMatchingRestPath(httpReq.HttpMethod, httpReq.PathInfo);
+            if (restPath != null)
+            {
+                handler = new RestHandler { RestPath = restPath, RequestName = restPath.RequestType.Name };
+
+                string operationName;
+                httpReq.OperationName = operationName = handler.RestPath.RequestType.Name;
+
+                try
+                {
+                    handler.ProcessRequest(httpReq, httpRes, operationName);
+                }
+                catch
+                {
+                    //TODO: Send Exception details back to Queue
+                }
+                finally
+                {
+                    httpReq.InputStream.Close();
+                    httpRes.Close();
+                }
+
+                try
+                {
+                    subscriber.SendResponse(context, CreateResponsePacketFromWrapper(httpRes, subscriber));
+                }
+                catch
+                {
+                    //Log SendResponse error
+                }
+
+                return;
+            }
+
+
+            //TODO: Send this exception back to Queue
+            throw new ApplicationException("The Resource cannot be found");
+        }
 
         private static HttpResponsePacket CreateResponsePacketFromWrapper(ResponseWrapper wrapper, IRestBusSubscriber subscriber)
         {

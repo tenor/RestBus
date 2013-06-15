@@ -23,7 +23,7 @@ namespace RestBus.RabbitMQ.Client
 
     public class RestBusClient : HttpClient
     {
-        internal const string REQUEST_OPTIONS_KEY = "_rb_options";
+        const string REQUEST_OPTIONS_KEY = "_rb_options";
 
         readonly IExchangeMapper exchangeMapper;
         readonly ExchangeInfo exchangeInfo;
@@ -39,6 +39,8 @@ namespace RestBus.RabbitMQ.Client
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
 
+        public const int HEART_BEAT = 30;
+
         public RestBusClient(IExchangeMapper exchangeMapper) : base()
         {
             this.exchangeMapper = exchangeMapper;
@@ -51,6 +53,7 @@ namespace RestBus.RabbitMQ.Client
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeInfo.ServerAddress;
+            connectionFactory.RequestedHeartbeat = HEART_BEAT;
         }
 
         //TODO: FIgure out how to handle the CancelPendingRequests() method (It's not overridable)
@@ -70,14 +73,7 @@ namespace RestBus.RabbitMQ.Client
             PrepareMessage(request);
 
             //Get Request Options
-            RequestOptions requestOptions = null;
-            {
-                object reqObj;
-                if (request.Properties.TryGetValue(RestBusClient.REQUEST_OPTIONS_KEY, out reqObj))
-                {
-                    requestOptions = (RequestOptions)reqObj;
-                }
-            }
+            RequestOptions requestOptions = GetRequestOptions(request);
 
             //Declare messaging resources
             Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival = null;
@@ -98,6 +94,7 @@ namespace RestBus.RabbitMQ.Client
                 }
 
                 //NOTE: Do not share channels across threads.
+                //TODO: Investigate Channel pooling to see if there is significant increase in throughput on connections with reasonable latency
                 channel = conn.CreateModel();
 
                 TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
@@ -264,6 +261,22 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
+        internal static RequestOptions GetRequestOptions(HttpRequestMessage request)
+        {
+            object reqObj;
+            if (request.Properties.TryGetValue(REQUEST_OPTIONS_KEY, out reqObj))
+            {
+                return reqObj as RequestOptions;
+            }
+
+            return null;
+        }
+
+        internal static void SetRequestOptions(HttpRequestMessage request, RequestOptions options)
+        {
+            request.Properties[REQUEST_OPTIONS_KEY] = options;
+        }
+
         private void CleanupMessagingResources(IModel channel, Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
         {
             if (channel != null)
@@ -415,7 +428,18 @@ namespace RestBus.RabbitMQ.Client
 
                             if (conn != null)
                             {
+
                                 //NOTE: This is the only place where connections are disposed
+
+                                try
+                                {
+                                    conn.Close();
+                                }
+                                catch
+                                {
+                                    //TODO: Log Error
+                                }
+
                                 try
                                 {
                                     conn.Dispose();

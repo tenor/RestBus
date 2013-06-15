@@ -37,6 +37,8 @@ namespace RestBus.RabbitMQ.Subscriber
 
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeInfo.ServerAddress;
+            connectionFactory.RequestedHeartbeat = Client.RestBusClient.HEART_BEAT;
+
         }
 
         public string Id
@@ -58,9 +60,24 @@ namespace RestBus.RabbitMQ.Subscriber
         {
             isStarted = true;
 
+            /*
+            //Get consumer tags if available
+            string workCTag = null, subscriberCTag = null;
+            if(subscriberConsumer != null)
+            {
+                subscriberCTag = subscriberConsumer.ConsumerTag;
+            }
+
+            if(workConsumer != null)
+            {
+                workCTag = workConsumer.ConsumerTag;
+            }
+             */
+
             //CLose connections and channels
             if (subscriberChannel != null)
             {
+
                 try
                 {
                     subscriberChannel.Close();
@@ -90,6 +107,14 @@ namespace RestBus.RabbitMQ.Subscriber
                 catch
                 {
                 }
+
+                try
+                {
+                    conn.Dispose();
+                }
+                catch 
+                {
+                }
             }
 
 
@@ -101,6 +126,29 @@ namespace RestBus.RabbitMQ.Subscriber
 
             //Create work channel and declare exchanges and queues
             workChannel = conn.CreateModel();
+            
+            /* This doesn't seem to work, you can't cancel a consumer over a new connection
+            //Cancel consumers on server
+            if(workCTag != null)
+            {
+                try
+                {
+                    workChannel.BasicCancel(workCTag);
+                }
+                catch { }
+            }
+
+            if (subscriberCTag != null)
+            {
+                try
+                {
+                    workChannel.BasicCancel(subscriberCTag);
+                }
+                catch { }
+            }
+             */
+
+            //Recdeclare exchanges and queues
             Utils.DeclareExchangeAndQueues(workChannel, exchangeInfo, exchangeDeclareSync, subscriberId);
 
             //Listen on work queue
@@ -250,7 +298,17 @@ namespace RestBus.RabbitMQ.Subscriber
 
             if (conn != null)
             {
-                conn.Dispose();
+                try
+                {
+                    conn.Close();
+                }
+                catch { }
+
+                try
+                {
+                    conn.Dispose();
+                }
+                catch { }
             }
         }
 

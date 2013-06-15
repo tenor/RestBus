@@ -5,7 +5,7 @@ using System.IO;
 using System.Net.Http;
 using System.Linq;
 
-namespace RestBus.RabbitMQ
+namespace RestBus.RabbitMQ.Common
 {
     //TODO: Describe why this class exists
     public class HttpRequestPacket : HttpPacket

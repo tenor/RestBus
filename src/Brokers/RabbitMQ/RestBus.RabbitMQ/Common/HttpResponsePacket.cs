@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 
-namespace RestBus.RabbitMQ
+namespace RestBus.RabbitMQ.Common
 {
  
     //TODO: Describe why this class exists

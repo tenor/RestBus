@@ -416,8 +416,10 @@ namespace RestBus.RabbitMQ.Client
             }
 
             //Attach options to request
-            request.Properties[RestBusClient.REQUEST_OPTIONS_KEY] = options;
+            RestBusClient.SetRequestOptions(request, options);
         }
+
+
         #endregion
 
     }

@@ -1,5 +1,5 @@
 
-namespace RestBus.RabbitMQ
+namespace RestBus.RabbitMQ.Common
 {
     public class ExchangeInfo
     {

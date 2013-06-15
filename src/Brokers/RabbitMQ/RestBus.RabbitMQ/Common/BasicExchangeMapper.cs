@@ -1,3 +1,4 @@
+using RestBus.RabbitMQ.Client;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,34 +6,32 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RestBus.RabbitMQ
+namespace RestBus.RabbitMQ.Common
 {
-    //TODO: Is this class used by the subscriber at all. If not move to Client, same goes for the Interface
-    public class BasicExchangeMapper : RestBus.RabbitMQ.IExchangeMapper
+    public class BasicExchangeMapper : RestBus.RabbitMQ.Common.IExchangeMapper
     {
-        string applicationName;
-        string rabbitMQHost;
+        string serviceName;
+        string amqpHostUri;
 
-
-        public BasicExchangeMapper(string rabbitMQHost, string applicationName)
+        public BasicExchangeMapper(string amqpHostUri, string serviceName)
         {
-            if(String.IsNullOrWhiteSpace(rabbitMQHost))
+            if(String.IsNullOrWhiteSpace(amqpHostUri))
             {
                 throw new ArgumentException("rabbitMQHost");
             }
 
-            if (String.IsNullOrWhiteSpace(applicationName))
+            if (String.IsNullOrWhiteSpace(serviceName))
             {
                 throw new ArgumentException("applicationBaseUrl");
             }
 
-            this.applicationName = applicationName;
-            this.rabbitMQHost = rabbitMQHost;
+            this.serviceName = serviceName;
+            this.amqpHostUri = amqpHostUri;
         }
 
         public virtual ExchangeInfo GetExchangeInfo()
         {
-            string appPath = applicationName;
+            string appPath = serviceName;
             if (String.IsNullOrWhiteSpace(appPath))
             {
                 appPath = "/";
@@ -48,7 +47,7 @@ namespace RestBus.RabbitMQ
                 appPath = appPath + "/";
             }
 
-            return new ExchangeInfo(rabbitMQHost, appPath, "direct");
+            return new ExchangeInfo(amqpHostUri, appPath, "direct");
         }
 
         public virtual string GetRoutingKey(HttpRequestMessage request)
@@ -74,6 +73,11 @@ namespace RestBus.RabbitMQ
             }
 
             return path.Trim();
+        }
+
+        protected RequestOptions GetRequestOptions(HttpRequestMessage request)
+        {
+            return RestBusClient.GetRequestOptions(request);
         }
 
     }

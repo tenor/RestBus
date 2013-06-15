@@ -13,6 +13,7 @@ namespace RestBus.RabbitMQ.Client
         TimeSpan? timeout;
         RequestHeaders headers;
         readonly RequestCookieCollection cookies;
+        object tag;
 
         public RequestOptions()
         {
@@ -20,6 +21,13 @@ namespace RestBus.RabbitMQ.Client
             cookies = new RequestCookieCollection(headers);
         }
 
+        public object Tag
+        {
+            get { return tag; }
+            set { tag = value; }
+        }
+
+        //TODO: DIsallow illegal times
         public TimeSpan? Timeout
         {
             get { return timeout; }

@@ -1,6 +1,5 @@
-using RestBus.RabbitMQ.Common;
 using System.Net.Http;
-namespace RestBus.RabbitMQ
+namespace RestBus.RabbitMQ.Common
 {
     public interface IExchangeMapper
     {
