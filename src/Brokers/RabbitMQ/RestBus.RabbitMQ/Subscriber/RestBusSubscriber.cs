@@ -22,6 +22,7 @@ namespace RestBus.RabbitMQ.Subscriber
         string subscriberId;
         ExchangeInfo exchangeInfo;
         object exchangeDeclareSync = new object();
+        volatile bool disposed = false;
 
         //TODO: Consider converting this to an int so that you can do Interlocked.Exchange here(Is that neccessary?)
         bool isStarted = false;
@@ -59,20 +60,6 @@ namespace RestBus.RabbitMQ.Subscriber
         public void Restart()
         {
             isStarted = true;
-
-            /*
-            //Get consumer tags if available
-            string workCTag = null, subscriberCTag = null;
-            if(subscriberConsumer != null)
-            {
-                subscriberCTag = subscriberConsumer.ConsumerTag;
-            }
-
-            if(workConsumer != null)
-            {
-                workCTag = workConsumer.ConsumerTag;
-            }
-             */
 
             //CLose connections and channels
             if (subscriberChannel != null)
@@ -127,7 +114,7 @@ namespace RestBus.RabbitMQ.Subscriber
             //Create work channel and declare exchanges and queues
             workChannel = conn.CreateModel();
             
-            /* This doesn't seem to work, you can't cancel a consumer over a new connection
+            /* Work this into subscriber dispose and restart
             //Cancel consumers on server
             if(workCTag != null)
             {
@@ -166,6 +153,7 @@ namespace RestBus.RabbitMQ.Subscriber
         //Will block until a request is received from either queue
         public HttpContext Dequeue()
         {
+            if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
             if(workConsumer == null || subscriberConsumer == null) throw new InvalidOperationException("Start the subscriber prior to calling Dequeue");
 
             HttpRequestPacket request;
@@ -173,9 +161,9 @@ namespace RestBus.RabbitMQ.Subscriber
 
             global::RabbitMQ.Util.SharedQueue queue1 = null, queue2 = null;
 
-
             while (true)
             {
+                if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
                 if (lastProcessedQueue == subscriberConsumer.Queue)
                 {
                     queue1 = workConsumer.Queue;
@@ -187,19 +175,50 @@ namespace RestBus.RabbitMQ.Subscriber
                     queue2 = workConsumer.Queue;
                 }
 
-                if (TryGetRequest(queue1, out request, out properties))
+                try
                 {
-                    lastProcessedQueue = queue1;
-                    break;
+                    if (TryGetRequest(queue1, out request, out properties))
+                    {
+                        lastProcessedQueue = queue1;
+                        break;
+                    }
+
+                    if (TryGetRequest(queue2, out request, out properties))
+                    {
+                        lastProcessedQueue = queue2;
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (!(e is System.IO.EndOfStreamException))
+                    {
+                        //TODO: Log exception: Don't know what else to expect here
+
+                    }
+
+                    //Loop until a connection is made
+                    bool successfulRestart = false;
+                    while (true)
+                    {
+                        try
+                        {
+                            Restart();
+                            successfulRestart = true;
+                        }
+                        catch { }
+
+                        if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
+
+                        if (successfulRestart) break;
+                        Thread.Sleep(1);
+                    }
+
+                    //Check for next message
+                    continue;
                 }
 
-                if (TryGetRequest(queue2, out request, out properties))
-                {
-                    lastProcessedQueue = queue2;
-                    break;
-                }
-
-                 Thread.Sleep(1);
+                Thread.Sleep(1); //Nothing was found in both queues so take a 1ms nap
 
             }
 
@@ -286,6 +305,7 @@ namespace RestBus.RabbitMQ.Subscriber
 
         public void Dispose()
         {
+            disposed = true;
             if (workChannel != null)
             {
                 workChannel.Dispose();
@@ -314,6 +334,7 @@ namespace RestBus.RabbitMQ.Subscriber
 
         public void SendResponse(HttpContext context, HttpResponsePacket response )
         {
+            if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
             if (String.IsNullOrEmpty(context.ReplyToQueue)) return;
 
             if (conn == null)

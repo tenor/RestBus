@@ -21,9 +21,8 @@ namespace RestBus.ServiceStack
             = new Dictionary<Type, IMessageHandlerFactory>();
 
         private IRestBusSubscriber subscriber;
-
-
         private bool hasStarted = false;
+        volatile bool disposed = false;
 
         public RestBusHost(IRestBusSubscriber subscriber)
         {
@@ -105,8 +104,11 @@ namespace RestBus.ServiceStack
 
         public void Dispose()
         {
-            //TODO:
-            throw new NotImplementedException();
+            disposed = true;
+            if (subscriber != null)
+            {
+                subscriber.Dispose();
+            }
         }
 
         private void RunLoop()
@@ -114,28 +116,27 @@ namespace RestBus.ServiceStack
             HttpContext context = null;
             while (true)
             {
-                //TODO: There should be a dispose check here, you could pass a disposeCheck delegate which is called by DeQueue
-                //or simply dispose subscriber and DeQueue should exit as soon as it's detected.
-
-                //TODO: Host shouldn't be aware of EndOfStreamException which belongs to RabbitMQ
-
                 try
                 {
                     context = subscriber.Dequeue();
                 }
-                catch (System.IO.EndOfStreamException)
-                {
-                    //TODO: Log this exception
-                    //DO not continue if dispose has been set
-                    subscriber.Restart();
-                    continue;
-                }
                 catch (Exception e)
                 {
-                    //TODO: WHat happens when other kinds of exceptions take place, error should be logged and server restarted.
-                    //DO not continue if dispose has been set
-                    subscriber.Restart();
-                    continue;
+                    if (!(e is ObjectDisposedException))
+                    {
+                        //TODO: Log exception: Don't know what else to expect here
+
+                    }
+
+                    //Exit method if host has been disposed
+                    if (disposed)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        continue;
+                    }
                 }
 
                 System.Threading.ThreadPool.QueueUserWorkItem(Process, context);

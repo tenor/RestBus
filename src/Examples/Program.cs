@@ -1,5 +1,5 @@
 using RestBus.RabbitMQ.Client;
-using RestBus.RabbitMQ;
+using RestBus.RabbitMQ.Common;
 //using RestBus.RabbitMQ.Subscriber;
 using System;
 using System.Collections.Generic;
@@ -13,8 +13,8 @@ namespace Examples
     {
         static void Main(string[] args)
         {
-            BasicExchangeMapper exchangeMapper = new BasicExchangeMapper("amqp:localhost:5672", "test");
-            RestBusClient client = new RestBusClient(exchangeMapper);
+            BasicMessageMapper msgMapper = new BasicMessageMapper("amqp:localhost:5672", "test");
+            RestBusClient client = new RestBusClient(msgMapper);
 
             var msg = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, "http://localhost/test/restbus/")
             {
