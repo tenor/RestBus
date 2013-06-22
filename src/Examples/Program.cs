@@ -23,12 +23,11 @@ namespace Examples
 
             msg.Headers.Add("Accept", "application/json, text/javascript, */*; q=0.01, */*; q=0.01");
 
+            //TODO: This doesn't return a timeout error when the message times out it returns ("Error in the application" 
             var m = client.SendAsync(msg, System.Threading.CancellationToken.None).Result;
 
-            //TODO: client.Dispose should kill that background thread that's actually in the foreground and doesn't let this sample die.
+            client.Dispose();
 
-            //RabbitMQRestBusSubscriber subscriber = new RabbitMQRestBusSubscriber(exchangeMapper);
-            //subscriber.Start();
         }
     }
 }

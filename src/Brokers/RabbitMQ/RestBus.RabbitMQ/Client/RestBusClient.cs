@@ -38,6 +38,7 @@ namespace RestBus.RabbitMQ.Client
         readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
+        volatile bool disposed = false;
 
         public const int HEART_BEAT = 30;
 
@@ -58,7 +59,7 @@ namespace RestBus.RabbitMQ.Client
 
         //TODO: FIgure out how to handle the CancelPendingRequests() method (It's not overridable)
 
-        //TODO: This method has to be thread safe
+        //TODO: Confirm that this method is thread safe
         public override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
         {
             if (request == null) throw new ArgumentNullException("request");
@@ -68,7 +69,7 @@ namespace RestBus.RabbitMQ.Client
                throw new InvalidOperationException("The request URI must either be set or BaseAddress must be set");
             }
 
-            //TODO: Check if client is disposed
+            if (disposed) throw new ObjectDisposedException("Client has been disposed");
 
             PrepareMessage(request);
 
@@ -340,9 +341,6 @@ namespace RestBus.RabbitMQ.Client
             return timeout;
         }
 
-        //TODO: If COnnection fails this needs to be restarted
-        //Note that it creates a new background thread which would have to be stopped before restarting
-        //Also note that connection is seperate from client connection
         private void StartCallbackQueueConsumer()
         {
             //TODO: DOuble-checked locking -- make this better
@@ -384,10 +382,17 @@ namespace RestBus.RabbitMQ.Client
 
                                 while (true)
                                 {
-                                    //TODO: Check for object disposal here and leave
-                                    //This means Dequeue will have to be changed to one that loops and checks for the disposed flag
 
-                                    obj = callbackConsumer.Queue.Dequeue();
+                                    try
+                                    {
+                                        obj = DequeueCallbackQueue();
+                                    }
+                                    catch
+                                    {
+                                        //TODO: Log this exception except it's ObjectDisposedException
+                                        throw;
+                                    }
+
                                     evt = (global::RabbitMQ.Client.Events.BasicDeliverEventArgs)obj;
 
                                     try
@@ -418,38 +423,12 @@ namespace RestBus.RabbitMQ.Client
                             }
                             catch { }
 
-                            //TODO: Log error
-                            //TODO: Inform class that CallbackQueue is dead, so that it can try again on next send
+                            //TODO: Log error (Except it's object disposed exception)
+                            //TODO: Set Exception object which will be throw by signal waiter
                         }
                         finally
                         {
-
-                            //TODO: Test if CallBackConsumer.IsRunning is true at this point
-
-                            if (conn != null)
-                            {
-
-                                //NOTE: This is the only place where connections are disposed
-
-                                try
-                                {
-                                    conn.Close();
-                                }
-                                catch
-                                {
-                                    //TODO: Log Error
-                                }
-
-                                try
-                                {
-                                    conn.Dispose();
-                                }
-                                catch
-                                {
-                                    //TODO: Log Error
-                                }
-                            }
-
+                            DisposeConnection();
                         }
 
                     });
@@ -462,6 +441,8 @@ namespace RestBus.RabbitMQ.Client
                     //Wait for Thread to start consuming messages
                     consumerSignal.Wait();
 
+                    //TODO: Examine exception if it were set and rethrow it
+
                 }
             }
 
@@ -470,10 +451,18 @@ namespace RestBus.RabbitMQ.Client
 
         protected override void Dispose(bool disposing)
         {
+
             //TODO: Work on this method
+
+            //TODO: Confirm that this does in fact kill all background threads
+
+            disposed = true;
+            DisposeConnection();
+
+            //TODO: Kill all channels in channel pool (if implemented)
+
             base.Dispose(disposing);
 
-            //Kill all connections in Pool
         }
 
         private void PrepareMessage(HttpRequestMessage request)
@@ -503,6 +492,48 @@ namespace RestBus.RabbitMQ.Client
                 }
             }
 
+        }
+
+        private void DisposeConnection()
+        {
+            if (conn != null)
+            {
+
+                try
+                {
+                    conn.Close();
+                }
+                catch
+                {
+                    //TODO: Log Error
+                }
+
+                try
+                {
+                    conn.Dispose();
+                }
+                catch
+                {
+                    //TODO: Log Error
+                }
+            }
+        }
+
+        private object DequeueCallbackQueue()
+        {
+            while (true)
+            {
+                if (disposed) throw new ObjectDisposedException("Client has been disposed");
+
+                object obj = callbackConsumer.Queue.DequeueNoWait(null);
+
+                if (obj != null)
+                {
+                    return obj;
+                }
+
+                Thread.Sleep(1);
+            }
         }
 
     }
