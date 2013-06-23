@@ -405,14 +405,18 @@ namespace RestBus.RabbitMQ.Client
 
         private static void AttachOptions(HttpRequestMessage request, RequestOptions options)
         {
-            //Copy headers over
-            foreach (var header in options.Headers)
+            if (options != null && options.Headers != null)
             {
-                if (request.Headers.Contains(header.Key))
+                //Copy headers over
+
+                foreach (var header in options.Headers)
                 {
-                    request.Headers.Remove(header.Key);
+                    if (request.Headers.Contains(header.Key))
+                    {
+                        request.Headers.Remove(header.Key);
+                    }
+                    request.Headers.Add(header.Key, header.Value);
                 }
-                request.Headers.Add(header.Key, header.Value);
             }
 
             //Attach options to request

@@ -1,4 +1,4 @@
-using RestBus.RabbitMQ.Common;
+using RestBus.RabbitMQ;
 using System;
 namespace RestBus.RabbitMQ.Subscriber
 {

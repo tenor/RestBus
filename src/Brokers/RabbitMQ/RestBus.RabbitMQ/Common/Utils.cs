@@ -3,7 +3,7 @@ using Newtonsoft.Json.Bson;
 using System;
 using System.IO;
 
-namespace RestBus.RabbitMQ.Common
+namespace RestBus.RabbitMQ
 {
     internal static class Utils
     {

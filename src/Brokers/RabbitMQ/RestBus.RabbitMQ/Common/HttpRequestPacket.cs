@@ -1,18 +1,16 @@
-using RestBus.RabbitMQ.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Linq;
+using System.Net.Http;
 
-namespace RestBus.RabbitMQ.Common
+namespace RestBus.RabbitMQ
 {
     //TODO: Describe why this class exists
     public class HttpRequestPacket : HttpPacket
     {
         public string Method;
         public string Resource;
-
 
         public HttpRequestPacket()
         {
@@ -22,14 +20,14 @@ namespace RestBus.RabbitMQ.Common
         {
             foreach (var hdr in request.Headers)
             {
-                AddHttpRequestMessageHeader(hdr);
+                AddHttpHeader(hdr);
             }
 
             if (request.Content != null)
             {
                 foreach (var hdr in request.Content.Headers)
                 {
-                    AddHttpRequestMessageHeader(hdr);
+                    AddHttpHeader(hdr);
                 }
             }
 
@@ -47,19 +45,6 @@ namespace RestBus.RabbitMQ.Common
             }
 
         }
-
-        private void AddHttpRequestMessageHeader(KeyValuePair<string, IEnumerable<string>> hdr)
-        {
-            if (this.Headers.ContainsKey(hdr.Key))
-            {
-                ((List<string>)this.Headers[hdr.Key]).Add(String.Join(", ", hdr.Value.ToArray()));
-            }
-            else
-            {
-                this.Headers.Add(hdr.Key, new List<string>() { String.Join(", ", hdr.Value.ToArray()) });
-            }
-        }
-
 
         public override byte[] Serialize()
         {
@@ -158,6 +143,71 @@ namespace RestBus.RabbitMQ.Common
 
         }
 
+        public bool TryGetHttpRequestMessage(out HttpRequestMessage request)
+        {
+            try
+            {
+                request = new HttpRequestMessage
+                {
+                    Content = new ByteArrayContent(this.Content ?? new byte[0]),
+                    Version = new Version(this.Version),
+                    Method = new HttpMethod(this.Method ?? "GET"),
+                    RequestUri = GetUriFromResource(this.Resource)
+                };
+
+                PopulateHeaders(request.Content.Headers, request.Headers);
+            }
+            catch
+            {
+                request = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        //This method tries to get an absolute uri from the provided resource
+        private static string machineHostName = Environment.MachineName ?? "localhost";
+        private static Uri GetUriFromResource(string resource)
+        {
+            string path, query;
+            int qmarkIndex = resource.IndexOf('?');
+            if (qmarkIndex == -1)
+            {
+                path = resource;
+                query = string.Empty;
+            }
+            else
+            {
+                path = resource.Substring(0, qmarkIndex);
+                query = resource.Substring(qmarkIndex);
+            }
+            bool success = false;
+
+            Uri result = null;
+            try
+            {
+                result = new UriBuilder("http", machineHostName, 80, path, query).Uri;
+                success = true;
+            }
+            catch { }
+
+            if (success) return result;
+
+            //Something may be wrong with machine name, and so try localhost
+
+            try
+            {
+                result = new UriBuilder("http", "localhost", 80, path, query).Uri;
+                success = true;
+            }
+            catch { }
+
+            if (success) return result;
+
+            //Return a Relative Uri
+            return new Uri(resource, UriKind.RelativeOrAbsolute);
+        }
 
 
 

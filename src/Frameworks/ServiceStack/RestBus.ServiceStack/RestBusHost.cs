@@ -1,13 +1,9 @@
-﻿using RestBus.RabbitMQ.Common;
+using RestBus.RabbitMQ;
 using RestBus.RabbitMQ.Subscriber;
 using ServiceStack.Messaging;
 using ServiceStack.WebHost.Endpoints;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RestBus.ServiceStack
 {
@@ -20,7 +16,7 @@ namespace RestBus.ServiceStack
         private readonly Dictionary<Type, IMessageHandlerFactory> handlerMap
             = new Dictionary<Type, IMessageHandlerFactory>();
 
-        private IRestBusSubscriber subscriber;
+        private readonly IRestBusSubscriber subscriber;
         private bool hasStarted = false;
         volatile bool disposed = false;
 
@@ -87,7 +83,6 @@ namespace RestBus.ServiceStack
             //TODO: Add some sync here so that multiple threads are not created.
             hasStarted = true;
             subscriber.Start();
-
 
             System.Threading.Thread msgLooper = new System.Threading.Thread(RunLoop);
             msgLooper.Name = "RestBus ServiceStack Host";
@@ -190,6 +185,7 @@ namespace RestBus.ServiceStack
 
                 try
                 {
+                    //TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
                     subscriber.SendResponse(context, CreateResponsePacketFromWrapper(httpRes, subscriber));
                 }
                 catch

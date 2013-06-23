@@ -6,9 +6,9 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RestBus.RabbitMQ.Common
+namespace RestBus.RabbitMQ
 {
-    public class BasicMessageMapper : RestBus.RabbitMQ.Common.IMessageMapper
+    public class BasicMessageMapper : IMessageMapper
     {
         string serviceName;
         string amqpHostUri;

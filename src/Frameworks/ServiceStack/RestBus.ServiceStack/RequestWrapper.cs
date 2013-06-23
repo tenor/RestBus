@@ -1,4 +1,4 @@
-using RestBus.RabbitMQ.Common;
+using RestBus.RabbitMQ;
 using ServiceStack.ServiceHost;
 using ServiceStack.WebHost.Endpoints;
 using System;

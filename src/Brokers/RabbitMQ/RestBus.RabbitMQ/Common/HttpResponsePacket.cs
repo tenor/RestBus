@@ -1,10 +1,8 @@
-using RestBus.RabbitMQ.Common;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 
-namespace RestBus.RabbitMQ.Common
+namespace RestBus.RabbitMQ
 {
  
     //TODO: Describe why this class exists
@@ -13,13 +11,38 @@ namespace RestBus.RabbitMQ.Common
         public int StatusCode;
         public string StatusDescription;
 
-
-        static string[] contentHeaders = { "ALLOW", "CONTENT-DISPOSITION", "CONTENT-ENCODING", "CONTENT-LANGUAGE", "CONTENT-LOCATION", "CONTENT-MD5", 
-                                             "CONTENT-RANGE", "CONTENT-TYPE", "EXPIRES", "LAST-MODIFIED", "CONTENT-LENGTH"  };
-
-
         public HttpResponsePacket()
         {
+        }
+
+        public HttpResponsePacket(HttpResponseMessage response)
+        {
+            foreach (var hdr in response.Headers)
+            {
+                AddHttpHeader(hdr);
+            }
+
+            if (response.Content != null)
+            {
+                foreach (var hdr in response.Content.Headers)
+                {
+                    AddHttpHeader(hdr);
+                }
+            }
+
+            this.Version = response.Version.ToString();
+            this.StatusCode = (int)response.StatusCode;
+            this.StatusDescription = response.ReasonPhrase;
+
+            if (response.Content != null)
+            {
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    response.Content.CopyToAsync(ms).Wait();
+                    Content = ms.ToArray();
+                }
+            }
+
         }
 
         public override byte[] Serialize()
@@ -59,52 +82,6 @@ namespace RestBus.RabbitMQ.Common
             }
 
         }
-
-        public bool TryGetHttpResponseMessage(out HttpResponseMessage response)
-        {
-            try
-            {
-                response = new HttpResponseMessage
-                {
-                    Content = new ByteArrayContent(this.Content ?? new byte[0]),
-                    Version = new Version(this.Version),
-                    ReasonPhrase = this.StatusDescription,
-                    StatusCode = (System.Net.HttpStatusCode)this.StatusCode
-                };
-
-                string hdrKey;
-                foreach (var hdr in this.Headers)
-                {
-                    if (hdr.Key == null) continue;
-
-                    hdrKey = hdr.Key.Trim().ToUpperInvariant();
-
-                    if (hdrKey == "CONTENT-LENGTH") continue; //Content Length is automaitically calculated
-
-                    if (Array.IndexOf<String>(contentHeaders, hdrKey) >= 0)
-                    {
-                        //TODO: Confirm if HttpResponseMessage will break headers into "," commas whereas in actuality header in Packet is an entire header
-                        response.Content.Headers.Add(hdr.Key.Trim(), hdr.Value);
-                    }
-                    else
-                    {
-                        response.Headers.Add(hdr.Key.Trim(), hdr.Value);
-                    }
-
-                    //TODO: Check if a string can be parsed properly into the typed header
-
-                    //Test adding multiple headers of the same name will do. // Look up the Add overload that takes an ienumerable<string> to figure out its purpose.
-                }
-            }
-            catch
-            {
-                response = null;
-                return false;
-            }
-
-            return true;
-        }
-
 
         public static HttpResponsePacket Deserialize(byte[] data)
         {
@@ -177,6 +154,28 @@ namespace RestBus.RabbitMQ.Common
 
         }
 
+        public bool TryGetHttpResponseMessage(out HttpResponseMessage response)
+        {
+            try
+            {
+                response = new HttpResponseMessage
+                {
+                    Content = new ByteArrayContent(this.Content ?? new byte[0]),
+                    Version = new Version(this.Version),
+                    ReasonPhrase = this.StatusDescription,
+                    StatusCode = (System.Net.HttpStatusCode)this.StatusCode
+                };
+
+                PopulateHeaders(response.Content.Headers, response.Headers);
+            }
+            catch
+            {
+                response = null;
+                return false;
+            }
+
+            return true;
+        }
 
 
     }

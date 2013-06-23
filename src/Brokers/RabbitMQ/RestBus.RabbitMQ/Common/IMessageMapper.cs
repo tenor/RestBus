@@ -1,5 +1,5 @@
 using System.Net.Http;
-namespace RestBus.RabbitMQ.Common
+namespace RestBus.RabbitMQ
 {
     public interface IMessageMapper
     {

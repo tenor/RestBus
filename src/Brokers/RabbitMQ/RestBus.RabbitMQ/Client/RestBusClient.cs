@@ -1,6 +1,6 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Framing.v0_9_1;
-using RestBus.RabbitMQ.Common;
+using RestBus.RabbitMQ;
 using System;
 using System.Net.Http;
 using System.Threading;

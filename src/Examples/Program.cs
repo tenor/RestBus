@@ -1,6 +1,5 @@
 using RestBus.RabbitMQ.Client;
-using RestBus.RabbitMQ.Common;
-//using RestBus.RabbitMQ.Subscriber;
+using RestBus.RabbitMQ;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +22,7 @@ namespace Examples
 
             msg.Headers.Add("Accept", "application/json, text/javascript, */*; q=0.01, */*; q=0.01");
 
-            //TODO: This doesn't return a timeout error when the message times out it returns ("Error in the application" 
+            //TODO: This doesn't return a timeout error when the message times out it returns ("Error in the application")
             var m = client.SendAsync(msg, System.Threading.CancellationToken.None).Result;
 
             client.Dispose();
