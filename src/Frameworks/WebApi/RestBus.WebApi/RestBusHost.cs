@@ -1,5 +1,4 @@
-using RestBus.RabbitMQ;
-using RestBus.RabbitMQ.Subscriber;
+using RestBus.Common;
 using System;
 using System.Net.Http;
 using System.Security.Principal;
@@ -167,7 +166,7 @@ namespace RestBus.WebApi
             var responsePkt = new HttpResponsePacket(responseMsg);
 
             //Add/Update Subscriber-Id header
-            responsePkt.Headers[RestBusSubscriber.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
+            responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
 
             return responsePkt;
         }

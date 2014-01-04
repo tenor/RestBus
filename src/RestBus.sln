@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestBus.ServiceStack", "Fra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestBus.WebApi", "Frameworks\WebApi\RestBus.WebApi\RestBus.WebApi.csproj", "{ECCF6050-A89D-4570-8E1F-E524DA19EDC5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestBus.Common", "Common\RestBus.Common\RestBus.Common.csproj", "{CA13AFF8-BE69-416C-9CF2-A8029F9AC60C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +33,10 @@ Global
 		{ECCF6050-A89D-4570-8E1F-E524DA19EDC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ECCF6050-A89D-4570-8E1F-E524DA19EDC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ECCF6050-A89D-4570-8E1F-E524DA19EDC5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA13AFF8-BE69-416C-9CF2-A8029F9AC60C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA13AFF8-BE69-416C-9CF2-A8029F9AC60C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA13AFF8-BE69-416C-9CF2-A8029F9AC60C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA13AFF8-BE69-416C-9CF2-A8029F9AC60C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

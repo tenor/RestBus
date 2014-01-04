@@ -1,4 +1,3 @@
-using RestBus.RabbitMQ;
 using ServiceStack.ServiceHost;
 using ServiceStack.WebHost.Endpoints;
 using System;
@@ -8,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ServiceStack.WebHost.Endpoints.Extensions;
 using System.IO;
+using RestBus.Common;
 
 namespace RestBus.ServiceStack
 {

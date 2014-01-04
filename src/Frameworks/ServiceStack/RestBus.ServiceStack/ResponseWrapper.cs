@@ -1,4 +1,3 @@
-using RestBus.RabbitMQ.Subscriber;
 using ServiceStack.ServiceHost;
 using System;
 using System.Collections.Generic;

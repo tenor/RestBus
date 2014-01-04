@@ -1,5 +1,7 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Framing.v0_9_1;
+using RestBus.Common;
+using RestBus.Common.Amqp;
 using RestBus.RabbitMQ;
 using System;
 using System.Net.Http;
@@ -46,9 +48,9 @@ namespace RestBus.RabbitMQ.Client
         {
             this.messageMapper = messageMapper;
             this.exchangeInfo = messageMapper.GetExchangeInfo();
-            this.clientId = Utils.GetRandomId();
-            this.exchangeName = Utils.GetExchangeName(exchangeInfo);
-            this.callbackQueueName = Utils.GetCallbackQueueName(exchangeInfo, clientId);
+            this.clientId = AmqpUtils.GetRandomId();
+            this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo);
+            this.callbackQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
             this.WaitForResponse = true;
 
             //Map request to RabbitMQ Host and exchange, 
@@ -104,13 +106,13 @@ namespace RestBus.RabbitMQ.Client
                     //Redeclare exchanges and queues every 30 seconds
 
                     Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
-                    Utils.DeclareExchangeAndQueues(channel, exchangeInfo, exchangeDeclareSync, null);
+                    AmqpUtils.DeclareExchangeAndQueues(channel, exchangeInfo, exchangeDeclareSync, null);
                 }
 
 
                 //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
 
-                string correlationId = Utils.GetRandomId();
+                string correlationId = AmqpUtils.GetRandomId();
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
 
                 //TODO: Check if cancellation token was set before operation even began
@@ -229,7 +231,7 @@ namespace RestBus.RabbitMQ.Client
 
                 //Send message
                 channel.BasicPublish(exchangeName,
-                                messageMapper.GetRoutingKey(request) ?? Utils.GetWorkQueueRoutingKey(),
+                                messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),
                                 basicProperties,
                                 (new HttpRequestPacket(request)).Serialize());
 
@@ -367,7 +369,7 @@ namespace RestBus.RabbitMQ.Client
                             {
                                 //Declare call back queue
                                 var callbackQueueArgs = new System.Collections.Hashtable();
-                                callbackQueueArgs.Add("x-expires", (long)Utils.GetCallbackQueueExpiry().TotalMilliseconds);
+                                callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
 
                                 channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 

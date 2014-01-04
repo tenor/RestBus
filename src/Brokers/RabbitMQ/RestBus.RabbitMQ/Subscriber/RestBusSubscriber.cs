@@ -1,5 +1,7 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Framing.v0_9_1;
+using RestBus.Common;
+using RestBus.Common.Amqp;
 using RestBus.RabbitMQ;
 using System;
 using System.Collections.Generic;
@@ -28,13 +30,12 @@ namespace RestBus.RabbitMQ.Subscriber
         bool isStarted = false;
         global::RabbitMQ.Util.SharedQueue lastProcessedQueue = null;
         readonly ConnectionFactory connectionFactory;
-        public const string SUBSCRIBER_ID_HEADER = "X-RestBus-Subscriber-Id";
 
         public RestBusSubscriber(IMessageMapper messageMapper )
         {
 
             exchangeInfo = messageMapper.GetExchangeInfo();
-            subscriberId = Utils.GetRandomId();
+            subscriberId = AmqpUtils.GetRandomId();
 
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeInfo.ServerAddress;
@@ -135,18 +136,18 @@ namespace RestBus.RabbitMQ.Subscriber
             }
              */
 
-            //Recdeclare exchanges and queues
-            Utils.DeclareExchangeAndQueues(workChannel, exchangeInfo, exchangeDeclareSync, subscriberId);
+            //Redeclare exchanges and queues
+            AmqpUtils.DeclareExchangeAndQueues(workChannel, exchangeInfo, exchangeDeclareSync, subscriberId);
 
             //Listen on work queue
             workConsumer = new QueueingBasicConsumer(workChannel, queue);
-            string workQueueName = Utils.GetWorkQueueName(exchangeInfo);
+            string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
             workChannel.BasicConsume(workQueueName, false, workConsumer);
 
             //Listen on subscriber queue
             subscriberChannel = conn.CreateModel();
             subscriberConsumer = new QueueingBasicConsumer(subscriberChannel, queue);
-            string subscriberWorkQueueName = Utils.GetSubscriberQueueName(exchangeInfo, subscriberId);
+            string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
             subscriberChannel.BasicConsume(subscriberWorkQueueName, false, subscriberConsumer);
         }
 
@@ -259,7 +260,7 @@ namespace RestBus.RabbitMQ.Subscriber
                 request.Headers["Content-Length"] = new string[] { (request.Content == null ? 0 : request.Content.Length).ToString() };
 
                 //Add/Update Subscriber-Id header
-                request.Headers[SUBSCRIBER_ID_HEADER] = new string[] { this.subscriberId };
+                request.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { this.subscriberId };
 
             }
             catch

@@ -44,6 +44,8 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AmqpUtils.cs" />
+    <Compile Include="BasicMessageMapper.cs" />
     <Compile Include="Client\Formatting\CloneableExtensions.cs" />
     <Compile Include="Client\Formatting\CommonWebApiResources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -82,17 +84,7 @@
     <Compile Include="Client\RequestOptions.cs" />
     <Compile Include="Client\RestBusClient.cs" />
     <Compile Include="Client\RestBusClientExtensions.cs" />
-    <Compile Include="Common\BasicMessageMapper.cs" />
-    <Compile Include="Common\ExchangeInfo.cs" />
-    <Compile Include="Common\HttpMessageReader.cs" />
-    <Compile Include="Common\HttpPacket.cs" />
-    <Compile Include="Common\HttpRequestPacket.cs" />
-    <Compile Include="Common\HttpResponsePacket.cs" />
-    <Compile Include="Common\IMessageMapper.cs" />
-    <Compile Include="Common\Utils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Subscriber\HttpContext.cs" />
-    <Compile Include="Subscriber\IRestBusSubscriber.cs" />
     <Compile Include="Subscriber\RestBusSubscriber.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -107,7 +99,12 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Common\RestBus.Common\RestBus.Common.csproj">
+      <Project>{ca13aff8-be69-416c-9cf2-a8029f9ac60c}</Project>
+      <Name>RestBus.Common</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
