@@ -90,7 +90,14 @@ namespace RestBus.RabbitMQ
 	
 	                var subscriberQueueArgs = new System.Collections.Hashtable();
 	                subscriberQueueArgs.Add("x-expires", (long)Utils.GetSubscriberQueueExpiry().TotalMilliseconds);
-	
+
+                    //TODO: Look into making the subscriber queue exclusive
+                    //and retry with a different id if the queue has alreasy been taken.
+                    //in this case the Id property of the ISubscriber interface should be changed to GetId()
+                    //and will be documented to return the "current" id.
+                    //In fact Hide GetId and id property for both client and subscriber, they should be private for now.
+                    //Write something similar for the client.
+
 	                //TODO: the line below can throw some kind of socket exception, so what do you do in that situation
 	                //Bear in mind that Restart may call this code.
 	                //The exception name is the OperationInterruptedException

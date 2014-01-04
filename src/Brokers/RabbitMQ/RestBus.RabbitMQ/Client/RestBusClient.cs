@@ -23,7 +23,7 @@ namespace RestBus.RabbitMQ.Client
 
     public class RestBusClient : HttpClient
     {
-        const string REQUEST_OPTIONS_KEY = "_rb_options";
+        const string REQUEST_OPTIONS_KEY = "_RestBus_request_options";
 
         readonly IMessageMapper messageMapper;
         readonly ExchangeInfo exchangeInfo;

@@ -136,7 +136,10 @@ namespace RestBus.WebApi
             }
             catch
             {
-                //TODO: Log this (shouldn't occur)
+                //TODO: There's a null-reference exception in V4.0 of HttpRoutingDispatcher
+                //so if a null reference exception is found -- return a 404
+
+                //TODO: Log this 
                 return;
             }
             finally

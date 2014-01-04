@@ -167,7 +167,7 @@ namespace RestBus.RabbitMQ
         }
 
         //This method tries to get an absolute uri from the provided resource
-        private static string machineHostName = Environment.MachineName ?? "localhost";
+        private static string machineHostName;
         private static Uri GetUriFromResource(string resource)
         {
             string path, query;
@@ -187,6 +187,10 @@ namespace RestBus.RabbitMQ
             Uri result = null;
             try
             {
+                if(machineHostName == null)
+                {
+                    machineHostName = Environment.MachineName ?? "localhost";
+                }
                 result = new UriBuilder("http", machineHostName, 80, path, query).Uri;
                 success = true;
             }
@@ -194,16 +198,22 @@ namespace RestBus.RabbitMQ
 
             if (success) return result;
 
-            //Something may be wrong with machine name, and so try localhost
-
-            try
+            if (machineHostName != "localhost")
             {
-                result = new UriBuilder("http", "localhost", 80, path, query).Uri;
-                success = true;
-            }
-            catch { }
+                //Something may be wrong with machine name, and so try localhost
+                try
+                {
+                    result = new UriBuilder("http", "localhost", 80, path, query).Uri;
+                    success = true;
+                }
+                catch { }
 
-            if (success) return result;
+                if (success)
+                {
+                    machineHostName = "localhost";
+                    return result;
+                }
+            }
 
             //Return a Relative Uri
             return new Uri(resource, UriKind.RelativeOrAbsolute);
