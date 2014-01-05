@@ -20,6 +20,12 @@
             value actually used to create the publicKey</param>
             <returns></returns>
         </member>
+        <member name="M:ServiceStack.Common.CryptUtils.CreatePublicAndPrivateKeyPair">
+            <summary>
+            Create Public and Private Key Pair based on settings already in static class.
+            </summary>        
+            <returns>RsaKeyPair</returns>
+        </member>
         <member name="M:ServiceStack.Common.EnumExtensions.ToDescription(System.Enum)">
             <summary>
             Gets the textual description of the enum if it has one. e.g.
@@ -713,6 +719,12 @@
             <param name="successCode">The success code.</param>
             <param name="errorCode">The error code.</param>
         </member>
+        <member name="M:ServiceStack.Validation.ValidationErrorResult.Merge(ServiceStack.Validation.ValidationErrorResult)">
+            <summary>
+            Merge errors from another <see cref="T:ServiceStack.Validation.ValidationErrorResult"/>
+            </summary>
+            <param name="result"></param>
+        </member>
         <member name="P:ServiceStack.Validation.ValidationErrorResult.SuccessCode">
             <summary>
             Gets or sets the success code.
@@ -940,15 +952,38 @@
             <summary>
             Whether the response is an IHttpError or Exception
             </summary>
-            <param name="response"></param>
-            <returns></returns>
+        </member>
+        <member name="M:ServiceStack.Common.Web.HttpResultExtensions.ExtractHttpRanges(System.String,System.Int64,System.Int64@,System.Int64@)">
+            <summary>
+            rangeHeader should be of the format "bytes=0-" or "bytes=0-12345" or "bytes=123-456"
+            </summary>
+        </member>
+        <member name="M:ServiceStack.Common.Web.HttpResultExtensions.AddHttpRangeResponseHeaders(ServiceStack.ServiceHost.IHttpResponse,System.Int64,System.Int64,System.Int64)">
+            <summary>
+            Adds 206 PartialContent Status, Content-Range and Content-Length headers
+            </summary>
+        </member>
+        <member name="M:ServiceStack.Common.Web.HttpResultExtensions.WritePartialTo(System.IO.Stream,System.IO.Stream,System.Int64,System.Int64)">
+            <summary>
+            Writes partial range as specified by start-end, from fromStream to toStream.
+            </summary>
         </member>
         <member name="M:ServiceStack.Common.RequestContextExtensions.SetItem(ServiceStack.ServiceHost.IRequestContext,System.String,System.Object)">
             <summary>
             Store an entry in the IHttpRequest.Items Dictionary
             </summary>
         </member>
+        <member name="M:ServiceStack.Common.RequestContextExtensions.SetItem(ServiceStack.ServiceHost.IHttpRequest,System.String,System.Object)">
+            <summary>
+            Store an entry in the IHttpRequest.Items Dictionary
+            </summary>
+        </member>
         <member name="M:ServiceStack.Common.RequestContextExtensions.GetItem(ServiceStack.ServiceHost.IRequestContext,System.String)">
+            <summary>
+            Get an entry from the IHttpRequest.Items Dictionary
+            </summary>
+        </member>
+        <member name="M:ServiceStack.Common.RequestContextExtensions.GetItem(ServiceStack.ServiceHost.IHttpRequest,System.String)">
             <summary>
             Get an entry from the IHttpRequest.Items Dictionary
             </summary>

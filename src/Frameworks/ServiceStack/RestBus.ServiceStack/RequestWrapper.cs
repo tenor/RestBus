@@ -339,5 +339,10 @@ namespace RestBus.ServiceStack
             return Encoding.UTF8.GetString(bytes.ToArray());
 
         }
+
+        public Uri UrlReferrer
+        {
+            get { return null; }
+        }
     }
 }

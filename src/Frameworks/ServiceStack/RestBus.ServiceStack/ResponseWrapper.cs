@@ -150,6 +150,11 @@ namespace RestBus.ServiceStack
             }
         }
 
+        public void SetContentLength(long contentLength)
+        {
+            //headers["Content-Length"] = contentLength.ToString();
+        }
+
         private string GetStatusDescription(int statusCode)
         {
             switch (statusCode)
@@ -256,5 +261,8 @@ namespace RestBus.ServiceStack
             }
 
         }
+
+
+
     }
 }

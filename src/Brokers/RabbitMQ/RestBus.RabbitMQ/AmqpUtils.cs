@@ -58,6 +58,8 @@ namespace RestBus.RabbitMQ
 			return TimeSpan.FromMinutes(1);
 		}
 
+
+		//NOTE This is the only method that cannot be moved into RestBus.Common so keep that in mind if intergrating other Amqp brokers
 		public static void DeclareExchangeAndQueues(global::RabbitMQ.Client.IModel channel, ExchangeInfo exchangeInfo, object syncObject, string subscriberId )
 		{
 			//TODO: IS the lock statement here necessary?

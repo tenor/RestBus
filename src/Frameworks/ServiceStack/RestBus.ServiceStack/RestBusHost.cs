@@ -43,6 +43,14 @@ namespace RestBus.ServiceStack
 			throw new NotImplementedException();
 		}
 
+		public List<Type> RegisteredTypes
+		{
+			get
+			{
+				return System.Linq.Enumerable.ToList( handlerMap.Keys);
+			}
+		}
+
 		public IMessageFactory MessageFactory
 		{
 			get;
@@ -160,7 +168,8 @@ namespace RestBus.ServiceStack
 
 			RestHandler handler = null;
 
-			var restPath = RestHandler.FindMatchingRestPath(httpReq.HttpMethod, httpReq.PathInfo);
+			string contentType;
+			var restPath = RestHandler.FindMatchingRestPath(httpReq.HttpMethod, httpReq.PathInfo, out contentType);
 			if (restPath != null)
 			{
 				handler = new RestHandler { RestPath = restPath, RequestName = restPath.RequestType.Name };

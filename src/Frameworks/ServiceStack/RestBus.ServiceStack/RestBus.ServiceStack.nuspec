@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>RestBus.ServiceStack</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>ServiceStack support for RestBus</description>
+    <copyright>Copyright 2014</copyright>
+    <tags>servicestack amqp rabbitmq messaging queueing restbus rest</tags>
+    <dependencies>
+       <dependency id="ServiceStack" version="[3.9.71,4)" />
+       <dependency id="ServiceStack.Common" version="[3.9.71,4)" />
+       <dependency id="RestBus.Common" version="0.4.0" />
+    </dependencies>
+  </metadata>
+</package>
