@@ -28,30 +28,32 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <p>RestBus enables you to consume your ServiceStack and WebAPI service endpoints via RabbitMQ.<br>
+          <p>RestBus enables you to consume your WebAPI and ServiceStack service endpoints via RabbitMQ.<br>
 With RestBus, queuing or sending a message asynchronously is as simple as:</p>
 
-<div class="highlight highlight-csharp"><pre><span class="kt">var</span> <span class="n">amqpUrl</span> <span class="p">=</span> <span class="s">"amqp:localhost:5672"</span><span class="p">;</span> <span class="c1">//AMQP URL for RabbitMQ installation</span>
+<div class="highlight highlight-csharp"><pre><span class="kt">var</span> <span class="n">amqpUrl</span> <span class="p">=</span> <span class="s">"amqp:localhost:5672"</span><span class="p">;</span> <span class="c1">//AMQP URL for RabbitMQ server</span>
 <span class="kt">var</span> <span class="n">serviceName</span> <span class="p">=</span> <span class="s">"madagascar"</span><span class="p">;</span> <span class="c1">//The unique identifier for the target service</span>
 
-<span class="n">RestBusClient</span> <span class="n">client</span> <span class="p">=</span> <span class="k">new</span> <span class="n">RestBusClient</span><span class="p">(</span><span class="k">new</span> <span class="n">BasicMessageMapper</span><span class="p">(</span><span class="n">amqpUrl</span><span class="p">,</span> <span class="n">serviceName</span><span class="p">));</span>
+<span class="kt">var</span> <span class="n">client</span> <span class="p">=</span> <span class="k">new</span> <span class="n">RestBusClient</span><span class="p">(</span><span class="k">new</span> <span class="n">BasicMessageMapper</span><span class="p">(</span><span class="n">amqpUrl</span><span class="p">,</span> <span class="n">serviceName</span><span class="p">));</span>
 <span class="kt">var</span> <span class="n">response</span> <span class="p">=</span> <span class="n">client</span><span class="p">.</span><span class="n">GetAsync</span><span class="p">(</span><span class="s">"/hello/random"</span><span class="p">,</span> <span class="k">null</span><span class="p">).</span><span class="n">Result</span><span class="p">;</span>
 </pre></div>
 
 <p>Does that look familiar?<br>
-If you've ever used <a href="http://msdn.microsoft.com/en-us/library/system.net.http.httpclient(v=vs.110).aspx" target="_blank">.NET's HttpClient</a>, you'll be right at home with the <code>RestBusClient</code> class. In fact they derive from the same base class.</p>
+If you've ever used <a href="http://msdn.microsoft.com/en-us/library/system.net.http.httpclient(v=vs.110).aspx" target="_blank">.NET's HttpClient</a> class, you'll be right at home with the <code>RestBusClient</code> class. In fact they derive from the same base class.</p>
 
 <h3>
 <a name="why-do-i-need-this" class="anchor" href="#why-do-i-need-this"><span class="octicon octicon-link"></span></a>Why do I need this?</h3>
 
 <h3>
-<a name="featuresadvantages" class="anchor" href="#featuresadvantages"><span class="octicon octicon-link"></span></a>Features/Advantages</h3>
+<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h3>
 
 <p><strong>Zero Configuration</strong></p>
 
 <p><strong>Use your Existing Web Services</strong></p>
 
-<p><strong>Concurrent Processing</strong></p>
+<ul>
+<li>If you are already making calls with the <code>HttpClient</code> class, simply switch the client to a <code>RestBusClient</code> class and your messages will be routed through RabbitMQ.</li>
+</ul><p><strong>Concurrent Processing</strong></p>
 
 <h3>
 <a name="getting-started" class="anchor" href="#getting-started"><span class="octicon octicon-link"></span></a>Getting Started</h3>
