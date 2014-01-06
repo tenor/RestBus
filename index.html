@@ -41,7 +41,8 @@ With RestBus, queuing or sending a message asynchronously is as simple as:</p>
 </pre></div>
 
 <p>Does that look familiar?<br>
-If you've ever used <a href="http://msdn.microsoft.com/en-us/library/system.net.http.httpclient(v=vs.110).aspx" target="_blank">.NET's HttpClient</a> class, you'll be right at home with the <code>RestBusClient</code> class. In fact they derive from the same base class.</p>
+If you've ever used <a href="http://msdn.microsoft.com/en-us/library/system.net.http.httpclient(v=vs.110).aspx" target="_blank">.NET's HttpClient</a> class, you'll be right at home with the <code>RestBusClient</code> class. In fact they derive from the same base class.<br>
+Yes, <code>RestBusClient</code> is a HTTP client. It just happens to route HTTP messages through RabbitMQ.</p>
 
 <h2>
 <a name="why-do-i-need-this" class="anchor" href="#why-do-i-need-this"><span class="octicon octicon-link"></span></a>Why do I need this?</h2>
