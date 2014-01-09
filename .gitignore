@@ -49,3 +49,4 @@ _ReSharper*/
 
 #NuGet packages
 *.nupkg
+/nuget/pack_solution.bat

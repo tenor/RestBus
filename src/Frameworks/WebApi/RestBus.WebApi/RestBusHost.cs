@@ -131,6 +131,7 @@ namespace RestBus.WebApi
                     Thread.CurrentPrincipal = anonymousPrincipal.Value;
                 }
                 //TODO: consider using await here -- what's the implication of that considering the thread principal may have changed?
+                //TODO: This is a candidate for Task.ConfigureAwait(false)
                 responseMsg = requestHandler.SendAsync(requestMsg).Result;
             }
             catch
@@ -143,6 +144,7 @@ namespace RestBus.WebApi
             }
             finally
             {
+                //TODO: This thread might be different from the original one. DO we care?
                 Thread.CurrentPrincipal = originalPrincipal;
             }
 
