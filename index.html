@@ -31,13 +31,13 @@
           <p>RestBus enables you to consume your WebAPI and ServiceStack service endpoints via RabbitMQ.<br>
 With RestBus, queuing or sending a message asynchronously is as simple as:</p>
 
-<div class="highlight highlight-csharp"><pre><span class="kt">var</span> <span class="n">amqpUrl</span> <span class="p">=</span> <span class="s">"amqp:localhost:5672"</span><span class="p">;</span> <span class="c1">//AMQP URL for RabbitMQ server</span>
+<div class="highlight highlight-csharp"><pre><span class="kt">var</span> <span class="n">amqpUrl</span> <span class="p">=</span> <span class="s">"amqp:localhost:5672"</span><span class="p">;</span> <span class="c1">//AMQP URI for RabbitMQ server</span>
 <span class="kt">var</span> <span class="n">serviceName</span> <span class="p">=</span> <span class="s">"madagascar"</span><span class="p">;</span> <span class="c1">//The unique identifier for the target service</span>
 
 <span class="kt">var</span> <span class="n">client</span> <span class="p">=</span> <span class="k">new</span> <span class="n">RestBusClient</span><span class="p">(</span><span class="k">new</span> <span class="n">BasicMessageMapper</span><span class="p">(</span><span class="n">amqpUrl</span><span class="p">,</span> <span class="n">serviceName</span><span class="p">));</span>
 
 <span class="c1">//Call the /hello/random endpoint</span>
-<span class="kt">var</span> <span class="n">response</span> <span class="p">=</span> <span class="n">client</span><span class="p">.</span><span class="n">GetAsync</span><span class="p">(</span><span class="s">"/hello/random"</span><span class="p">,</span> <span class="k">null</span><span class="p">).</span><span class="n">Result</span><span class="p">;</span>
+<span class="kt">var</span> <span class="n">response</span> <span class="p">=</span> <span class="k">await</span> <span class="n">client</span><span class="p">.</span><span class="n">GetAsync</span><span class="p">(</span><span class="s">"/hello/random"</span><span class="p">);</span>
 </pre></div>
 
 <p>Does that look familiar?<br>
@@ -51,9 +51,19 @@ Yes, <code>RestBusClient</code> is a HTTP client. It just happens to route HTTP 
 <a name="getting-started" class="anchor" href="#getting-started"><span class="octicon octicon-link"></span></a>Getting Started</h2>
 
 <ul>
-<li><p><a href="https://github.com/tenor/RestBus/wiki/Self-hosting-ServiceStack-service-(RabbitMQ-callable)" target="_blank">Using RestBus in a Self-Hosted ServiceStack Service</a></p></li>
-<li><p><a href="https://github.com/tenor/RestBus/wiki/ASP.NET-hosted-ServiceStack-Service-(RabbitMQ-callable)" target="_blank">Using RestBus in an ASP.NET hosted ServiceStack Service</a></p></li>
-<li><p>Queuing Messages</p></li>
+<li>
+<a href="https://github.com/tenor/RestBus/wiki/Web-API-service-(RabbitMQ-callable)" target="_blank">Using RestBus in a Web API service</a><br>
+</li>
+<li>
+<a href="https://github.com/tenor/RestBus/wiki/Self-hosting-Web-API-service-(RabbitMQ-callable)" target="_blank">Using RestBus in a Self-Hosted Web API service</a><br>
+</li>
+<li>
+<a href="https://github.com/tenor/RestBus/wiki/ASP.NET-hosted-ServiceStack-Service-(RabbitMQ-callable)" target="_blank">Using RestBus in an ASP.NET hosted ServiceStack service</a><br>
+</li>
+<li>
+<a href="https://github.com/tenor/RestBus/wiki/Self-hosting-ServiceStack-service-(RabbitMQ-callable)" target="_blank">Using RestBus in a Self-Hosted ServiceStack service</a><br>
+</li>
+<li>Queuing Messages</li>
 </ul><h2>
 <a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
 
