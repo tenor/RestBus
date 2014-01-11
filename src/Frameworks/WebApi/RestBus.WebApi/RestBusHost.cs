@@ -108,6 +108,7 @@ namespace RestBus.WebApi
                 //TODO: Return Bad Request Response
             }
 
+            //TODO: Protect this statement with a Try Catch
             requestHandler.EnsureInitialized();
 
             // Add current synchronization context to request parameter

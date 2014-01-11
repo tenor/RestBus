@@ -44,7 +44,7 @@ namespace RestBus.WebApi
         void Initialize()
         {
             config.Initializer(config);
-            InnerHandler = HttpClientFactory.CreatePipeline(dispatcher, config.MessageHandlers);
+            InnerHandler = GetSafePipeline(dispatcher, config.MessageHandlers);
         }
 
         protected override void Dispose(bool disposing)
@@ -59,6 +59,42 @@ namespace RestBus.WebApi
             }
 
             base.Dispose(disposing);
+        }
+
+        private HttpMessageHandler GetSafePipeline(HttpMessageHandler innerHandler, System.Collections.ObjectModel.Collection<DelegatingHandler> handlers)
+        {
+            /*
+             * This method exists because HttpClientFactory.CreatePipeline will chain the messagehandlers and so, 
+             * when HttpServer calls HttpClientFactory.CreatePipeline, it will throw an exception if it has already been chained. 
+             * i.e.:
+             * 
+             * If you make a request through RestBus before making any request through regular HTTP, regular HTTP requests to
+             * WebAPI will fail.
+             * 
+             * See http://aspnetwebstack.codeplex.com/workitem/260 for a related issue that triggers this bug
+             * 
+             * The most robust way to fix this is to detect that the pipeline has not been chained and then create 
+             * some kind of MessagehandlerWrapper pipeline that's chained and use that instead without chaining 
+             * the individual MessageHandlers it wraps.
+             * 
+             * For now, just return the first message handler if it's already chained, if not return the innerHandler.
+             * 
+             */
+
+            if (handlers == null || !System.Linq.Enumerable.Any(handlers))
+            {
+                return innerHandler;
+            }
+
+            var first = System.Linq.Enumerable.First(handlers);
+            if (first.InnerHandler != null)
+            {
+                return innerHandler;
+            }
+
+            return first;
+
+
         }
 
     }
