@@ -23,9 +23,9 @@ namespace RestBus.WebApi
 
         }
 
-        public Task<HttpResponseMessage> SendAsync (HttpRequestMessage request)
+        public Task<HttpResponseMessage> SendMessageAsync (HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            return base.SendAsync(request, CancellationToken.None);
+            return base.SendAsync(request, cancellationToken);
         }
 
         public void EnsureInitialized()
@@ -89,10 +89,11 @@ namespace RestBus.WebApi
             var first = System.Linq.Enumerable.First(handlers);
             if (first.InnerHandler != null)
             {
-                return innerHandler;
+                //Already wired
+                return first;
             }
 
-            return first;
+            return innerHandler;
 
 
         }
