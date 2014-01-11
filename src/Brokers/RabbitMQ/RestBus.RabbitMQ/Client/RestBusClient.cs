@@ -4,26 +4,16 @@ using RestBus.Common;
 using RestBus.Common.Amqp;
 using RestBus.RabbitMQ;
 using System;
+using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
 {
 
-    //TODO: Flesh out class, make the incompatible methods such as the StreamXXX ones work somehow or throw a NotSUpportedException
-
-    //TODO: RestBusClient should derive directly from HttpMessageInvoker
-    //Problem with HTTPClient include
-    //1. TimeOut cannot be controlled (Needed to introduce WaitForResponse which can be eliminated if derived directly )
-    //2. CancelPendingRequest cannot be overriden
-    //3. The BIG one is SendAsync overloads that cannot be overriden but call into the System.Net.Http stack
-    //4. IsStarted can also be checked to enforce things like Timeout, BaseUrl and DefaultHeaders
-
-    //The drawback to this approach is that all the regular Get/Post/Async methods will have to be reimplemented + all fields and properties
-    //Also extension methods would have to be called either against RestBus or HttpMessageInvoker
-
-    public class RestBusClient : HttpClient
+    public class RestBusClient : HttpMessageInvoker
     {
         const string REQUEST_OPTIONS_KEY = "_RestBus_request_options";
 
@@ -42,16 +32,28 @@ namespace RestBus.RabbitMQ.Client
         int lastExchangeDeclareTickCount = 0;
         volatile bool disposed = false;
 
+        private bool hasKickStarted = false;
+        private Uri baseAddress;
+        private HttpRequestHeaders defaultRequestHeaders;
+        private TimeSpan timeout;
+
+
         public const int HEART_BEAT = 30;
 
-        public RestBusClient(IMessageMapper messageMapper) : base()
+        /// <summary>Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.</summary>
+        public RestBusClient(IMessageMapper messageMapper) : base(new HttpClientHandler(), true)
         {
+            //Set default HttpClient related fields
+            timeout = TimeSpan.FromSeconds(100);
+            MaxResponseContentBufferSize = int.MaxValue;
+            //TODO: Setup cancellation token here.
+
+            //Configure RestBus fields/properties
             this.messageMapper = messageMapper;
             this.exchangeInfo = messageMapper.GetExchangeInfo();
             this.clientId = AmqpUtils.GetRandomId();
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo);
             this.callbackQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
-            this.WaitForResponse = true;
 
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
@@ -59,9 +61,84 @@ namespace RestBus.RabbitMQ.Client
             connectionFactory.RequestedHeartbeat = HEART_BEAT;
         }
 
-        //TODO: FIgure out how to handle the CancelPendingRequests() method (It's not overridable)
+        /// <summary>Gets or sets the base address of Uniform Resource Identifier (URI) of the Internet resource used when sending requests.</summary>
+        /// <returns>Returns <see cref="T:System.Uri" />.The base address of Uniform Resource Identifier (URI) of the Internet resource used when sending requests.</returns>
+        public Uri BaseAddress
+        {
+            get
+            {
+                return baseAddress;
+            }
+            set
+            {
+                EnsureNotStartedOrDisposed();
+                baseAddress = value;
+            }
+        }
+
+        /// <summary>Gets the headers which should be sent with each request.</summary>
+        /// <returns>Returns <see cref="T:System.Net.Http.Headers.HttpRequestHeaders" />.The headers which should be sent with each request.</returns>
+        public HttpRequestHeaders DefaultRequestHeaders
+        {
+            //HTTPRequestHeaders ctor is internal so this property cannot be instantiated by tgis class and so is useless ...sigh...
+            //Fortunately, you can specify Headers per message when using the RequestOptions class
+
+            //TODO: Consider throwing a NotSupported Exception here instead, since a caller will not expect null.
+            get
+            {
+                return defaultRequestHeaders;
+            }
+        }
+
+        /// <summary>Gets or sets the maximum number of bytes to buffer when reading the response content.</summary>
+        /// <returns>Returns <see cref="T:System.Int32" />.The maximum number of bytes to buffer when reading the response content. The default value for this property is 64K.</returns>
+        /// <exception cref="T:System.ArgumentOutOfRangeException">The size specified is less than or equal to zero.</exception>
+        /// <exception cref="T:System.InvalidOperationException">An operation has already been started on the current instance. </exception>
+        /// <exception cref="T:System.ObjectDisposedException">The current instance has been disposed. </exception>
+        public long MaxResponseContentBufferSize
+        {
+            //Entire Message is dequeued from queue
+            //So this property is only here for compatibilty with HttpClient and does nothing
+            get;
+            set;
+        }
+
+        /// <summary>Gets or sets the number of milliseconds to wait before the request times out.</summary>
+        /// <returns>Returns <see cref="T:System.TimeSpan" />.The number of milliseconds to wait before the request times out.</returns>
+        /// <exception cref="T:System.ArgumentOutOfRangeException">The timeout specified is less than zero and is not <see cref="F:System.Threading.Timeout.Infinite" />.</exception>
+        /// <exception cref="T:System.InvalidOperationException">An operation has already been started on the current instance. </exception>
+        /// <exception cref="T:System.ObjectDisposedException">The current instance has been disposed.</exception>
+        public TimeSpan Timeout
+        {
+            get
+            {
+                return timeout;
+            }
+            set
+            {
+                if (value != System.Threading.Timeout.InfiniteTimeSpan  && value <= TimeSpan.Zero)
+                {
+                    throw new ArgumentOutOfRangeException("value");
+                }
+                EnsureNotStartedOrDisposed();
+                timeout = value;
+            }
+        }
+
+        /// <summary>Cancel all pending requests on this instance.</summary>
+        public void CancelPendingRequests()
+        {
+            //TODO: Implement CancelPendingRequests() 
+        }
+
 
         //TODO: Confirm that this method is thread safe
+
+        /// <summary>Send an HTTP request as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="request">The HTTP request message to send.</param>
+        /// <param name="cancellationToken">The cancellation token to cancel operation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="request" /> was null.</exception>
         public override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
         {
             if (request == null) throw new ArgumentNullException("request");
@@ -72,7 +149,7 @@ namespace RestBus.RabbitMQ.Client
             }
 
             if (disposed) throw new ObjectDisposedException("Client has been disposed");
-
+            hasKickStarted = true;
             PrepareMessage(request);
 
             //Get Request Options
@@ -264,6 +341,311 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
+        #region xxxAsync Methods attached to the HTTP Client
+
+        //All the xxxAsync methods should have been implemented as extension methods (all except SendAsync), oh well....
+
+        /// <summary>Send a DELETE request to the specified Uri as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> DeleteAsync(string requestUri)
+        {
+            return DeleteAsync(GetUri(requestUri));
+        }
+
+        /// <summary>Send a DELETE request to the specified Uri as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> DeleteAsync(Uri requestUri)
+        {
+            return DeleteAsync(requestUri, CancellationToken.None);
+        }
+
+        /// <summary>Send a DELETE request to the specified Uri with a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> DeleteAsync(string requestUri, CancellationToken cancellationToken)
+        {
+            return DeleteAsync(GetUri(requestUri), cancellationToken);
+        }
+
+        /// <summary>Send a DELETE request to the specified Uri with a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> DeleteAsync(Uri requestUri, CancellationToken cancellationToken)
+        {
+            return SendAsync(new HttpRequestMessage(HttpMethod.Delete, requestUri), cancellationToken);
+        }
+
+        /// <summary>Send a GET request to the specified Uri as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> GetAsync(string requestUri)
+        {
+            return GetAsync(GetUri(requestUri));
+        }
+
+        /// <summary>Send a GET request to the specified Uri as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> GetAsync(Uri requestUri)
+        {
+            return GetAsync(requestUri, HttpCompletionOption.ResponseContentRead);
+        }
+
+        /// <summary>Send a GET request to the specified Uri with an HTTP completion option as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="completionOption">An HTTP completion option value that indicates when the operation should be considered completed.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> GetAsync(string requestUri, HttpCompletionOption completionOption)
+        {
+            return GetAsync(GetUri(requestUri), completionOption);
+        }
+
+        /// <summary>Send a GET request to the specified Uri with an HTTP completion option as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="completionOption">An HTTP  completion option value that indicates when the operation should be considered completed.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> GetAsync(Uri requestUri, HttpCompletionOption completionOption)
+        {
+            return GetAsync(requestUri, completionOption, CancellationToken.None);
+        }
+
+        /// <summary>Send a GET request to the specified Uri with a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> GetAsync(string requestUri, CancellationToken cancellationToken)
+        {
+            return GetAsync(GetUri(requestUri), cancellationToken);
+        }
+
+        /// <summary>Send a GET request to the specified Uri with a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> GetAsync(Uri requestUri, CancellationToken cancellationToken)
+        {
+            return GetAsync(requestUri, HttpCompletionOption.ResponseContentRead, cancellationToken);
+        }
+
+        /// <summary>Send a GET request to the specified Uri with an HTTP completion option and a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="completionOption">An HTTP  completion option value that indicates when the operation should be considered completed.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> GetAsync(string requestUri, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+        {
+            return GetAsync(GetUri(requestUri), completionOption, cancellationToken);
+        }
+
+        /// <summary>Send a GET request to the specified Uri with an HTTP completion option and a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="completionOption">An HTTP  completion option value that indicates when the operation should be considered completed.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> GetAsync(Uri requestUri, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+        {
+            return SendAsync(new HttpRequestMessage(HttpMethod.Get, requestUri), completionOption, cancellationToken);
+        }
+
+        /// <summary>Send a GET request to the specified Uri and return the response body as a byte array in an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<byte[]> GetByteArrayAsync(string requestUri)
+        {
+            return GetByteArrayAsync(GetUri(requestUri));
+        }
+
+        /// <summary>Send a GET request to the specified Uri and return the response body as a byte array in an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<byte[]> GetByteArrayAsync(Uri requestUri)
+        {
+            //TODO: Look into adding Task.ConfigureAwait (false) here
+            //TODO: Test this -- Note there is a similar method in RestBusExtensions
+            return SendAsync(new HttpRequestMessage(HttpMethod.Get, requestUri)).ContinueWith<byte[]>( task => task.Result.Content.ReadAsByteArrayAsync().Result);
+        }
+
+        /// <summary>Send a GET request to the specified Uri and return the response body as a stream in an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<Stream> GetStreamAsync(string requestUri)
+        {
+            return GetStreamAsync(GetUri(requestUri));
+        }
+
+        /// <summary>Send a GET request to the specified Uri and return the response body as a stream in an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<Stream> GetStreamAsync(Uri requestUri)
+        {
+            //TODO: Look into adding Task.ConfigureAwait (false) here
+            //TODO: Test this -- Note there is a similar method in RestBusExtensions
+            return SendAsync(new HttpRequestMessage(HttpMethod.Get, requestUri)).ContinueWith<Stream>(task => task.Result.Content.ReadAsStreamAsync().Result);
+        }
+
+        /// <summary>Send a GET request to the specified Uri and return the response body as a string in an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<string> GetStringAsync(string requestUri)
+        {
+            return GetStringAsync(GetUri(requestUri));
+        }
+
+        /// <summary>Send a GET request to the specified Uri and return the response body as a string in an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<string> GetStringAsync(Uri requestUri)
+        {
+            //TODO: Look into adding Task.ConfigureAwait (false) here
+            //TODO: Test this -- Note there is a similar method in RestBusExtensions
+            return SendAsync(new HttpRequestMessage(HttpMethod.Get, requestUri)).ContinueWith<string>(task => task.Result.Content.ReadAsStringAsync().Result);
+        }
+
+        /// <summary>Send a POST request to the specified Uri as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="content">The HTTP request content sent to the server.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content)
+        {
+            return PostAsync(GetUri(requestUri), content);
+        }
+
+        /// <summary>Send a POST request to the specified Uri as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="content">The HTTP request content sent to the server.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> PostAsync(Uri requestUri, HttpContent content)
+        {
+            return PostAsync(requestUri, content, CancellationToken.None);
+        }
+
+        /// <summary>Send a POST request with a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="content">The HTTP request content sent to the server.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, CancellationToken cancellationToken)
+        {
+            return PostAsync(GetUri(requestUri), content, cancellationToken);
+        }
+
+        /// <summary>Send a POST request with a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="content">The HTTP request content sent to the server.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> PostAsync(Uri requestUri, HttpContent content, CancellationToken cancellationToken)
+        {
+            return SendAsync(new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = content
+            }, cancellationToken);
+        }
+
+        /// <summary>Send a PUT request to the specified Uri as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="content">The HTTP request content sent to the server.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content)
+        {
+            return PutAsync(GetUri(requestUri), content);
+        }
+
+        /// <summary>Send a PUT request to the specified Uri as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="content">The HTTP request content sent to the server.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> PutAsync(Uri requestUri, HttpContent content)
+        {
+            return PutAsync(requestUri, content, CancellationToken.None);
+        }
+
+        /// <summary>Send a PUT request with a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="content">The HTTP request content sent to the server.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content, CancellationToken cancellationToken)
+        {
+            return PutAsync(GetUri(requestUri), content, cancellationToken);
+        }
+
+        /// <summary>Send a PUT request with a cancellation token as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="requestUri">The Uri the request is sent to.</param>
+        /// <param name="content">The HTTP request content sent to the server.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="requestUri" /> was null.</exception>
+        public Task<HttpResponseMessage> PutAsync(Uri requestUri, HttpContent content, CancellationToken cancellationToken)
+        {
+            return SendAsync(new HttpRequestMessage(HttpMethod.Put, requestUri)
+            {
+                Content = content
+            }, cancellationToken);
+        }
+
+        /// <summary>Send an HTTP request as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="request">The HTTP request message to send.</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="request" /> was null.</exception>
+        public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
+        {
+            return SendAsync(request, HttpCompletionOption.ResponseContentRead, CancellationToken.None);
+        }
+
+        /// <summary>Send an HTTP request as an asynchronous operation.</summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="request">The HTTP request message to send.</param>
+        /// <param name="completionOption">When the operation should complete (as soon as a response is available or after reading the whole response content).</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="request" /> was null.</exception>
+        public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, HttpCompletionOption completionOption)
+        {
+            return SendAsync(request, completionOption, CancellationToken.None);
+        }
+
+        /// <summary>Send an HTTP request as an asynchronous operation. </summary>
+        /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
+        /// <param name="request">The HTTP request message to send.</param>
+        /// <param name="completionOption">When the operation should complete (as soon as a response is available or after reading the whole response content).</param>
+        /// <exception cref="T:System.ArgumentNullException">The <paramref name="request" /> was null.</exception>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+        {
+            return SendAsync(request, cancellationToken);
+        }
+
+
+        #endregion
+
         internal static RequestOptions GetRequestOptions(HttpRequestMessage request)
         {
             object reqObj;
@@ -278,6 +660,22 @@ namespace RestBus.RabbitMQ.Client
         internal static void SetRequestOptions(HttpRequestMessage request, RequestOptions options)
         {
             request.Properties[REQUEST_OPTIONS_KEY] = options;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+
+            //TODO: Work on this method
+
+            //TODO: Confirm that this does in fact kill all background threads
+
+            disposed = true;
+            DisposeConnection();
+
+            //TODO: Kill all channels in channel pool (if implemented)
+
+            base.Dispose(disposing);
+
         }
 
         private void CleanupMessagingResources(IModel channel, Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
@@ -307,13 +705,6 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        //TODO: Get a better name (SkipResponse maybe ??)
-        public virtual bool WaitForResponse
-        {
-            get;
-            set;
-        }
-
         private TimeSpan GetRequestTimeout(RequestOptions options)
         {
             return GetTimeoutValue(options).Duration();
@@ -321,26 +712,24 @@ namespace RestBus.RabbitMQ.Client
 
         private bool IsRequestTimeoutInfinite(RequestOptions options)
         {
-            return GetTimeoutValue(options) == System.Threading.Timeout.InfiniteTimeSpan;
+            return GetTimeoutValue(options) == System.Threading.Timeout.InfiniteTimeSpan; //new TimeSpan(0, 0, 0, 0, -1)
         }
 
         private TimeSpan GetTimeoutValue(RequestOptions options)
         {
-            TimeSpan timeout;
-            if (!WaitForResponse)
-            {
-                timeout = TimeSpan.Zero;
-            }
-            else
-            {
-                timeout = this.Timeout;
-            }
+            TimeSpan timeoutVal = this.Timeout;
 
             if (options != null && options.Timeout.HasValue)
             {
-                timeout = options.Timeout.Value;
+                timeoutVal = options.Timeout.Value;
             }
-            return timeout;
+            return timeoutVal;
+        }
+
+        private Uri GetUri(string uri)
+        {
+            if (string.IsNullOrEmpty(uri)) return null;
+            return new Uri(uri, UriKind.RelativeOrAbsolute);
         }
 
         private void StartCallbackQueueConsumer()
@@ -450,21 +839,10 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
-
-        protected override void Dispose(bool disposing)
+        private void EnsureNotStartedOrDisposed()
         {
-
-            //TODO: Work on this method
-
-            //TODO: Confirm that this does in fact kill all background threads
-
-            disposed = true;
-            DisposeConnection();
-
-            //TODO: Kill all channels in channel pool (if implemented)
-
-            base.Dispose(disposing);
-
+            if (disposed) throw new ObjectDisposedException(GetType().FullName);
+            if (hasKickStarted) throw new InvalidOperationException("This instance has already started one or more requests. Properties can only be modified before sending the first request.");
         }
 
         private void PrepareMessage(HttpRequestMessage request)

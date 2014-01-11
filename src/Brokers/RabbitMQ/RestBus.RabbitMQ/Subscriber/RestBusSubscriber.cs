@@ -1,14 +1,11 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Framing.v0_9_1;
+
 using RestBus.Common;
 using RestBus.Common.Amqp;
-using RestBus.RabbitMQ;
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Subscriber
 {
@@ -197,6 +194,8 @@ namespace RestBus.RabbitMQ.Subscriber
                         //TODO: Log exception: Don't know what else to expect here
 
                     }
+
+                    //TODO: IS this the best place to place reconnection logic? In a catch block??
 
                     //Loop until a connection is made
                     bool successfulRestart = false;

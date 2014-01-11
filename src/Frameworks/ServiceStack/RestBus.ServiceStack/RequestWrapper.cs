@@ -1,13 +1,12 @@
+using RestBus.Common;
 using ServiceStack.ServiceHost;
 using ServiceStack.WebHost.Endpoints;
+using ServiceStack.WebHost.Endpoints.Extensions;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using ServiceStack.WebHost.Endpoints.Extensions;
-using System.IO;
-using RestBus.Common;
 
 namespace RestBus.ServiceStack
 {
