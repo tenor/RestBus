@@ -49,7 +49,7 @@
     <Compile Include="External\System.Web.Http\HttpRequestContext.cs" />
     <Compile Include="External\System.Web.Http\RequestBackedHttpRequestContext.cs" />
     <Compile Include="RequestHandler.cs" />
-    <Compile Include="External\System.Web.Http\HttpRequestHelperExtensions.cs" />
+    <Compile Include="HttpRequestHelperExtensions.cs" />
     <Compile Include="RestBusHost.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
