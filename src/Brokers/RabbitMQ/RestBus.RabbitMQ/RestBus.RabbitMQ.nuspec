@@ -9,11 +9,14 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>RabbitMQ broker for RestBus</description>
     <copyright>Copyright 2014</copyright>
-    <tags>restbus rabbitmq amqp messaging queue queueing rest</tags>
+    <tags>restbus rabbitmq amqp messaging queue queueing rest http</tags>
     <dependencies>
        <dependency id="Newtonsoft.Json" version="4.5.1" />
        <dependency id="RabbitMQ.Client" version="3.0.0" />
        <dependency id="RestBus.Common" version="0.4.0" />
     </dependencies>
+    <frameworkAssemblies>
+       <frameworkAssembly assemblyName="System.Net.Http" />
+    </frameworkAssemblies>
   </metadata>
 </package>

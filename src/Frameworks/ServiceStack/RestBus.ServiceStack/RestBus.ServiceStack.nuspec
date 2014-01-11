@@ -9,7 +9,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>ServiceStack support for RestBus</description>
     <copyright>Copyright 2014</copyright>
-    <tags>servicestack amqp rabbitmq messaging queueing restbus rest</tags>
+    <tags>servicestack amqp rabbitmq messaging queueing restbus rest http</tags>
     <dependencies>
        <dependency id="ServiceStack" version="[3.9.71,4)" />
        <dependency id="ServiceStack.Common" version="[3.9.71,4)" />
