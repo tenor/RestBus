@@ -179,6 +179,8 @@ namespace RestBus.Common
                 virtualPath += "/";
             }
 
+            var originalResource = resource;
+
             if (resource != null && resource.StartsWith("/"))
             {
                 resource = resource.Substring(1);
@@ -230,7 +232,7 @@ namespace RestBus.Common
             }
 
             //Return a Relative Uri
-            return new Uri(resource, UriKind.RelativeOrAbsolute);
+            return new Uri(originalResource, UriKind.RelativeOrAbsolute);
         }
 
 

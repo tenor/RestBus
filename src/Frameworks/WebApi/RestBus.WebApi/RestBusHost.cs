@@ -165,6 +165,32 @@ namespace RestBus.WebApi
                     {
                         responseMsg = exception.Response;
                     }
+                    catch (NullReferenceException exception)
+                    {
+                        // There is a bug in older versions of HttpRoutingDispatcher which causes a null reference exception when
+                        // a route could not be found
+                        // This bug can be triggered by sending a request for a url that doesn't have a route
+                        // This commit fixes the bug https://github.com/ASP-NET-MVC/aspnetwebstack/commit/6a0c03f9e549966a7f806f8b696ec4cb2ec272e6#diff-c89c7bee3d225a037a6d04e8e4447460
+
+                        if (exception.TargetSite != null && exception.TargetSite.DeclaringType != null
+                            && exception.TargetSite.DeclaringType.FullName == "System.Web.Http.Dispatcher.HttpRoutingDispatcher"
+                            && exception.TargetSite.Name == "SendAsync")
+                        {
+                            //This is the bug, so send a 404 instead
+
+                            const string NoRouteMatchedHttpPropertyKey = "MS_NoRouteMatched";
+
+                            requestMsg.Properties.Add(NoRouteMatchedHttpPropertyKey, true);
+                            responseMsg = requestMsg.CreateErrorResponse(
+                                HttpStatusCode.NotFound,
+                                String.Format("No HTTP resource was found that matches the request URI '{0}'.", requestMsg.RequestUri));
+
+                        }
+                        else
+                        {
+                            responseMsg = CreateResponseMessageFromException(exception);
+                        }
+                    }
                     catch (Exception exception)
                     {
                         responseMsg = CreateResponseMessageFromException(exception);
@@ -213,14 +239,14 @@ namespace RestBus.WebApi
             var sb = new System.Text.StringBuilder();
             sb.Append("Exception: \r\n\r\n");
             sb.Append(ex.Message);
-            sb.Append("\r\n\r\n StackTrace: \r\n\r\n");
+            sb.Append("\r\n\r\nStackTrace: \r\n\r\n");
             sb.Append(ex.StackTrace);
 
             if (ex.InnerException != null)
             {
                 sb.Append("Inner Exception: \r\n\r\n");
                 sb.Append(ex.InnerException.Message);
-                sb.Append("\r\n\r\n StackTrace: \r\n\r\n");
+                sb.Append("\r\n\r\nStackTrace: \r\n\r\n");
                 sb.Append(ex.InnerException.StackTrace);
             }
 

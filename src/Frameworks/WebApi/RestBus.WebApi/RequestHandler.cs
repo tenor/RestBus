@@ -16,19 +16,19 @@ namespace RestBus.WebApi
         private object initializationTarget;
 
 
-        public RequestHandler(HttpConfiguration config)
+        internal RequestHandler(HttpConfiguration config)
         {
             this.config = config;
             this.dispatcher = new HttpRoutingDispatcher(config);
 
         }
 
-        public Task<HttpResponseMessage> SendMessageAsync (HttpRequestMessage request, CancellationToken cancellationToken)
+        internal Task<HttpResponseMessage> SendMessageAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return base.SendAsync(request, cancellationToken);
         }
 
-        public void EnsureInitialized()
+        internal void EnsureInitialized()
         {
             //Not sure why this lazy initialization was done this way in aspnetwebstack\HttpServer.cs
             LazyInitializer.EnsureInitialized(ref initializationTarget, ref initialized, ref initializationSync, () =>
