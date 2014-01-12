@@ -4,9 +4,9 @@ namespace RestBus.Common
     public interface IRestBusSubscriber : IDisposable
     {
         string Id { get; }
-        HttpContext Dequeue();
+        MessageContext Dequeue();
         void Start();
 
-        void SendResponse(HttpContext context, HttpResponsePacket response);
+        void SendResponse(MessageContext context, HttpResponsePacket response);
     }
 }

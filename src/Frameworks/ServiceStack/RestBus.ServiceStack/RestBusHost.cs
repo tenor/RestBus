@@ -115,7 +115,7 @@ namespace RestBus.ServiceStack
 
 		private void RunLoop()
 		{
-			HttpContext context = null;
+			MessageContext context = null;
 			while (true)
 			{
 				try
@@ -152,7 +152,7 @@ namespace RestBus.ServiceStack
 
 			try
 			{
-				ProcessRequest((HttpContext)state);
+				ProcessRequest((MessageContext)state);
 			}
 			catch  (Exception ex)
 			{
@@ -160,7 +160,7 @@ namespace RestBus.ServiceStack
 			}
 		}
 
-		private void ProcessRequest(HttpContext context)
+		private void ProcessRequest(MessageContext context)
 		{
 			var httpReq = new RequestWrapper(context.Request);
 			var httpRes = new ResponseWrapper();

@@ -58,7 +58,7 @@ namespace RestBus.WebApi
 
         private void RunLoop()
         {
-            HttpContext context = null;
+            MessageContext context = null;
             while (true)
             {
                 try
@@ -84,8 +84,6 @@ namespace RestBus.WebApi
                     }
                 }
 
-                //System.Threading.ThreadPool.QueueUserWorkItem(Process, context);
-
                 var cancellationToken = CancellationToken.None;
                 Task.Factory.StartNew((Func<object, Task>)Process, Tuple.Create(context, cancellationToken), cancellationToken);
 
@@ -96,7 +94,7 @@ namespace RestBus.WebApi
         {
             try
             {
-                var typedState = (Tuple<HttpContext, CancellationToken>) state;
+                var typedState = (Tuple<MessageContext, CancellationToken>) state;
                 await ProcessRequest(typedState.Item1, typedState.Item2);
             }
             catch (Exception ex)
@@ -105,7 +103,7 @@ namespace RestBus.WebApi
             }
         }
 
-        private async Task ProcessRequest(HttpContext restbusContext, CancellationToken cancellationToken)
+        private async Task ProcessRequest(MessageContext restbusContext, CancellationToken cancellationToken)
         {
             //NOTE: This method is called on a background thread and must be protected by an outer big-try catch
 

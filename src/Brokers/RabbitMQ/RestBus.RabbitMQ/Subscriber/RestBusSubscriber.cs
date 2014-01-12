@@ -149,7 +149,7 @@ namespace RestBus.RabbitMQ.Subscriber
         }
 
         //Will block until a request is received from either queue
-        public HttpContext Dequeue()
+        public MessageContext Dequeue()
         {
             if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
             if(workConsumer == null || subscriberConsumer == null) throw new InvalidOperationException("Start the subscriber prior to calling Dequeue");
@@ -222,7 +222,7 @@ namespace RestBus.RabbitMQ.Subscriber
 
             }
 
-            return new HttpContext { Request = request, ReplyToQueue = properties == null ? null : properties.ReplyTo, CorrelationId = properties.CorrelationId };
+            return new MessageContext { Request = request, ReplyToQueue = properties == null ? null : properties.ReplyTo, CorrelationId = properties.CorrelationId };
 
 
         }
@@ -332,7 +332,7 @@ namespace RestBus.RabbitMQ.Subscriber
             }
         }
 
-        public void SendResponse(HttpContext context, HttpResponsePacket response )
+        public void SendResponse(MessageContext context, HttpResponsePacket response )
         {
             if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
             if (String.IsNullOrEmpty(context.ReplyToQueue)) return;

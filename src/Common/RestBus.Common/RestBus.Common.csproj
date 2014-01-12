@@ -39,7 +39,7 @@
     <Compile Include="Amqp\IMessageMapper.cs" />
     <Compile Include="Shared.cs" />
     <Compile Include="CommonUtils.cs" />
-    <Compile Include="HttpContext.cs" />
+    <Compile Include="MessageContext.cs" />
     <Compile Include="HttpMessageReader.cs" />
     <Compile Include="HttpPacket.cs" />
     <Compile Include="HttpRequestPacket.cs" />
