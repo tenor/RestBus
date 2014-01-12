@@ -1,4 +1,4 @@
-//Sourced and modified from https://github.com/ServiceStack/ServiceStack/blob/master/src/ServiceStack/ServiceHost/Cookies.cs
+//Sourced and modified from https://github.com/ServiceStack/ServiceStack/blob/v3/src/ServiceStack/ServiceHost/Cookies.cs
 
 using ServiceStack.Common.Web;
 using ServiceStack.ServiceHost;

@@ -10,7 +10,7 @@ using System.Web.Http.Routing;
 
 namespace RestBus.WebApi
 {
-    public static class HttpRequestHelperExtensions
+    internal static class HttpRequestHelperExtensions
     {
 
         const string RequestContextKey = "MS_RequestContext";

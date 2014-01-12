@@ -12,6 +12,13 @@ namespace Examples
     {
         static void Main(string[] args)
         {
+            /*
+             * An example that composes a HttpRequest Message and sends it via the RestBus RabbitMQ client.
+             * 
+             * For more examples, see the https://github.com/tenor/RestBus.Examples repo
+             * 
+             */
+
             BasicMessageMapper msgMapper = new BasicMessageMapper("amqp:localhost:5672", "test");
             RestBusClient client = new RestBusClient(msgMapper);
 
