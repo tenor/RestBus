@@ -16,6 +16,7 @@ namespace RestBus.WebApi
         private readonly IRestBusSubscriber subscriber;
         private readonly HttpConfiguration config;
         private readonly RequestHandler requestHandler;
+        private string appVirtualPath;
         private bool hasStarted = false;
 
 
@@ -111,7 +112,7 @@ namespace RestBus.WebApi
             HttpRequestMessage requestMsg;
             HttpResponseMessage responseMsg = null;
 
-            if (!restbusContext.Request.TryGetHttpRequestMessage(out requestMsg))
+            if (!restbusContext.Request.TryGetHttpRequestMessage(appVirtualPath ?? (appVirtualPath = System.Web.Hosting.HostingEnvironment.ApplicationVirtualPath), out requestMsg))
             {
                 responseMsg = new HttpResponseMessage(HttpStatusCode.BadRequest) { ReasonPhrase = "Bad Request" };
             }
@@ -195,8 +196,6 @@ namespace RestBus.WebApi
                 //TODO: Log SendResponse error
             }
         }
-
-
 
         private HttpResponsePacket CreateResponsePacketFromMessage(HttpResponseMessage responseMsg, IRestBusSubscriber subscriber)
         {

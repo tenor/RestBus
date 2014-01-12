@@ -141,7 +141,7 @@ namespace RestBus.Common
 
         }
 
-        public bool TryGetHttpRequestMessage(out HttpRequestMessage request)
+        public bool TryGetHttpRequestMessage(string virtualPath, out HttpRequestMessage request)
         {
             try
             {
@@ -150,7 +150,7 @@ namespace RestBus.Common
                     Content = new ByteArrayContent(this.Content ?? new byte[0]),
                     Version = new Version(this.Version),
                     Method = new HttpMethod(this.Method ?? "GET"),
-                    RequestUri = GetUriFromResource(this.Resource)
+                    RequestUri = GetUriFromResource(virtualPath, this.Resource)
                 };
 
                 PopulateHeaders(request.Content.Headers, request.Headers);
@@ -166,18 +166,34 @@ namespace RestBus.Common
 
         //This method tries to get an absolute uri from the provided resource
         private static string machineHostName;
-        private static Uri GetUriFromResource(string resource)
+        private static Uri GetUriFromResource(string virtualPath, string resource)
         {
+
+            if (String.IsNullOrEmpty(virtualPath))
+            {
+                virtualPath = "/";
+            }
+
+            if (!virtualPath.EndsWith("/"))
+            {
+                virtualPath += "/";
+            }
+
+            if (resource != null && resource.StartsWith("/"))
+            {
+                resource = resource.Substring(1);
+            }
+
             string path, query;
             int qmarkIndex = resource.IndexOf('?');
             if (qmarkIndex == -1)
             {
-                path = resource;
+                path = virtualPath + resource;
                 query = string.Empty;
             }
             else
             {
-                path = resource.Substring(0, qmarkIndex);
+                path = virtualPath + resource.Substring(0, qmarkIndex);
                 query = resource.Substring(qmarkIndex);
             }
             bool success = false;
