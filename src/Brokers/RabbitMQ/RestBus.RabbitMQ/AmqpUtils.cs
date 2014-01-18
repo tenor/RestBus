@@ -1,4 +1,6 @@
+using RabbitMQ.Client;
 using RestBus.Common.Amqp;
+using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.IO;
 
@@ -60,7 +62,7 @@ namespace RestBus.RabbitMQ
 
 
 		//NOTE This is the only method that cannot be moved into RestBus.Common so keep that in mind if intergrating other Amqp brokers
-		public static void DeclareExchangeAndQueues(global::RabbitMQ.Client.IModel channel, ExchangeInfo exchangeInfo, object syncObject, string subscriberId )
+		public static void DeclareExchangeAndQueues(IModel channel, ExchangeInfo exchangeInfo, object syncObject, string subscriberId )
 		{
 			//TODO: IS the lock statement here necessary?
 			lock (syncObject)

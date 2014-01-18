@@ -44,8 +44,11 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChannelPooling\AmqpChannelPooler.cs" />
     <Compile Include="AmqpUtils.cs" />
     <Compile Include="BasicMessageMapper.cs" />
+    <Compile Include="ChannelPooling\AmqpModelContainer.cs" />
+    <Compile Include="ChannelPooling\ChannelFlags.cs" />
     <Compile Include="Client\Formatting\CloneableExtensions.cs" />
     <Compile Include="Client\Formatting\CommonWebApiResources.Designer.cs">
       <AutoGen>True</AutoGen>

@@ -3,6 +3,7 @@ using RabbitMQ.Client.Framing.v0_9_1;
 using RestBus.Common;
 using RestBus.Common.Amqp;
 using RestBus.RabbitMQ;
+using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.IO;
 using System.Net.Http;
@@ -24,6 +25,7 @@ namespace RestBus.RabbitMQ.Client
         readonly string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
         QueueingBasicConsumer callbackConsumer = null;
+        AmqpChannelPooler pooler;
         IConnection conn = null;
         event Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> responseArrivalNotification = null;
 
@@ -158,15 +160,15 @@ namespace RestBus.RabbitMQ.Client
             //Declare messaging resources
             Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival = null;
             ManualResetEventSlim receivedEvent = null;
-            IModel channel = null;
+            AmqpModelContainer model = null;
 
             try
             {
                 //Start Callback consumer if it hasn't started
                 StartCallbackQueueConsumer();
 
-                //TODO: test if conn is null, then leave
-                if (conn == null)
+                //TODO: test if conn or pooler is null, then leave
+                if (conn == null || pooler == null)
                 {
                     //TODO: This means a connection could not be created most likely because the server was Unreachable
                     //TODO: Throw some kind of HTTP 500 (Unreachable) exception
@@ -175,7 +177,7 @@ namespace RestBus.RabbitMQ.Client
 
                 //NOTE: Do not share channels across threads.
                 //TODO: Investigate Channel pooling to see if there is significant increase in throughput on connections with reasonable latency
-                channel = conn.CreateModel();
+                model = pooler.GetChannel(ChannelFlags.None);
 
                 TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
                 if (lastExchangeDeclareTickCount == 0 || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
@@ -183,7 +185,7 @@ namespace RestBus.RabbitMQ.Client
                     //Redeclare exchanges and queues every 30 seconds
 
                     Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
-                    AmqpUtils.DeclareExchangeAndQueues(channel, exchangeInfo, exchangeDeclareSync, null);
+                    AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
                 }
 
 
@@ -294,7 +296,7 @@ namespace RestBus.RabbitMQ.Client
                                 }
                                 finally
                                 {
-                                    CleanupMessagingResources(channel, arrival, receivedEvent);
+                                    CleanupMessagingResources(model, arrival, receivedEvent);
                                 }
                             },
                                 null,
@@ -307,7 +309,7 @@ namespace RestBus.RabbitMQ.Client
                 }
 
                 //Send message
-                channel.BasicPublish(exchangeName,
+                model.Channel.BasicPublish(exchangeName,
                                 messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),
                                 basicProperties,
                                 (new HttpRequestPacket(request)).Serialize());
@@ -320,7 +322,7 @@ namespace RestBus.RabbitMQ.Client
                     //Zero timespan means the client isn't interested in a response
                     taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[0]) });
 
-                    CleanupMessagingResources(channel, arrival, receivedEvent);
+                    CleanupMessagingResources(model, arrival, receivedEvent);
                 }
 
                 //TODO: Verify that calls to Wait() on the task do not loop for change and instead rely on Kernel for notification
@@ -332,7 +334,7 @@ namespace RestBus.RabbitMQ.Client
             {
                 //TODO: Log this
 
-                CleanupMessagingResources(channel, arrival, receivedEvent);
+                CleanupMessagingResources(model, arrival, receivedEvent);
 
                 throw;
 
@@ -672,22 +674,17 @@ namespace RestBus.RabbitMQ.Client
             disposed = true;
             DisposeConnection();
 
+            if (pooler != null) pooler.Dispose();
+
             //TODO: Kill all channels in channel pool (if implemented)
 
             base.Dispose(disposing);
 
         }
 
-        private void CleanupMessagingResources(IModel channel, Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
+        private void CleanupMessagingResources(AmqpModelContainer channel, Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
         {
-            if (channel != null)
-            {
-                try
-                {
-                    channel.Dispose();
-                }
-                catch { }
-            }
+            pooler.ReturnChannel(channel);
 
             if (arrival != null)
             {
@@ -753,6 +750,13 @@ namespace RestBus.RabbitMQ.Client
                             //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
                             //NOTE: This is the only place where connections are created in the client
                             conn = connectionFactory.CreateConnection();
+
+                            if (pooler != null)
+                            {
+                                pooler.Dispose();
+                            }
+                            //TODO: Is it necessary to do a CompareExchange since this is within a lock?
+                            pooler = new AmqpChannelPooler(conn);
 
                             using (IModel channel = conn.CreateModel())
                             {
