@@ -180,17 +180,27 @@ namespace RestBus.RabbitMQ.Client
                     throw new ApplicationException("This is Bad");
                 }
 
+                //TODO: Check if cancellation token was set before operation even began
+                var taskSource = new TaskCompletionSource<HttpResponseMessage>();
 
-                //Setup message task and response arrival event notification:
+                //NOTE: You're not supposed to share channels across threads but I think we're fine here.
+
+                //TODO: Investigate Channel pooling to see if there is significant increase in throughput on connections with reasonable latency
+                model = pooler.GetModel(ChannelFlags.None);
+
+                TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
+                if (lastExchangeDeclareTickCount == 0 || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
+                {
+                    //Redeclare exchanges and queues every 30 seconds
+
+                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                    AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
+                }
 
                 //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
 
                 string correlationId = AmqpUtils.GetRandomId();
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
-
-                //TODO: Check if cancellation token was set before operation even began
-
-                var taskSource = new TaskCompletionSource<HttpResponseMessage>();
 
                 TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
 
@@ -237,7 +247,7 @@ namespace RestBus.RabbitMQ.Client
                                 responsePacket = res;
                             }
                             receivedEvent.Set();
-                            responseArrivalNotification -= arrival;
+                            responseArrivalNotification -= arrival; //confirm that this is threadsafe
                         }
                     };
 
@@ -248,7 +258,8 @@ namespace RestBus.RabbitMQ.Client
                     }
 
 
-                    //Create task for message arrival event
+                    //Wait for received event on the ThreadPool
+
                     var localVariableInitLock = new object();
 
                     lock (localVariableInitLock)
@@ -302,22 +313,6 @@ namespace RestBus.RabbitMQ.Client
                     responseArrivalNotification += arrival; //Confirm that this is thread-safe
                 }
 
-
-                //Get AMQP Model/Channel and send message
-
-                //NOTE: Do not share channels across threads.
-                //TODO: Investigate Channel pooling to see if there is significant increase in throughput on connections with reasonable latency
-                model = pooler.GetModel(ChannelFlags.None);
-
-                TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
-                if (lastExchangeDeclareTickCount == 0 || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
-                {
-                    //Redeclare exchanges and queues every 30 seconds
-
-                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
-                    AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
-                }
-
                 //Send message
                 model.Channel.BasicPublish(exchangeName,
                                 messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),
@@ -354,6 +349,7 @@ namespace RestBus.RabbitMQ.Client
                 }
                 CleanupMessagingResources(arrival, receivedEvent);
 
+                //TODO: Encapsulate this error in a HttpException
                 throw;
 
             }
@@ -821,6 +817,15 @@ namespace RestBus.RabbitMQ.Client
 
                                     try
                                     {
+
+                                        // TODO: Consider using a concurrent hashtable here, and use the correletation Id as the key to find the  
+                                        // delegate value, and then execute the delegate.
+                                        // The current use of an event works okay when a small number of requests are waiting for responses silmultaneously
+                                        // If the number of requests waiting for responses are in the thousands then things will get slow
+                                        // because all delegates are triggered for each incoming response event.
+
+                                        //NOTE: This means correlation id will be passed into CLeanUpMessagingResources to find delegate.
+
                                         if (responseArrivalNotification != null)
                                         {
                                             responseArrivalNotification(evt);
@@ -870,6 +875,7 @@ namespace RestBus.RabbitMQ.Client
 
                     //Wait for Thread to start consuming messages
                     consumerSignal.Wait();
+                    consumerSignal.Dispose();
 
                     //TODO: Examine exception if it were set and rethrow it
 

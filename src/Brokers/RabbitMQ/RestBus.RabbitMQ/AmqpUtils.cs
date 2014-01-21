@@ -41,6 +41,8 @@ namespace RestBus.RabbitMQ
 
 		public static string GetRandomId()
 		{
+            //NOTE: Might be better to have a static Random object instead of instatiating a new one everytime
+            // However, Random.NextDouble() might not be thread safe.
 			return ((long)(new Random().NextDouble() * (Int32.MaxValue - 1))).ToString("x");
 		}
 
