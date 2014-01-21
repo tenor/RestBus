@@ -1,9 +1,9 @@
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Framing.v0_9_1;
-
+using RabbitMQ.Util;
 using RestBus.Common;
 using RestBus.Common.Amqp;
-
 using System;
 using System.Threading;
 
@@ -25,7 +25,7 @@ namespace RestBus.RabbitMQ.Subscriber
 
         //TODO: Consider converting this to an int so that you can do Interlocked.Exchange here(Is that neccessary?)
         bool isStarted = false;
-        global::RabbitMQ.Util.SharedQueue lastProcessedQueue = null;
+        SharedQueue lastProcessedQueue = null;
         readonly ConnectionFactory connectionFactory;
 
         public RestBusSubscriber(IMessageMapper messageMapper )
@@ -107,7 +107,7 @@ namespace RestBus.RabbitMQ.Subscriber
             conn = connectionFactory.CreateConnection();
 
             //Create shared queue
-            global::RabbitMQ.Util.SharedQueue queue = new global::RabbitMQ.Util.SharedQueue();
+            SharedQueue queue = new SharedQueue();
 
             //Create work channel and declare exchanges and queues
             workChannel = conn.CreateModel();
@@ -157,7 +157,7 @@ namespace RestBus.RabbitMQ.Subscriber
             HttpRequestPacket request;
             IBasicProperties properties;
 
-            global::RabbitMQ.Util.SharedQueue queue1 = null, queue2 = null;
+            SharedQueue queue1 = null, queue2 = null;
 
             while (true)
             {
@@ -227,17 +227,17 @@ namespace RestBus.RabbitMQ.Subscriber
 
         }
 
-        private bool TryGetRequest(global::RabbitMQ.Util.SharedQueue queue, out HttpRequestPacket request, out IBasicProperties properties)
+        private bool TryGetRequest(SharedQueue queue, out HttpRequestPacket request, out IBasicProperties properties)
         {
             object obj;
-            global::RabbitMQ.Client.Events.BasicDeliverEventArgs evt;
+            BasicDeliverEventArgs evt;
             request = null;
             properties = null;
 
             obj = queue.DequeueNoWait(null);
             if (obj != null)
             {
-                 evt = (global::RabbitMQ.Client.Events.BasicDeliverEventArgs)obj;
+                 evt = (BasicDeliverEventArgs)obj;
             }
             else
             {

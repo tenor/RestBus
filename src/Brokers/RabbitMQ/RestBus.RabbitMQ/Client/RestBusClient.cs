@@ -1,4 +1,5 @@
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Framing.v0_9_1;
 using RestBus.Common;
 using RestBus.Common.Amqp;
@@ -25,9 +26,10 @@ namespace RestBus.RabbitMQ.Client
         readonly string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
         QueueingBasicConsumer callbackConsumer = null;
-        AmqpChannelPooler pooler;
         IConnection conn = null;
-        event Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> responseArrivalNotification = null;
+        event Action<BasicDeliverEventArgs> responseArrivalNotification = null;
+        AmqpChannelPooler _clientPool;
+
 
         readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
@@ -158,7 +160,7 @@ namespace RestBus.RabbitMQ.Client
             RequestOptions requestOptions = GetRequestOptions(request);
 
             //Declare messaging resources
-            Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival = null;
+            Action<BasicDeliverEventArgs> arrival = null;
             ManualResetEventSlim receivedEvent = null;
             AmqpModelContainer model = null;
 
@@ -166,6 +168,8 @@ namespace RestBus.RabbitMQ.Client
             {
                 //Start Callback consumer if it hasn't started
                 StartCallbackQueueConsumer();
+
+                var pooler = _clientPool; //Henceforth, use pooler since _clientPool may change and we want to work with the original pooler
 
                 //TODO: test if conn or pooler is null, then leave
                 if (conn == null || pooler == null)
@@ -177,7 +181,7 @@ namespace RestBus.RabbitMQ.Client
 
                 //NOTE: Do not share channels across threads.
                 //TODO: Investigate Channel pooling to see if there is significant increase in throughput on connections with reasonable latency
-                model = pooler.GetChannel(ChannelFlags.None);
+                model = pooler.GetModel(ChannelFlags.None);
 
                 TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
                 if (lastExchangeDeclareTickCount == 0 || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
@@ -674,7 +678,7 @@ namespace RestBus.RabbitMQ.Client
             disposed = true;
             DisposeConnection();
 
-            if (pooler != null) pooler.Dispose();
+            if (_clientPool != null) _clientPool.Dispose();
 
             //TODO: Kill all channels in channel pool (if implemented)
 
@@ -682,9 +686,12 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
-        private void CleanupMessagingResources(AmqpModelContainer channel, Action<global::RabbitMQ.Client.Events.BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
+        private void CleanupMessagingResources(AmqpModelContainer model, Action<BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
         {
-            pooler.ReturnChannel(channel);
+            if (model != null)
+            {
+                model.Close();
+            }
 
             if (arrival != null)
             {
@@ -731,7 +738,8 @@ namespace RestBus.RabbitMQ.Client
 
         private void StartCallbackQueueConsumer()
         {
-            //TODO: DOuble-checked locking -- make this better
+            //TODO: Double-checked locking -- make this better
+            //TODO: Consider moving the conn related checks into a pooler method
             if (callbackConsumer == null || conn == null || !callbackConsumer.IsRunning || !conn.IsOpen)
             {
                 lock (callbackConsumerStartSync)
@@ -747,16 +755,20 @@ namespace RestBus.RabbitMQ.Client
                         try
                         {
 
-                            //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
                             //NOTE: This is the only place where connections are created in the client
+                            //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
                             conn = connectionFactory.CreateConnection();
 
-                            if (pooler != null)
+                            AmqpChannelPooler oldpool = _clientPool;
+
+                            //TODO: Is it necessary to do a CompareExchange since this is within a lock? //Yes, cos this is in a brand new thread
+                            _clientPool = new AmqpChannelPooler(conn);
+
+                            //Dispose old pool -- after making sure new pool was assigned.
+                            if (oldpool != null)
                             {
-                                pooler.Dispose();
+                                oldpool.Dispose();
                             }
-                            //TODO: Is it necessary to do a CompareExchange since this is within a lock?
-                            pooler = new AmqpChannelPooler(conn);
 
                             using (IModel channel = conn.CreateModel())
                             {
@@ -773,7 +785,7 @@ namespace RestBus.RabbitMQ.Client
                                 consumerSignal.Set();
 
                                 object obj;
-                                global::RabbitMQ.Client.Events.BasicDeliverEventArgs evt;
+                                BasicDeliverEventArgs evt;
 
                                 while (true)
                                 {
@@ -788,7 +800,7 @@ namespace RestBus.RabbitMQ.Client
                                         throw;
                                     }
 
-                                    evt = (global::RabbitMQ.Client.Events.BasicDeliverEventArgs)obj;
+                                    evt = (BasicDeliverEventArgs)obj;
 
                                     try
                                     {
@@ -811,6 +823,9 @@ namespace RestBus.RabbitMQ.Client
                         }
                         catch
                         {
+                            //TODO: Log error (Except it's object disposed exception)
+                            //TODO: Set Exception object which will be throw by signal waiter
+
                             //Notify outer thread to move on, in case it's still waiting
                             try
                             {
@@ -818,11 +833,14 @@ namespace RestBus.RabbitMQ.Client
                             }
                             catch { }
 
-                            //TODO: Log error (Except it's object disposed exception)
-                            //TODO: Set Exception object which will be throw by signal waiter
+
                         }
                         finally
                         {
+                            if (_clientPool != null)
+                            {
+                                _clientPool.Dispose();
+                            }
                             DisposeConnection();
                         }
 

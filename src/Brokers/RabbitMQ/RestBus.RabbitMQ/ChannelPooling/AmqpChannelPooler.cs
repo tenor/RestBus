@@ -1,7 +1,8 @@
-﻿#undef ENABLE_CHANNELPOOLING
+﻿#define ENABLE_CHANNELPOOLING
 
 using RabbitMQ.Client;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,6 +16,13 @@ namespace RestBus.RabbitMQ.ChannelPooling
         readonly IConnection conn;
         volatile bool _disposed;
 
+#if ENABLE_CHANNELPOOLING
+
+        readonly ConcurrentDictionary<ChannelFlags, ConcurrentQueue<AmqpModelContainer>> _pool = new ConcurrentDictionary<ChannelFlags, ConcurrentQueue<AmqpModelContainer>>();
+        static readonly int MODEL_EXPIRY_TIMESPAN = (int)TimeSpan.FromMinutes(5).TotalMilliseconds;
+
+#endif
+
         public bool IsDisposed
         {
             get { return _disposed; }
@@ -25,43 +33,144 @@ namespace RestBus.RabbitMQ.ChannelPooling
             this.conn = conn;
         }
 
-        internal AmqpModelContainer GetChannel(ChannelFlags flags)
+        internal AmqpModelContainer GetModel(ChannelFlags flags)
         {
 #if ENABLE_CHANNELPOOLING
-            throw new NotImplementedException();
 
-            //TODO: If Disposed, throw disposed exception
+            //Search pool for a model:
+            AmqpModelContainer model = null;
 
-#else
-            return new AmqpModelContainer( conn.CreateModel(), flags);
-#endif
-
-        }
-
-        internal void ReturnChannel(AmqpModelContainer container)
-        {
-#if ENABLE_CHANNELPOOLING
-            throw new NotImplementedException();
-
-            //TODO: If Disposed, Just kill channel
-
-#else
-            if (container != null && container.Channel != null)
+            //First get the queue
+            ConcurrentQueue<AmqpModelContainer> queue;
+            if (_pool.TryGetValue(flags, out queue))
             {
-                try
+                bool retry;
+                int tick = Environment.TickCount;
+
+                //Dequeue queue until an unexpired model is found 
+                do
                 {
-                    container.Channel.Dispose();
+                    retry = false;
+                    model = null;
+                    if (queue.TryDequeue(out model))
+                    {
+                        if (HasModelExpired(tick, model))
+                        {
+
+                            DisposeModel(model); // dispose model
+                            retry = true;
+                        }
+                    }
                 }
-                catch { }
+                while (retry );
             }
+
+            if (model == null)
+            {
+                //Wasn't found, so create a new one
+                model = new AmqpModelContainer(conn.CreateModel(), flags, this);
+            }
+
+            return model;
+
+
+#else
+            return new AmqpModelContainer( conn.CreateModel(), flags, this);
+#endif
+
+        }
+
+        internal void ReturnModel(AmqpModelContainer modelContainer)
+        {
+            // NOTE: do not call AmqpModelContainer.Close() here.
+            // That method calls this method.
+
+#if ENABLE_CHANNELPOOLING
+
+            if (_disposed || HasModelExpired(Environment.TickCount, modelContainer))
+            {
+                DisposeModel(modelContainer);
+                return;
+            }
+
+            //Insert model in pool
+            ConcurrentQueue<AmqpModelContainer> queue;
+            if (_pool.TryGetValue(modelContainer.Flags, out queue))
+            {
+                //Found the queue so just enqueue the model
+                queue.Enqueue(modelContainer);
+
+                //TODO: AddOrUpdate below performs this lookup so this code here is redundant.
+                //Consider removing this code and using an Add factory to eliminate the new queue allocation below
+            }
+            else
+            {
+                //Attempt to add a new queue, if a queue doesn't exist and if it does, then add model to queue
+
+                queue = new ConcurrentQueue<AmqpModelContainer>();
+                queue.Enqueue(modelContainer);
+
+                _pool.AddOrUpdate(modelContainer.Flags, queue, (f, q) => { q.Enqueue(modelContainer); return q; });
+            }
+
+
+            //It's possible for the disposed flag to be set (and the pool flushed) right after the first _disposed check
+            //and right before the modelContainer was added, so check again. 
+            if (_disposed)
+            {
+                Flush();
+            }
+
+#else
+            DisposeModel(modelContainer);
 #endif
         }
+
+
 
         public void Dispose()
         {
             _disposed = true;
+
+#if ENABLE_CHANNELPOOLING
+            Flush();
+#endif
             
-            //TODO: CLear all items in pool
+
+        }
+
+        private void Flush()
+        {
+            var snapshot = _pool.ToArray();
+
+            ConcurrentQueue<AmqpModelContainer> queue;
+            AmqpModelContainer model;
+            foreach (var kv in snapshot)
+            {
+                queue = kv.Value;
+                while (queue.TryDequeue(out model))
+                {
+                    DisposeModel(model);
+                }
+            }
+        }
+
+        private static bool HasModelExpired(int currentTickCount, AmqpModelContainer modelContainer)
+        {
+            //TickCount wrapped around (so timespan can't be trusted) or model has expired
+            return currentTickCount < modelContainer.Created || modelContainer.Created < (currentTickCount - MODEL_EXPIRY_TIMESPAN);
+        }
+
+        private static void DisposeModel(AmqpModelContainer modelContainer)
+        {
+            if (modelContainer != null && modelContainer.Channel != null)
+            {
+                try
+                {
+                    modelContainer.Channel.Dispose();
+                }
+                catch { }
+            }
         }
     }
 }
