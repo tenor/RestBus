@@ -163,6 +163,7 @@ namespace RestBus.RabbitMQ.Client
             Action<BasicDeliverEventArgs> arrival = null;
             ManualResetEventSlim receivedEvent = null;
             AmqpModelContainer model = null;
+            bool modelClosed = false;
 
             try
             {
@@ -179,19 +180,8 @@ namespace RestBus.RabbitMQ.Client
                     throw new ApplicationException("This is Bad");
                 }
 
-                //NOTE: Do not share channels across threads.
-                //TODO: Investigate Channel pooling to see if there is significant increase in throughput on connections with reasonable latency
-                model = pooler.GetModel(ChannelFlags.None);
 
-                TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
-                if (lastExchangeDeclareTickCount == 0 || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
-                {
-                    //Redeclare exchanges and queues every 30 seconds
-
-                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
-                    AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
-                }
-
+                //Setup message task and response arrival event notification:
 
                 //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
 
@@ -300,7 +290,7 @@ namespace RestBus.RabbitMQ.Client
                                 }
                                 finally
                                 {
-                                    CleanupMessagingResources(model, arrival, receivedEvent);
+                                    CleanupMessagingResources(arrival, receivedEvent);
                                 }
                             },
                                 null,
@@ -309,7 +299,23 @@ namespace RestBus.RabbitMQ.Client
 
                     }
 
-                    responseArrivalNotification += arrival;
+                    responseArrivalNotification += arrival; //Confirm that this is thread-safe
+                }
+
+
+                //Get AMQP Model/Channel and send message
+
+                //NOTE: Do not share channels across threads.
+                //TODO: Investigate Channel pooling to see if there is significant increase in throughput on connections with reasonable latency
+                model = pooler.GetModel(ChannelFlags.None);
+
+                TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
+                if (lastExchangeDeclareTickCount == 0 || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
+                {
+                    //Redeclare exchanges and queues every 30 seconds
+
+                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                    AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
                 }
 
                 //Send message
@@ -317,6 +323,10 @@ namespace RestBus.RabbitMQ.Client
                                 messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),
                                 basicProperties,
                                 (new HttpRequestPacket(request)).Serialize());
+
+                //Close channel
+                CloseAmqpModel(model);
+                modelClosed = true;
 
 
                 if (requestTimeout == TimeSpan.Zero)
@@ -326,7 +336,7 @@ namespace RestBus.RabbitMQ.Client
                     //Zero timespan means the client isn't interested in a response
                     taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[0]) });
 
-                    CleanupMessagingResources(model, arrival, receivedEvent);
+                    CleanupMessagingResources(arrival, receivedEvent);
                 }
 
                 //TODO: Verify that calls to Wait() on the task do not loop for change and instead rely on Kernel for notification
@@ -338,7 +348,11 @@ namespace RestBus.RabbitMQ.Client
             {
                 //TODO: Log this
 
-                CleanupMessagingResources(model, arrival, receivedEvent);
+                if (!modelClosed)
+                {
+                    CloseAmqpModel(model);
+                }
+                CleanupMessagingResources(arrival, receivedEvent);
 
                 throw;
 
@@ -686,13 +700,16 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
-        private void CleanupMessagingResources(AmqpModelContainer model, Action<BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
+        private void CloseAmqpModel(AmqpModelContainer model)
         {
             if (model != null)
             {
                 model.Close();
             }
+        }
 
+        private void CleanupMessagingResources(Action<BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
+        {
             if (arrival != null)
             {
                 try

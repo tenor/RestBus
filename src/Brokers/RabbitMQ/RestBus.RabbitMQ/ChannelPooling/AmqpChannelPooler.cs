@@ -3,9 +3,6 @@
 using RabbitMQ.Client;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-
 
 
 namespace RestBus.RabbitMQ.ChannelPooling
@@ -139,6 +136,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
         }
 
+#if ENABLE_CHANNELPOOLING
         private void Flush()
         {
             var snapshot = _pool.ToArray();
@@ -155,11 +153,14 @@ namespace RestBus.RabbitMQ.ChannelPooling
             }
         }
 
+
         private static bool HasModelExpired(int currentTickCount, AmqpModelContainer modelContainer)
         {
             //TickCount wrapped around (so timespan can't be trusted) or model has expired
             return currentTickCount < modelContainer.Created || modelContainer.Created < (currentTickCount - MODEL_EXPIRY_TIMESPAN);
         }
+
+#endif
 
         private static void DisposeModel(AmqpModelContainer modelContainer)
         {
