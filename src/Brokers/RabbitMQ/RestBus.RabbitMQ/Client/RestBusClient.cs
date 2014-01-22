@@ -283,14 +283,13 @@ namespace RestBus.RabbitMQ.Client
                                         // http://stackoverflow.com/questions/10547895/how-can-i-tell-when-httpclient-has-timed-out
                                         // and http://stackoverflow.com/questions/12666922/distinguish-timeout-from-user-cancellation
                                         //
-                                        // However, for compatibility with the HttpCLient, it returns a cancellation
+                                        // However, for compatibility with the HttpClient, it returns a cancellation
                                         //
 
                                         taskSource.SetCanceled();
                                     }
                                     else
                                     {
-
                                         HttpResponseMessage msg;
                                         if (deserializationException == null && responsePacket.TryGetHttpResponseMessage(out msg))
                                         {
