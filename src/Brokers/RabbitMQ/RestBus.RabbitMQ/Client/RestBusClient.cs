@@ -358,7 +358,14 @@ namespace RestBus.RabbitMQ.Client
                 }
                 CleanupMessagingResources(arrival, receivedEvent);
 
-                throw GetWrappedException("An error occurred while sending the request.", ex);
+                if (ex is HttpRequestException)
+                {
+                    throw;
+                }
+                else
+                {
+                    throw GetWrappedException("An error occurred while sending the request.", ex);
+                }
 
             }
 
@@ -768,18 +775,12 @@ namespace RestBus.RabbitMQ.Client
 
                     Thread callBackProcessor = new Thread(p =>
                     {
-
                         try
                         {
-
                             //NOTE: This is the only place where connections are created in the client
                             //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
-                            conn = connectionFactory.CreateConnection();
-
-                            AmqpChannelPooler oldpool = _clientPool;
-
-                            //TODO: Is it necessary to do a CompareExchange since this is within a lock? //Yes, cos this is in a brand new thread (do this for conn object too)
-                            _clientPool = new AmqpChannelPooler(conn);
+                            Interlocked.Exchange(ref conn, connectionFactory.CreateConnection());
+                            AmqpChannelPooler oldpool = Interlocked.Exchange(ref _clientPool, new AmqpChannelPooler(conn));
 
                             //Dispose old pool -- after making sure new pool was assigned.
                             if (oldpool != null)
@@ -886,7 +887,7 @@ namespace RestBus.RabbitMQ.Client
                     //Examine exception if it were set and rethrow it
                     if (consumerSignalException != null)
                     {
-                        throw GetWrappedException("An error occurred while sending the request.", consumerSignalException);
+                        throw consumerSignalException;
                     }
 
                     //No more code from this point in this method
