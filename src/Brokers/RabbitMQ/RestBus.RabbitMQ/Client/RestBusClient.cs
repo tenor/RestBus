@@ -175,9 +175,11 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: test if conn or pooler is null, then leave
                 if (conn == null || pooler == null)
                 {
-                    //TODO: This means a connection could not be created most likely because the server was Unreachable
-                    //TODO: Throw some kind of HTTP 500 (Unreachable) exception
-                    throw new ApplicationException("This is Bad");
+                    // This means a connection could not be created most likely because the server was Unreachable
+                    // and shouldn't happen because StartCallbackQueueConsumer should have thrown the exception
+
+                    //TODO: The inner exception here is a good candidate for a RestBusException
+                    throw GetWrappedException("Unable to establish a connection.", new ApplicationException("Unable to establish a connection."));
                 }
 
                 //TODO: Check if cancellation token was set before operation even began
@@ -221,29 +223,32 @@ namespace RestBus.RabbitMQ.Client
 
                     //Message arrival event
                     HttpResponsePacket responsePacket = null;
-                    bool deserializationError = false;
+                    Exception deserializationException = null;
                     receivedEvent = new ManualResetEventSlim(false);
 
                     arrival = a =>
                     {
                         if (a.BasicProperties.CorrelationId == correlationId)
                         {
-                            //TODO: If deserialization failed then set exception
                             HttpResponsePacket res = null;
                             try
                             {
                                 res = HttpResponsePacket.Deserialize(a.Body);
                             }
-                            catch
+                            catch (Exception ex)
                             {
-                                deserializationError = true;
+                                Interlocked.Exchange(ref deserializationException, ex);
                             }
 
-                            //Add/Update Content-Length Header
-                            res.Headers["Content-Length"] = new string[]{(res.Content == null ? 0 : res.Content.Length).ToString()};;
-
-                            if (!deserializationError)
+                            if (deserializationException == null)
                             {
+                                if (res != null)
+                                {
+                                    //Add/Update Content-Length Header
+                                    res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
+                                }
+
+                                Interlocked.Exchange(ref responsePacket, res);
                                 responsePacket = res;
                             }
                             receivedEvent.Set();
@@ -273,25 +278,29 @@ namespace RestBus.RabbitMQ.Client
                                     //TODO: Check Cancelation Token when it's implemented
                                     if (timedOut)
                                     {
-                                        //TODO: This should be a HTTP timed out exception;
-                                        taskSource.SetException(new ApplicationException());
+                                        //NOTE: This really ought to return an "Operation Timed Out" WebException and not a Cancellation as noted in the following posts
+                                        // http://social.msdn.microsoft.com/Forums/en-US/d8d87789-0ac9-4294-84a0-91c9fa27e353/bug-in-httpclientgetasync-should-throw-webexception-not-taskcanceledexception?forum=netfxnetcom&prof=required
+                                        // http://stackoverflow.com/questions/10547895/how-can-i-tell-when-httpclient-has-timed-out
+                                        // and http://stackoverflow.com/questions/12666922/distinguish-timeout-from-user-cancellation
+                                        //
+                                        // However, for compatibility with the HttpCLient, it returns a cancellation
+                                        //
+
+                                        taskSource.SetCanceled();
                                     }
                                     else
                                     {
 
-                                        //TODO: How do we ensure that response (and deserializationError) is properly seen across different threads
                                         HttpResponseMessage msg;
-                                        if (!deserializationError && responsePacket.TryGetHttpResponseMessage(out msg))
+                                        if (deserializationException == null && responsePacket.TryGetHttpResponseMessage(out msg))
                                         {
                                             msg.RequestMessage = request;
                                             taskSource.SetResult(msg);
                                         }
                                         else
                                         {
-                                            //TODO: This should be one that translates to a bad response message error 
-                                            taskSource.SetException(new ApplicationException());
+                                            taskSource.SetException(GetWrappedException("An error occurred while reading the response.", deserializationException));
                                         }
-
                                     }
 
                                     lock (localVariableInitLock)
@@ -326,7 +335,7 @@ namespace RestBus.RabbitMQ.Client
 
                 if (requestTimeout == TimeSpan.Zero)
                 {
-                    //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before relying OK.
+                    //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before replying OK.
 
                     //Zero timespan means the client isn't interested in a response
                     taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[0]) });
@@ -339,7 +348,7 @@ namespace RestBus.RabbitMQ.Client
                 return taskSource.Task;
 
             }
-            catch
+            catch (Exception ex)
             {
                 //TODO: Log this
 
@@ -349,8 +358,7 @@ namespace RestBus.RabbitMQ.Client
                 }
                 CleanupMessagingResources(arrival, receivedEvent);
 
-                //TODO: Encapsulate this error in a HttpException
-                throw;
+                throw GetWrappedException("An error occurred while sending the request.", ex);
 
             }
 
@@ -680,17 +688,12 @@ namespace RestBus.RabbitMQ.Client
 
         protected override void Dispose(bool disposing)
         {
-
-            //TODO: Work on this method
-
             //TODO: Confirm that this does in fact kill all background threads
 
             disposed = true;
             DisposeConnection();
 
             if (_clientPool != null) _clientPool.Dispose();
-
-            //TODO: Kill all channels in channel pool (if implemented)
 
             base.Dispose(disposing);
 
@@ -761,6 +764,7 @@ namespace RestBus.RabbitMQ.Client
 
                     //This method waits on this signal to make sure the callbackprocessor thread either started successfully or failed.
                     ManualResetEventSlim consumerSignal = new ManualResetEventSlim(false);
+                    Exception consumerSignalException = null;
 
                     Thread callBackProcessor = new Thread(p =>
                     {
@@ -774,7 +778,7 @@ namespace RestBus.RabbitMQ.Client
 
                             AmqpChannelPooler oldpool = _clientPool;
 
-                            //TODO: Is it necessary to do a CompareExchange since this is within a lock? //Yes, cos this is in a brand new thread
+                            //TODO: Is it necessary to do a CompareExchange since this is within a lock? //Yes, cos this is in a brand new thread (do this for conn object too)
                             _clientPool = new AmqpChannelPooler(conn);
 
                             //Dispose old pool -- after making sure new pool was assigned.
@@ -843,10 +847,12 @@ namespace RestBus.RabbitMQ.Client
 
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             //TODO: Log error (Except it's object disposed exception)
-                            //TODO: Set Exception object which will be throw by signal waiter
+
+                            //Set Exception object which will be throw by signal waiter
+                            Interlocked.Exchange(ref consumerSignalException, ex);
 
                             //Notify outer thread to move on, in case it's still waiting
                             try
@@ -877,7 +883,13 @@ namespace RestBus.RabbitMQ.Client
                     consumerSignal.Wait();
                     consumerSignal.Dispose();
 
-                    //TODO: Examine exception if it were set and rethrow it
+                    //Examine exception if it were set and rethrow it
+                    if (consumerSignalException != null)
+                    {
+                        throw GetWrappedException("An error occurred while sending the request.", consumerSignalException);
+                    }
+
+                    //No more code from this point in this method
 
                 }
             }
@@ -961,6 +973,10 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
+        private HttpRequestException GetWrappedException(string message, Exception innerException)
+        {
+            return new HttpRequestException(message, innerException);
+        }
     }
 
 
