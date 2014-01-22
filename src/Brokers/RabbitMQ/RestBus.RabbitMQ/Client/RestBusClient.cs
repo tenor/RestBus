@@ -34,7 +34,7 @@ namespace RestBus.RabbitMQ.Client
         readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
-        volatile bool disposed = false;
+        volatile bool disposed = false; //TODO: Use Interlocked.Exchange to write this property and remove the volatile keyword
 
         private bool hasKickStarted = false;
         private Uri baseAddress;
@@ -172,11 +172,11 @@ namespace RestBus.RabbitMQ.Client
 
                 var pooler = _clientPool; //Henceforth, use pooler since _clientPool may change and we want to work with the original pooler
 
-                //TODO: test if conn or pooler is null, then leave
+                //Test if conn or pooler is null, then leave
                 if (conn == null || pooler == null)
                 {
-                    // This means a connection could not be created most likely because the server was Unreachable
-                    // and shouldn't happen because StartCallbackQueueConsumer should have thrown the exception
+                    // This means a connection could not be created most likely because the server was Unreachable.
+                    // This shouldn't happen because StartCallbackQueueConsumer should have thrown the exception
 
                     //TODO: The inner exception here is a good candidate for a RestBusException
                     throw GetWrappedException("Unable to establish a connection.", new ApplicationException("Unable to establish a connection."));
@@ -185,9 +185,8 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: Check if cancellation token was set before operation even began
                 var taskSource = new TaskCompletionSource<HttpResponseMessage>();
 
-                //NOTE: You're not supposed to share channels across threads but I think we're fine here.
+                //NOTE: You're not supposed to share channels across threads but I believe we're fine here.
 
-                //TODO: Investigate Channel pooling to see if there is significant increase in throughput on connections with reasonable latency
                 model = pooler.GetModel(ChannelFlags.None);
 
                 TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
@@ -200,6 +199,7 @@ namespace RestBus.RabbitMQ.Client
                 }
 
                 //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
+                //TODO: if exchangeInfo wants a Durable Queue
 
                 string correlationId = AmqpUtils.GetRandomId();
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
@@ -263,7 +263,7 @@ namespace RestBus.RabbitMQ.Client
                     }
 
 
-                    //Wait for received event on the ThreadPool
+                    //Wait for received event on the ThreadPool:
 
                     var localVariableInitLock = new object();
 
@@ -697,9 +697,10 @@ namespace RestBus.RabbitMQ.Client
             //TODO: Confirm that this does in fact kill all background threads
 
             disposed = true;
-            DisposeConnection();
 
             if (_clientPool != null) _clientPool.Dispose();
+
+            DisposeConnection(conn); // Dispose client connection
 
             base.Dispose(disposing);
 
@@ -774,20 +775,32 @@ namespace RestBus.RabbitMQ.Client
 
                     Thread callBackProcessor = new Thread(p =>
                     {
+                        IConnection callbackConn = null;
                         try
                         {
                             //NOTE: This is the only place where connections are created in the client
                             //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
-                            Interlocked.Exchange(ref conn, connectionFactory.CreateConnection());
-                            AmqpChannelPooler oldpool = Interlocked.Exchange(ref _clientPool, new AmqpChannelPooler(conn));
+                            callbackConn = connectionFactory.CreateConnection();
 
-                            //Dispose old pool -- after making sure new pool was assigned.
+                            //Swap out client connection and pooler, so other threads can use the new objects:
+
+                            //First Swap out old pool with new pool
+                            var oldpool = Interlocked.Exchange(ref _clientPool, new AmqpChannelPooler(callbackConn));
+
+                            //then swap out old connection with new one
+                            var oldconn = Interlocked.Exchange(ref conn, callbackConn);
+
+                            //Dispose old pool
                             if (oldpool != null)
                             {
                                 oldpool.Dispose();
                             }
 
-                            using (IModel channel = conn.CreateModel())
+                            //Dispose old connection
+                            DisposeConnection(oldconn); 
+
+                            //Start consumer
+                            using (IModel channel = callbackConn.CreateModel())
                             {
                                 //Declare call back queue
                                 var callbackQueueArgs = new System.Collections.Hashtable();
@@ -869,7 +882,7 @@ namespace RestBus.RabbitMQ.Client
                             {
                                 _clientPool.Dispose();
                             }
-                            DisposeConnection();
+                            DisposeConnection(callbackConn);
                         }
 
                     });
@@ -931,31 +944,6 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
-        private void DisposeConnection()
-        {
-            if (conn != null)
-            {
-
-                try
-                {
-                    conn.Close();
-                }
-                catch
-                {
-                    //TODO: Log Error
-                }
-
-                try
-                {
-                    conn.Dispose();
-                }
-                catch
-                {
-                    //TODO: Log Error
-                }
-            }
-        }
-
         private object DequeueCallbackQueue()
         {
             while (true)
@@ -973,10 +961,36 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        private HttpRequestException GetWrappedException(string message, Exception innerException)
+        private static HttpRequestException GetWrappedException(string message, Exception innerException)
         {
             return new HttpRequestException(message, innerException);
         }
+
+        private static void DisposeConnection(IConnection connection)
+        {
+            if (connection != null)
+            {
+
+                try
+                {
+                    connection.Close();
+                }
+                catch
+                {
+                    //TODO: Log Error
+                }
+
+                try
+                {
+                    connection.Dispose();
+                }
+                catch
+                {
+                    //TODO: Log Error
+                }
+            }
+        }
+
     }
 
 

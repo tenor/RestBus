@@ -11,7 +11,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
     internal sealed class AmqpChannelPooler : IDisposable
     {
         readonly IConnection conn;
-        volatile bool _disposed;
+        volatile bool _disposed; //TODO: Use Interlocked.Exchange to write this property and remove the volatile keyword
 
 #if ENABLE_CHANNELPOOLING
 
