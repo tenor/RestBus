@@ -34,7 +34,7 @@ namespace RestBus.RabbitMQ.Client
         readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
-        volatile bool disposed = false; //TODO: Use Interlocked.Exchange to write this property and remove the volatile keyword
+        InterlockedBoolean disposed; //TODO: Use Interlocked.Exchange to write this property and remove the volatile keyword
 
         private bool hasKickStarted = false;
         private Uri baseAddress;
@@ -152,7 +152,7 @@ namespace RestBus.RabbitMQ.Client
                throw new InvalidOperationException("The request URI must either be set or BaseAddress must be set");
             }
 
-            if (disposed) throw new ObjectDisposedException("Client has been disposed");
+            if (disposed.IsTrue) throw new ObjectDisposedException("Client has been disposed");
             hasKickStarted = true;
             PrepareMessage(request);
 
@@ -696,7 +696,7 @@ namespace RestBus.RabbitMQ.Client
         {
             //TODO: Confirm that this does in fact kill all background threads
 
-            disposed = true;
+            disposed.Set(true);
 
             if (_clientPool != null) _clientPool.Dispose();
 
@@ -835,13 +835,13 @@ namespace RestBus.RabbitMQ.Client
                                     try
                                     {
 
-                                        // TODO: Consider using a concurrent hashtable here, and use the correletation Id as the key to find the  
+                                        // TODO: Consider using a concurrent hashtable here, and use the correlation Id as the key to find the  
                                         // delegate value, and then execute the delegate.
                                         // The current use of an event works okay when a small number of requests are waiting for responses silmultaneously
                                         // If the number of requests waiting for responses are in the thousands then things will get slow
                                         // because all delegates are triggered for each incoming response event.
 
-                                        //NOTE: This means correlation id will be passed into CLeanUpMessagingResources to find delegate.
+                                        //NOTE: This means correlation id will be passed into CleanUpMessagingResources to find delegate.
 
                                         if (responseArrivalNotification != null)
                                         {
@@ -911,7 +911,7 @@ namespace RestBus.RabbitMQ.Client
 
         private void EnsureNotStartedOrDisposed()
         {
-            if (disposed) throw new ObjectDisposedException(GetType().FullName);
+            if (disposed.IsTrue) throw new ObjectDisposedException(GetType().FullName);
             if (hasKickStarted) throw new InvalidOperationException("This instance has already started one or more requests. Properties can only be modified before sending the first request.");
         }
 
@@ -948,7 +948,7 @@ namespace RestBus.RabbitMQ.Client
         {
             while (true)
             {
-                if (disposed) throw new ObjectDisposedException("Client has been disposed");
+                if (disposed.IsTrue) throw new ObjectDisposedException("Client has been disposed");
 
                 object obj = callbackConsumer.Queue.DequeueNoWait(null);
 
