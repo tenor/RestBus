@@ -99,7 +99,7 @@ namespace RestBus.WebApi
             }
             catch (Exception ex)
             {
-                //TODO: SHouldn't occur (the called methpd should be safe): Log execption and return a server error
+                //TODO: SHouldn't occur (the called method should be safe): Log execption and return a server error
             }
         }
 
