@@ -8,6 +8,8 @@ namespace RestBus.ServiceStack
 {
 	public class RestBusHost : IMessageService
 	{
+        const string HTTP_RESPONSE_VERSION = "1.1";
+
 		private IMessageHandler[] messageHandlers;
 		public int RetryCount { get; protected set; }
 		public Func<IMessage, IMessage> RequestFilter { get; set; }
@@ -148,22 +150,21 @@ namespace RestBus.ServiceStack
 
 		private void Process(object state)
 		{
-			//NOTE: This method is called on a background thread and must be protected by a big-try catch
-
 			try
 			{
 				ProcessRequest((MessageContext)state);
 			}
 			catch  (Exception ex)
 			{
-				//TODO: SHouldn't happen: Log execption
+                //TODO: SHouldn't happen: (the called method should be safe): Log execption
 			}
 		}
 
 		private void ProcessRequest(MessageContext context)
 		{
+			//NOTE: This method is called on a background thread and must be protected by an outer big-try catch
+
 			var httpReq = new RequestWrapper(context.Request);
-			var httpRes = new ResponseWrapper();
 			//var handler = ServiceStackHttpHandlerFactory.GetHandler(httpReq);
 
 			RestHandler handler = null;
@@ -177,13 +178,17 @@ namespace RestBus.ServiceStack
 				string operationName;
 				httpReq.OperationName = operationName = handler.RestPath.RequestType.Name;
 
+                var httpRes = new ResponseWrapper();
+                HttpResponsePacket resPacket = null;
 				try
 				{
 					handler.ProcessRequest(httpReq, httpRes, operationName);
+                    resPacket = CreateResponsePacketFromWrapper(httpRes, subscriber);
 				}
-				catch
+				catch (Exception exception)
 				{
-					//TODO: Send Exception details back to Queue
+					//Send Exception details back to Queue
+                    resPacket = CreateResponsePacketFromException(exception);
 				}
 				finally
 				{
@@ -191,14 +196,21 @@ namespace RestBus.ServiceStack
 					httpRes.Close();
 				}
 
+                if (resPacket == null)
+                {
+                    //TODO: Not good, Log this
+                    //TODO: derive exception from RestBus.Exceptions class
+                    resPacket = CreateResponsePacketFromException(new ApplicationException("Unable to get response"));
+                }
+
 				try
 				{
 					//TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
-					subscriber.SendResponse(context, CreateResponsePacketFromWrapper(httpRes, subscriber));
+					subscriber.SendResponse(context, resPacket );
 				}
 				catch
 				{
-					//Log SendResponse error
+					//TODO: Log SendResponse error
 				}
 
 				return;
@@ -241,10 +253,36 @@ namespace RestBus.ServiceStack
 			response.Content = (wrapper.OutputStream as System.IO.MemoryStream).ToArray();
 			response.StatusCode = wrapper.StatusCode;
 			response.StatusDescription = wrapper.StatusDescription;
-			response.Version = "1.1";
+            response.Version = HTTP_RESPONSE_VERSION;
 
 			return response;
 		}
-	
+
+        private HttpResponsePacket CreateResponsePacketFromException(Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("Exception: \r\n\r\n");
+            sb.Append(ex.Message);
+            sb.Append("\r\n\r\nStackTrace: \r\n\r\n");
+            sb.Append(ex.StackTrace);
+
+            if (ex.InnerException != null)
+            {
+                sb.Append("Inner Exception: \r\n\r\n");
+                sb.Append(ex.InnerException.Message);
+                sb.Append("\r\n\r\nStackTrace: \r\n\r\n");
+                sb.Append(ex.InnerException.StackTrace);
+            }
+
+            return new HttpResponsePacket
+            {
+                Content = new System.Text.UTF8Encoding().GetBytes(sb.ToString()),
+                StatusCode = 500, //HttpStatusCode.InternalServerError
+                StatusDescription = "An unexpected exception was thrown",
+                Version = HTTP_RESPONSE_VERSION
+            };
+
+        }
+
 	}
 }
