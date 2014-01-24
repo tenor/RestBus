@@ -6,6 +6,7 @@ using RestBus.Common.Amqp;
 using RestBus.RabbitMQ;
 using RestBus.RabbitMQ.ChannelPooling;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -34,7 +35,7 @@ namespace RestBus.RabbitMQ.Client
         readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
-        InterlockedBoolean disposed; //TODO: Use Interlocked.Exchange to write this property and remove the volatile keyword
+        InterlockedBoolean disposed;
 
         private bool hasKickStarted = false;
         private Uri baseAddress;
@@ -803,7 +804,7 @@ namespace RestBus.RabbitMQ.Client
                             using (IModel channel = callbackConn.CreateModel())
                             {
                                 //Declare call back queue
-                                var callbackQueueArgs = new System.Collections.Hashtable();
+                                var callbackQueueArgs = new Dictionary<string, object>();
                                 callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
 
                                 channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);

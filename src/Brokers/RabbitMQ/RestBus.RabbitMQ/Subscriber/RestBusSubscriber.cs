@@ -25,7 +25,7 @@ namespace RestBus.RabbitMQ.Subscriber
 
         //TODO: Consider converting this to an int so that you can do Interlocked.Exchange here(Is that neccessary?)
         bool isStarted = false;
-        SharedQueue lastProcessedQueue = null;
+        SharedQueue<BasicDeliverEventArgs> lastProcessedQueue = null;
         readonly ConnectionFactory connectionFactory;
 
         public RestBusSubscriber(IMessageMapper messageMapper )
@@ -107,7 +107,7 @@ namespace RestBus.RabbitMQ.Subscriber
             conn = connectionFactory.CreateConnection();
 
             //Create shared queue
-            SharedQueue queue = new SharedQueue();
+            SharedQueue<BasicDeliverEventArgs> queue = new SharedQueue<BasicDeliverEventArgs>();
 
             //Create work channel and declare exchanges and queues
             workChannel = conn.CreateModel();
@@ -157,7 +157,7 @@ namespace RestBus.RabbitMQ.Subscriber
             HttpRequestPacket request;
             IBasicProperties properties;
 
-            SharedQueue queue1 = null, queue2 = null;
+            SharedQueue<BasicDeliverEventArgs> queue1 = null, queue2 = null;
 
             while (true)
             {
@@ -227,7 +227,7 @@ namespace RestBus.RabbitMQ.Subscriber
 
         }
 
-        private bool TryGetRequest(SharedQueue queue, out HttpRequestPacket request, out IBasicProperties properties)
+        private bool TryGetRequest(SharedQueue<BasicDeliverEventArgs> queue, out HttpRequestPacket request, out IBasicProperties properties)
         {
             object obj;
             BasicDeliverEventArgs evt;

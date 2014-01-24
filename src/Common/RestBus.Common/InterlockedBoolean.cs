@@ -4,7 +4,7 @@ namespace RestBus.Common
 {
     /// <summary>
     /// Provides a boolean value that is written to using Interlocked.Exchange.
-    /// Use this struct only as a field and access it directly from any callee.
+    /// Use this struct only as a field in a class and access it directly from any callee.
     /// Do not pass this struct to methods/indexers etc. as it will be copied.
     /// </summary>
     public struct InterlockedBoolean

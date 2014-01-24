@@ -2,6 +2,7 @@ using RabbitMQ.Client;
 using RestBus.Common.Amqp;
 using RestBus.RabbitMQ.ChannelPooling;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace RestBus.RabbitMQ
@@ -78,7 +79,7 @@ namespace RestBus.RabbitMQ
 					channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType, false, true, null);
 				}
 
-				var workQueueArgs = new System.Collections.Hashtable();
+				var workQueueArgs = new Dictionary<string, object>();
 				workQueueArgs.Add("x-expires", (long)AmqpUtils.GetWorkQueueExpiry().TotalMilliseconds);
 
 				//TODO: the line below can throw some kind of socket exception, so what do you do in that situation
@@ -93,7 +94,7 @@ namespace RestBus.RabbitMQ
 				{
 					string subscriberQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
 	
-					var subscriberQueueArgs = new System.Collections.Hashtable();
+					var subscriberQueueArgs = new Dictionary<string, object>();
 					subscriberQueueArgs.Add("x-expires", (long)AmqpUtils.GetSubscriberQueueExpiry().TotalMilliseconds);
 
 					//TODO: Look into making the subscriber queue exclusive
