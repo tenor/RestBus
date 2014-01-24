@@ -236,7 +236,8 @@ namespace RestBus.RabbitMQ.Client
         public static Task<string> GetStringAsync(this HttpMessageInvoker client, Uri requestUri, RequestOptions options)
         {
             //TODO: Look into adding Task.ConfigureAwait (false) here
-            return SendAsync(client, new HttpRequestMessage(HttpMethod.Get, requestUri), options).ContinueWith<string>(task => task.Result.Content.ReadAsStringAsync().Result);
+            return SendAsync(client, new HttpRequestMessage(HttpMethod.Get, requestUri), options)
+                .ContinueWith<string>(task => task.Result.Content.ReadAsStringAsync().Result, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously );
 
         }
 
@@ -260,7 +261,8 @@ namespace RestBus.RabbitMQ.Client
         public static Task<byte[]> GetByteArrayAsync(this HttpMessageInvoker client, Uri requestUri, RequestOptions options)
         {
             //TODO: Look into adding Task.ConfigureAwait (false) here
-            return SendAsync(client, new HttpRequestMessage(HttpMethod.Get, requestUri), options).ContinueWith<byte[]>(task => task.Result.Content.ReadAsByteArrayAsync().Result);
+            return SendAsync(client, new HttpRequestMessage(HttpMethod.Get, requestUri), options)
+                .ContinueWith<byte[]>(task => task.Result.Content.ReadAsByteArrayAsync().Result, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
 
         }
 
@@ -284,7 +286,8 @@ namespace RestBus.RabbitMQ.Client
         public static Task<Stream> GetStreamAsync(this HttpMessageInvoker client, Uri requestUri, RequestOptions options)
         {
             //TODO: Look into adding Task.ConfigureAwait (false) here
-            return SendAsync(client, new HttpRequestMessage(HttpMethod.Get, requestUri), options).ContinueWith<Stream>(task => task.Result.Content.ReadAsStreamAsync().Result);
+            return SendAsync(client, new HttpRequestMessage(HttpMethod.Get, requestUri), options)
+                .ContinueWith<Stream>(task => task.Result.Content.ReadAsStreamAsync().Result, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
         }
 
         /// <summary>Send an HTTP request as an asynchronous operation.</summary>
