@@ -30,7 +30,10 @@ namespace RestBus.ServiceStack
             if (!_isClosed)
             {
                 _isClosed = true;
-                outputStream.Close();
+                if (outputStream != null)
+                {
+                    outputStream.Close();
+                }
             }
 
 

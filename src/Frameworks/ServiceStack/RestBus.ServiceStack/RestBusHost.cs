@@ -1,6 +1,7 @@
 using RestBus.Common;
 using ServiceStack.Messaging;
 using ServiceStack.WebHost.Endpoints;
+using ServiceStack.WebHost.Endpoints.Support;
 using System;
 using System.Collections.Generic;
 
@@ -165,60 +166,61 @@ namespace RestBus.ServiceStack
 			//NOTE: This method is called on a background thread and must be protected by an outer big-try catch
 
 			var httpReq = new RequestWrapper(context.Request);
-			//var handler = ServiceStackHttpHandlerFactory.GetHandler(httpReq);
+            var httpRes = new ResponseWrapper();
 
-			RestHandler handler = null;
+			IServiceStackHttpHandler handler = null;
+            string operationName, contentType;
 
-			string contentType;
+            //var handler = ServiceStackHttpHandlerFactory.GetHandler(httpReq);
+
 			var restPath = RestHandler.FindMatchingRestPath(httpReq.HttpMethod, httpReq.PathInfo, out contentType);
-			if (restPath != null)
-			{
-				handler = new RestHandler { RestPath = restPath, RequestName = restPath.RequestType.Name };
+            if (restPath != null)
+            {
+                handler = new RestHandler { RestPath = restPath, RequestName = restPath.RequestType.Name };
+                httpReq.OperationName = operationName = ((RestHandler)handler).RestPath.RequestType.Name;
+            }
+            else
+            {
+                handler = new NotFoundHttpHandler();
+                var stream = httpRes.OutputStream; //Bug fix: reading the OutputStream property will cause it to be created if it's null
+                httpReq.OperationName = operationName = null;
+            }
 
-				string operationName;
-				httpReq.OperationName = operationName = handler.RestPath.RequestType.Name;
-
-                var httpRes = new ResponseWrapper();
-                HttpResponsePacket resPacket = null;
-				try
-				{
-					handler.ProcessRequest(httpReq, httpRes, operationName);
-                    resPacket = CreateResponsePacketFromWrapper(httpRes, subscriber);
-				}
-				catch (Exception exception)
-				{
-					//Send Exception details back to Queue
-                    resPacket = CreateResponsePacketFromException(exception);
-				}
-				finally
-				{
-					httpReq.InputStream.Close();
-					httpRes.Close();
-				}
-
-                if (resPacket == null)
-                {
-                    //TODO: Not good, Log this
-                    //TODO: derive exception from RestBus.Exceptions class
-                    resPacket = CreateResponsePacketFromException(new ApplicationException("Unable to get response"));
-                }
-
-				try
-				{
-					//TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
-					subscriber.SendResponse(context, resPacket );
-				}
-				catch
-				{
-					//TODO: Log SendResponse error
-				}
-
-				return;
-			}
+            HttpResponsePacket resPacket = null;
+            try
+            {
+                handler.ProcessRequest(httpReq, httpRes, operationName);
+                resPacket = CreateResponsePacketFromWrapper(httpRes, subscriber);
+            }
+            catch (Exception exception)
+            {
+                //Send Exception details back to Queue
+                resPacket = CreateResponsePacketFromException(exception);
+            }
+            finally
+            {
+                httpReq.InputStream.Close();
+                httpRes.Close();
+            }
 
 
-			//TODO: Send this exception back to Queue
-			throw new ApplicationException("The Resource cannot be found");
+            if (resPacket == null)
+            {
+                //TODO: Not good, Log this
+                //TODO: derive exception from RestBus.Exceptions class
+                resPacket = CreateResponsePacketFromException(new ApplicationException("Unable to get response"));
+            }
+
+            try
+            {
+                //TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
+                subscriber.SendResponse(context, resPacket);
+            }
+            catch
+            {
+                //TODO: Log SendResponse error
+            }
+
 		}
 
 		private static HttpResponsePacket CreateResponsePacketFromWrapper(ResponseWrapper wrapper, IRestBusSubscriber subscriber)
