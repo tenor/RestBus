@@ -227,6 +227,11 @@ namespace RestBus.RabbitMQ.Client
                     Exception deserializationException = null;
                     receivedEvent = new ManualResetEventSlim(false);
 
+                    //TODO: Get rid of arrival below after turning responseArrivalNotification into a hashtable.
+                    // The hashtable shouldn't store a delegate, it should an object that encapsulates
+                    // responsePacket, deserializationException and receivedEvent.
+                    // This will allow the callback consumer to process the arrival directly instead of calling a delegate.
+
                     arrival = a =>
                     {
                         if (a.BasicProperties.CorrelationId == correlationId)
@@ -844,9 +849,12 @@ namespace RestBus.RabbitMQ.Client
 
                                         //NOTE: This means correlation id will be passed into CleanUpMessagingResources to find delegate.
 
-                                        if (responseArrivalNotification != null)
+                                        //Work on Step 1 above, followed by Step 2 outlined in the TODO in line 230.
+
+                                        var copy = Interlocked.CompareExchange(ref responseArrivalNotification, null, null);
+                                        if (copy != null)
                                         {
-                                            responseArrivalNotification(evt);
+                                            copy(evt);
                                         }
                                     }
                                     catch
