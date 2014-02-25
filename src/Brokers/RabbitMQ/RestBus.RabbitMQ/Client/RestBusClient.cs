@@ -257,8 +257,11 @@ namespace RestBus.RabbitMQ.Client
                                 Interlocked.Exchange(ref responsePacket, res);
                                 responsePacket = res;
                             }
+
+                            //NOTE: The ManualResetEventSlim.Set() method can be called after the object has been disposed
+                            //So no worries about the Timeout disposing the object before the response comes in.
                             receivedEvent.Set();
-                            responseArrivalNotification -= arrival; //confirm that this is threadsafe
+                            responseArrivalNotification -= arrival;
                         }
                     };
 
@@ -313,6 +316,12 @@ namespace RestBus.RabbitMQ.Client
                                         callbackHandle.Unregister(null);
                                     }
                                 }
+                                catch
+                                {
+                                    //TODO: Log this: 
+                                    // the code in the try block should be safe so this catch block should never be called, 
+                                    // hoewever, this delegate is called on a separate thread and should be protected.
+                                }
                                 finally
                                 {
                                     CleanupMessagingResources(arrival, receivedEvent);
@@ -324,7 +333,7 @@ namespace RestBus.RabbitMQ.Client
 
                     }
 
-                    responseArrivalNotification += arrival; //Confirm that this is thread-safe
+                    responseArrivalNotification += arrival;
                 }
 
                 //Send message

@@ -155,7 +155,7 @@ namespace RestBus.ServiceStack
 			{
 				ProcessRequest((MessageContext)state);
 			}
-			catch  (Exception ex)
+			catch
 			{
                 //TODO: SHouldn't happen: (the called method should be safe): Log execption
 			}

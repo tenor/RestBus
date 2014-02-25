@@ -343,7 +343,7 @@ namespace RestBus.RabbitMQ.Subscriber
                 throw new ApplicationException("This is Bad");
             }
 
-            //Note: Do not share channels across threads.
+            //TODO: Channel Pool this connection 
             using (IModel channel = conn.CreateModel())
             {
 
@@ -356,7 +356,9 @@ namespace RestBus.RabbitMQ.Subscriber
                                     basicProperties,
                                     response.Serialize());
                 }
-                catch { }
+                catch { 
+                    //TODO: Log execption
+                }
             }
 
         }
