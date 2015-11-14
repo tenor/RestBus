@@ -141,7 +141,7 @@ namespace RestBus.Common
 
         }
 
-        public bool TryGetHttpRequestMessage(string virtualPath, out HttpRequestMessage request)
+        public bool TryGetHttpRequestMessage(string virtualPath, string hostname, out HttpRequestMessage request)
         {
             try
             {
@@ -150,7 +150,7 @@ namespace RestBus.Common
                     Content = new ByteArrayContent(this.Content ?? new byte[0]),
                     Version = new Version(this.Version),
                     Method = new HttpMethod(this.Method ?? "GET"),
-                    RequestUri = GetUriFromResource(virtualPath, this.Resource)
+                    RequestUri = GetUriFromResource(virtualPath, hostname, this.Resource)
                 };
 
                 PopulateHeaders(request.Content.Headers, request.Headers);
@@ -165,8 +165,7 @@ namespace RestBus.Common
         }
 
         //This method tries to get an absolute uri from the provided resource
-        private static string machineHostName;
-        private static Uri GetUriFromResource(string virtualPath, string resource)
+        private static Uri GetUriFromResource(string virtualPath, string resource, string hostname)
         {
 
             if (String.IsNullOrEmpty(virtualPath))
@@ -201,20 +200,17 @@ namespace RestBus.Common
             bool success = false;
 
             Uri result = null;
+            if (hostname == null) hostname = "localhost";
             try
-            {
-                if(machineHostName == null)
-                {
-                    machineHostName = Environment.MachineName ?? "localhost";
-                }
-                result = new UriBuilder("http", machineHostName, 80, path, query).Uri;
+            {                
+                result = new UriBuilder("http", hostname, 80, path, query).Uri;
                 success = true;
             }
             catch { }
 
             if (success) return result;
 
-            if (machineHostName != "localhost")
+            if (hostname != "localhost")
             {
                 //Something may be wrong with machine name, and so try localhost
                 try
@@ -224,11 +220,8 @@ namespace RestBus.Common
                 }
                 catch { }
 
-                if (success)
-                {
-                    machineHostName = "localhost";
-                    return result;
-                }
+                if (success) return result;
+
             }
 
             //Return a Relative Uri

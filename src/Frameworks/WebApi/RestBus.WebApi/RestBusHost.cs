@@ -13,6 +13,7 @@ namespace RestBus.WebApi
     public class RestBusHost : IDisposable
     {
         private static readonly Lazy<IPrincipal> anonymousPrincipal = new Lazy<IPrincipal>(() => new GenericPrincipal(new GenericIdentity(String.Empty), new string[0]), isThreadSafe: true);
+        private static string machineHostName;
         private readonly IRestBusSubscriber subscriber;
         private readonly HttpConfiguration config;
         private readonly RequestHandler requestHandler;
@@ -107,10 +108,16 @@ namespace RestBus.WebApi
         {
             //NOTE: This method is called on a background thread and must be protected by an outer big-try catch
 
+            try
+            {
+                if (machineHostName == null) machineHostName = Environment.MachineName;
+            }
+            catch { }
+
             HttpRequestMessage requestMsg;
             HttpResponseMessage responseMsg = null;
 
-            if (!restbusContext.Request.TryGetHttpRequestMessage(appVirtualPath ?? (appVirtualPath = System.Web.Hosting.HostingEnvironment.ApplicationVirtualPath), out requestMsg))
+            if (!restbusContext.Request.TryGetHttpRequestMessage(appVirtualPath ?? (appVirtualPath = System.Web.Hosting.HostingEnvironment.ApplicationVirtualPath), machineHostName, out requestMsg))
             {
                 responseMsg = new HttpResponseMessage(HttpStatusCode.BadRequest) { ReasonPhrase = "Bad Request" };
             }
