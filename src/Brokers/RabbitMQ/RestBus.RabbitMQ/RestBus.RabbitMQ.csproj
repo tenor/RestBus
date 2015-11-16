@@ -88,7 +88,7 @@
     <Compile Include="Client\RestBusClient.cs" />
     <Compile Include="Client\RestBusClientExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Subscriber\RestBusSubscriber.cs" />
+    <Compile Include="Subscription\RestBusSubscriber.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Client\Formatting\CommonWebApiResources.resx">

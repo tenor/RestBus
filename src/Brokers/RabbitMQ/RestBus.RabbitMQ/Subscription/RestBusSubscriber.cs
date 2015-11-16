@@ -7,7 +7,7 @@ using RestBus.Common.Amqp;
 using System;
 using System.Threading;
 
-namespace RestBus.RabbitMQ.Subscriber
+namespace RestBus.RabbitMQ.Subscription
 {
     public class RestBusSubscriber : IRestBusSubscriber
     {
