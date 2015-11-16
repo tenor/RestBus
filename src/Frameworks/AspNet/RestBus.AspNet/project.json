@@ -1,0 +1,35 @@
+{
+  "version": "0.1.0-*",
+  "description": "RestBus.AspNet Class Library",
+  "authors": [ "sunny ahuwanya" ],
+  "tags": [ "" ],
+  "projectUrl": "",
+  "licenseUrl": "",
+
+  "dependencies": {
+    "Microsoft.AspNet.Http.Abstractions": "1.0.0-beta8",
+    "Microsoft.AspNet.Http": "1.0.0-beta8",
+    "System.Net.Http": "4.0.1-beta-23409",
+    "RestBus.Common": "0.5.2-*"
+  },
+
+  "frameworks": {
+    "dnx451": {
+      "frameworkAssemblies": {
+        "System.Collections": "",
+        "System.Runtime": ""
+      }
+    },
+    "dnxcore50": {
+      "dependencies": {
+        "Microsoft.CSharp": "4.0.0-beta-23019",
+        "System.Runtime": "4.0.21-beta-*",
+        "System.Collections": "4.0.10-beta-23019",
+        "System.Linq": "4.0.0-beta-23019",
+        "System.Threading": "4.0.10-beta-23019",
+        "System.Threading.Thread": "4.0.0-*"
+
+      }
+    }
+  }
+}
