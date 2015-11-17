@@ -8,6 +8,9 @@ using System.Text;
 
 namespace RestBus.Common
 {
+    /// <summary>
+    /// This class holds internal utilities that are used by both Client and Subscriber.
+    /// </summary>
     internal class CommonUtils
     {
         /*

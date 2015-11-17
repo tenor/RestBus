@@ -1,10 +1,9 @@
 using System;
 using System.IO;
-using System.Net.Http;
 
 namespace RestBus.Common
 {
- 
+
     //TODO: Describe why this class exists
     public class HttpResponsePacket : HttpPacket
     {
@@ -13,36 +12,6 @@ namespace RestBus.Common
 
         public HttpResponsePacket()
         {
-        }
-
-        public HttpResponsePacket(HttpResponseMessage response)
-        {
-            foreach (var hdr in response.Headers)
-            {
-                AddHttpHeader(hdr);
-            }
-
-            if (response.Content != null)
-            {
-                foreach (var hdr in response.Content.Headers)
-                {
-                    AddHttpHeader(hdr);
-                }
-            }
-
-            this.Version = response.Version.ToString();
-            this.StatusCode = (int)response.StatusCode;
-            this.StatusDescription = response.ReasonPhrase;
-
-            if (response.Content != null)
-            {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    response.Content.CopyToAsync(ms).Wait();
-                    Content = ms.ToArray();
-                }
-            }
-
         }
 
         public override byte[] Serialize()
@@ -154,28 +123,6 @@ namespace RestBus.Common
 
         }
 
-        public bool TryGetHttpResponseMessage(out HttpResponseMessage response)
-        {
-            try
-            {
-                response = new HttpResponseMessage
-                {
-                    Content = new ByteArrayContent(this.Content ?? new byte[0]),
-                    Version = new Version(this.Version),
-                    ReasonPhrase = this.StatusDescription,
-                    StatusCode = (System.Net.HttpStatusCode)this.StatusCode
-                };
-
-                PopulateHeaders(response.Content.Headers, response.Headers);
-            }
-            catch
-            {
-                response = null;
-                return false;
-            }
-
-            return true;
-        }
 
 
     }

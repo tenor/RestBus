@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Net.Http;
 
 namespace RestBus.Common
 {
@@ -12,36 +11,6 @@ namespace RestBus.Common
 
         public HttpRequestPacket()
         {
-        }
-
-        public HttpRequestPacket(HttpRequestMessage request)
-        {
-            foreach (var hdr in request.Headers)
-            {
-                AddHttpHeader(hdr);
-            }
-
-            if (request.Content != null)
-            {
-                foreach (var hdr in request.Content.Headers)
-                {
-                    AddHttpHeader(hdr);
-                }
-            }
-
-            this.Method = request.Method.Method;
-            this.Version = request.Version.ToString();
-            this.Resource = request.RequestUri.IsAbsoluteUri ? request.RequestUri.PathAndQuery : request.RequestUri.OriginalString;
-
-            if (request.Content != null)
-            {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    request.Content.CopyToAsync(ms).Wait();
-                    Content = ms.ToArray();
-                }
-            }
-
         }
 
         public override byte[] Serialize()
@@ -86,7 +55,7 @@ namespace RestBus.Common
 
             //if (SerializeAsBson)
             //{
-            //    return Utils.DeserializeFromBson<HttpRequestPacket>(data);
+            //    return CommonUtils.DeserializeFromBson<HttpRequestPacket>(data);
             //}
 
             HttpMessageReader reader = new HttpMessageReader(data);
@@ -141,31 +110,27 @@ namespace RestBus.Common
 
         }
 
-        public bool TryGetHttpRequestMessage(string virtualPath, string hostname, out HttpRequestMessage request)
+        /// <summary>
+        /// Builds a <see cref="System.Uri"/> for this <see cref="HttpRequestPacket"/>'s resource
+        /// </summary>
+        /// <param name="virtualPath">The virtual path (optional)</param>
+        /// <param name="hostname">The optional hostname (optional)</param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"> Throws InvalidOperationException if the Resource field is null.</exception>
+        public Uri BuildUri(string virtualPath, string hostname)
         {
-            try
-            {
-                request = new HttpRequestMessage
-                {
-                    Content = new ByteArrayContent(this.Content ?? new byte[0]),
-                    Version = new Version(this.Version),
-                    Method = new HttpMethod(this.Method ?? "GET"),
-                    RequestUri = GetUriFromResource(virtualPath, hostname, this.Resource)
-                };
-
-                PopulateHeaders(request.Content.Headers, request.Headers);
-            }
-            catch
-            {
-                request = null;
-                return false;
-            }
-
-            return true;
+            if (this.Resource == null) throw new InvalidOperationException("Resource field is null.");
+            return BuildUri(this.Resource, virtualPath, hostname);
         }
 
-        //This method tries to get an absolute uri from the provided resource
-        private static Uri GetUriFromResource(string virtualPath, string resource, string hostname)
+        /// <summary>
+        /// Builds a <see cref="System.Uri"/> for a specified resource, virtualPath and hostname
+        /// </summary>
+        /// <param name="resource"></param>
+        /// <param name="virtualPath"></param>
+        /// <param name="hostname"></param>
+        /// <returns></returns>
+        private static Uri BuildUri(string resource, string virtualPath, string hostname)
         {
 
             if (String.IsNullOrEmpty(virtualPath))
@@ -212,7 +177,7 @@ namespace RestBus.Common
 
             if (hostname != "localhost")
             {
-                //Something may be wrong with machine name, and so try localhost
+                //Something may be wrong with host name, and so try localhost
                 try
                 {
                     result = new UriBuilder("http", "localhost", 80, path, query).Uri;

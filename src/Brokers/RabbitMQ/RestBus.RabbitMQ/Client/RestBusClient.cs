@@ -3,7 +3,7 @@ using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Framing.v0_9_1;
 using RestBus.Common;
 using RestBus.Common.Amqp;
-using RestBus.RabbitMQ;
+using RestBus.Common.Http;
 using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.Collections.Generic;
@@ -300,7 +300,7 @@ namespace RestBus.RabbitMQ.Client
                                     else
                                     {
                                         HttpResponseMessage msg;
-                                        if (deserializationException == null && responsePacket.TryGetHttpResponseMessage(out msg))
+                                        if (deserializationException == null && TryGetHttpResponseMessage(responsePacket, out msg))
                                         {
                                             msg.RequestMessage = request;
                                             taskSource.SetResult(msg);
@@ -340,7 +340,7 @@ namespace RestBus.RabbitMQ.Client
                 model.Channel.BasicPublish(exchangeName,
                                 messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),
                                 basicProperties,
-                                (new HttpRequestPacket(request)).Serialize());
+                                request.ToHttpRequestPacket().Serialize());
 
                 //Close channel
                 CloseAmqpModel(model);
@@ -1007,6 +1007,29 @@ namespace RestBus.RabbitMQ.Client
                     //TODO: Log Error
                 }
             }
+        }
+
+        private static bool TryGetHttpResponseMessage(HttpResponsePacket packet, out HttpResponseMessage response)
+        {
+            try
+            {
+                response = new HttpResponseMessage
+                {
+                    Content = new ByteArrayContent(packet.Content ?? new byte[0]),
+                    Version = new Version(packet.Version),
+                    ReasonPhrase = packet.StatusDescription,
+                    StatusCode = (System.Net.HttpStatusCode)packet.StatusCode
+                };
+
+                packet.PopulateHeaders(response.Content.Headers, response.Headers);
+            }
+            catch
+            {
+                response = null;
+                return false;
+            }
+
+            return true;
         }
 
     }

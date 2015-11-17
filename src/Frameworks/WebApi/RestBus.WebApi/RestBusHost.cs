@@ -1,4 +1,5 @@
 using RestBus.Common;
+using RestBus.Common.Http;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -117,11 +118,10 @@ namespace RestBus.WebApi
             HttpRequestMessage requestMsg;
             HttpResponseMessage responseMsg = null;
 
-            if (!restbusContext.Request.TryGetHttpRequestMessage(appVirtualPath ?? (appVirtualPath = System.Web.Hosting.HostingEnvironment.ApplicationVirtualPath), machineHostName, out requestMsg))
+            if (!TryGetHttpRequestMessage(restbusContext.Request, appVirtualPath ?? (appVirtualPath = System.Web.Hosting.HostingEnvironment.ApplicationVirtualPath), machineHostName, out requestMsg))
             {
                 responseMsg = new HttpResponseMessage(HttpStatusCode.BadRequest) { ReasonPhrase = "Bad Request" };
             }
-
 
             if (disposed)
             {
@@ -228,10 +228,33 @@ namespace RestBus.WebApi
             }
         }
 
-        private HttpResponsePacket CreateResponsePacketFromMessage(HttpResponseMessage responseMsg, IRestBusSubscriber subscriber)
+        private static bool TryGetHttpRequestMessage(HttpRequestPacket packet, string virtualPath, string hostname, out HttpRequestMessage request)
         {
-            //TODO: Confirm that commas in response headers are merged iproperly into packet header
-            var responsePkt = new HttpResponsePacket(responseMsg);
+            try
+            {
+                request = new HttpRequestMessage
+                {
+                    Content = new ByteArrayContent(packet.Content ?? new byte[0]),
+                    Version = new Version(packet.Version),
+                    Method = new HttpMethod(packet.Method ?? "GET"),
+                    RequestUri = packet.BuildUri(virtualPath, hostname)
+                };
+
+                packet.PopulateHeaders(request.Content.Headers, request.Headers);
+            }
+            catch
+            {
+                request = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        private static HttpResponsePacket CreateResponsePacketFromMessage(HttpResponseMessage responseMsg, IRestBusSubscriber subscriber)
+        {
+            //TODO: Confirm that commas in response headers are merged properly into packet header
+            var responsePkt = responseMsg.ToHttpResponsePacket();
 
             //Add/Update Subscriber-Id header
             responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
@@ -239,7 +262,7 @@ namespace RestBus.WebApi
             return responsePkt;
         }
 
-        private HttpResponseMessage CreateResponseMessageFromException(Exception ex)
+        private static HttpResponseMessage CreateResponseMessageFromException(Exception ex)
         {
             var sb = new System.Text.StringBuilder();
             sb.Append("Exception: \r\n\r\n");
