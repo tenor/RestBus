@@ -280,7 +280,7 @@ namespace RestBus.ServiceStack
             {
                 Content = new System.Text.UTF8Encoding().GetBytes(sb.ToString()),
                 StatusCode = 500, //HttpStatusCode.InternalServerError
-                StatusDescription = "An unexpected exception was thrown",
+                StatusDescription = "An unexpected exception was thrown.",
                 Version = HTTP_RESPONSE_VERSION
             };
 

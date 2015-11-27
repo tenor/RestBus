@@ -122,96 +122,98 @@ namespace RestBus.WebApi
             {
                 responseMsg = new HttpResponseMessage(HttpStatusCode.BadRequest) { ReasonPhrase = "Bad Request" };
             }
-
-            if (disposed)
-            {
-                responseMsg = requestMsg.CreateErrorResponse(HttpStatusCode.ServiceUnavailable, "The server is no longer available.");
-            }
             else
             {
-                requestHandler.EnsureInitialized();
-
-                // Add current synchronization context to request parameter
-                SynchronizationContext syncContext = SynchronizationContext.Current;
-                if (syncContext != null)
+                if (disposed)
                 {
-                    requestMsg.SetSynchronizationContext(syncContext);
+                    responseMsg = requestMsg.CreateErrorResponse(HttpStatusCode.ServiceUnavailable, "The server is no longer available.");
                 }
-
-                // Add HttpConfiguration to request parameter
-                requestMsg.SetConfiguration(config);
-
-                // Ensure we have a principal, even if the host didn't give us one
-                IPrincipal originalPrincipal = Thread.CurrentPrincipal;
-                if (originalPrincipal == null)
+                else
                 {
-                    Thread.CurrentPrincipal = anonymousPrincipal.Value;
-                }
+                    requestHandler.EnsureInitialized();
 
-                // Ensure we have a principal on the request context (if there is a request context).
-                HttpRequestContext requestContext = requestMsg.GetRequestContext();
+                    // Add current synchronization context to request parameter
+                    SynchronizationContext syncContext = SynchronizationContext.Current;
+                    if (syncContext != null)
+                    {
+                        requestMsg.SetSynchronizationContext(syncContext);
+                    }
 
-                if (requestContext == null)
-                {
-                    requestContext = new RequestBackedHttpRequestContext(requestMsg);
+                    // Add HttpConfiguration to request parameter
+                    requestMsg.SetConfiguration(config);
 
-                    // if the host did not set a request context we will also set it back to the request.
-                    requestMsg.SetRequestContext(requestContext);
-                }
+                    // Ensure we have a principal, even if the host didn't give us one
+                    IPrincipal originalPrincipal = Thread.CurrentPrincipal;
+                    if (originalPrincipal == null)
+                    {
+                        Thread.CurrentPrincipal = anonymousPrincipal.Value;
+                    }
 
-                try
-                {
+                    // Ensure we have a principal on the request context (if there is a request context).
+                    HttpRequestContext requestContext = requestMsg.GetRequestContext();
+
+                    if (requestContext == null)
+                    {
+                        requestContext = new RequestBackedHttpRequestContext(requestMsg);
+
+                        // if the host did not set a request context we will also set it back to the request.
+                        requestMsg.SetRequestContext(requestContext);
+                    }
 
                     try
                     {
-                        responseMsg = await requestHandler.SendMessageAsync(requestMsg, cancellationToken);
-                    }
-                    catch (HttpResponseException exception)
-                    {
-                        responseMsg = exception.Response;
-                    }
-                    catch (NullReferenceException exception)
-                    {
-                        // There is a bug in older versions of HttpRoutingDispatcher which causes a null reference exception when
-                        // a route could not be found
-                        // This bug can be triggered by sending a request for a url that doesn't have a route
-                        // This commit fixes the bug https://github.com/ASP-NET-MVC/aspnetwebstack/commit/6a0c03f9e549966a7f806f8b696ec4cb2ec272e6#diff-c89c7bee3d225a037a6d04e8e4447460
 
-                        if (exception.TargetSite != null && exception.TargetSite.DeclaringType != null
-                            && exception.TargetSite.DeclaringType.FullName == "System.Web.Http.Dispatcher.HttpRoutingDispatcher"
-                            && exception.TargetSite.Name == "SendAsync")
+                        try
                         {
-                            //This is the bug, so send a 404 instead
-
-                            const string NoRouteMatchedHttpPropertyKey = "MS_NoRouteMatched";
-
-                            requestMsg.Properties.Add(NoRouteMatchedHttpPropertyKey, true);
-                            responseMsg = requestMsg.CreateErrorResponse(
-                                HttpStatusCode.NotFound,
-                                String.Format("No HTTP resource was found that matches the request URI '{0}'.", requestMsg.RequestUri));
-
+                            responseMsg = await requestHandler.SendMessageAsync(requestMsg, cancellationToken);
                         }
-                        else
+                        catch (HttpResponseException exception)
+                        {
+                            responseMsg = exception.Response;
+                        }
+                        catch (NullReferenceException exception)
+                        {
+                            // There is a bug in older versions of HttpRoutingDispatcher which causes a null reference exception when
+                            // a route could not be found
+                            // This bug can be triggered by sending a request for a url that doesn't have a route
+                            // This commit fixes the bug https://github.com/ASP-NET-MVC/aspnetwebstack/commit/6a0c03f9e549966a7f806f8b696ec4cb2ec272e6#diff-c89c7bee3d225a037a6d04e8e4447460
+
+                            if (exception.TargetSite != null && exception.TargetSite.DeclaringType != null
+                                && exception.TargetSite.DeclaringType.FullName == "System.Web.Http.Dispatcher.HttpRoutingDispatcher"
+                                && exception.TargetSite.Name == "SendAsync")
+                            {
+                                //This is the bug, so send a 404 instead
+
+                                const string NoRouteMatchedHttpPropertyKey = "MS_NoRouteMatched";
+
+                                requestMsg.Properties.Add(NoRouteMatchedHttpPropertyKey, true);
+                                responseMsg = requestMsg.CreateErrorResponse(
+                                    HttpStatusCode.NotFound,
+                                    String.Format("No HTTP resource was found that matches the request URI '{0}'.", requestMsg.RequestUri));
+
+                            }
+                            else
+                            {
+                                responseMsg = CreateResponseMessageFromException(exception);
+                            }
+                        }
+                        catch (Exception exception)
                         {
                             responseMsg = CreateResponseMessageFromException(exception);
                         }
-                    }
-                    catch (Exception exception)
-                    {
-                        responseMsg = CreateResponseMessageFromException(exception);
-                    }
 
-                    if (responseMsg == null)
-                    {
-                        //TODO: Not good, Log this
-                        //TODO: derive exception from RestBus.Exceptions class
-                        responseMsg = CreateResponseMessageFromException(new ApplicationException("Unable to get response"));
-                    }
+                        if (responseMsg == null)
+                        {
+                            //TODO: Not good, Log this
+                            //TODO: derive exception from RestBus.Exceptions class
+                            responseMsg = CreateResponseMessageFromException(new ApplicationException("Unable to get response"));
+                        }
 
-                }
-                finally
-                {
-                    Thread.CurrentPrincipal = originalPrincipal;
+                    }
+                    finally
+                    {
+                        Thread.CurrentPrincipal = originalPrincipal;
+                    }
                 }
             }
 
@@ -254,6 +256,16 @@ namespace RestBus.WebApi
         private static HttpResponsePacket CreateResponsePacketFromMessage(HttpResponseMessage responseMsg, IRestBusSubscriber subscriber)
         {
             //TODO: Confirm that commas in response headers are merged properly into packet header
+            //It seems like header folding behavior in ToHttpResponsePacket() is wrong
+            //AddHeader("One, Two")
+            //AddHeader(["Three", "Four"])
+            //Should not return 
+            //"One, Two"
+            //"Three, Four" in the output
+            //It should be:
+            //"One, Two"
+            //"Three"
+            //"Four"
             var responsePkt = responseMsg.ToHttpResponsePacket();
 
             //Add/Update Subscriber-Id header
@@ -281,7 +293,7 @@ namespace RestBus.WebApi
             return new HttpResponseMessage(HttpStatusCode.InternalServerError)
             {
                 Content = new StringContent(sb.ToString()),
-                ReasonPhrase = "An unexpected exception was thrown"
+                ReasonPhrase = "An unexpected exception was thrown."
             };
 
         }

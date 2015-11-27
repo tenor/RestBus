@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections;
-using Microsoft.Framework.Primitives;
+using Microsoft.Extensions.Primitives;
 using System.IO;
 using RestBus.Common;
+using Microsoft.AspNet.Http;
 
 namespace RestBus.AspNet
 {
@@ -254,7 +255,7 @@ namespace RestBus.AspNet
             set { _queryString = value; }
         }
 
-        IDictionary<string, StringValues> IHttpRequestFeature.Headers
+        IHeaderDictionary IHttpRequestFeature.Headers
         {
             get; set;
         }
@@ -277,7 +278,7 @@ namespace RestBus.AspNet
             get; set;
         }
 
-        IDictionary<string, StringValues> IHttpResponseFeature.Headers
+        IHeaderDictionary IHttpResponseFeature.Headers
         {
             get; set;
         }

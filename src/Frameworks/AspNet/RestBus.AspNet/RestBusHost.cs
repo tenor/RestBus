@@ -23,9 +23,7 @@ namespace RestBus.AspNet
         private string appVirtualPath;
         private bool hasStarted = false;
 
-
-        //TODO: Switch this to something you can do compareExchange with in both hosts
-        volatile bool disposed = false;
+        InterlockedBoolean disposed;
 
         public RestBusHost(IRestBusSubscriber subscriber, IApplicationBuilder appBuilder)
         {
@@ -49,9 +47,9 @@ namespace RestBus.AspNet
 
         public void Dispose()
         {
-            if (!disposed)
+            if (disposed.IsFalse)
             {
-                disposed = true;
+                disposed.Set(true);
                 //requestHandler.Dispose();
                 //configuration is disposed by requesthandler
                 subscriber.Dispose();
@@ -76,7 +74,7 @@ namespace RestBus.AspNet
                     }
 
                     //Exit method if host has been disposed
-                    if (disposed)
+                    if (disposed.IsTrue)
                     {
                         break;
                     }
@@ -109,19 +107,35 @@ namespace RestBus.AspNet
         {
             //NOTE: This method is called on a background thread and must be protected by an outer big-try catch
 
-            //HttpRequestMessage requestMsg;
-            HttpResponse responseMsg = null;
+            ServiceMessage msg;
+            if (disposed.IsTrue)
+            {
+                msg = CreateResponse(HttpStatusCode.ServiceUnavailable, "The server is no longer available.");
+            }
+            else
+            {
+                if (!restbusContext.Request.TryGetServiceMessage(out msg))
+                {
+                    //Bad message
+                    msg = CreateResponse(HttpStatusCode.BadRequest, "Bad Request");
+                }
+                else
+                {
+                    //Call application
+                    try
+                    {
+                        var httpContext = new DefaultHttpContext(msg);
+                        await appFunc.Invoke(httpContext).ConfigureAwait(false);
+                    }
+                    catch(Exception ex)
+                    {
+                        msg = CreateResponseFromException(ex);
+                    }
+                }
 
-            var msg = restbusContext.Request.ToServiceMessage();
-            var httpContext = new DefaultHttpContext(msg);
+            }
 
-            await appFunc.Invoke(httpContext).ConfigureAwait(false);
-            responseMsg = httpContext.Response;
 
-            //if (!restbusContext.Request.TryGetHttpRequestMessage(appVirtualPath ?? (appVirtualPath = System.Web.Hosting.HostingEnvironment.ApplicationVirtualPath), out requestMsg))
-            //{
-            //    responseMsg = new HttpResponseMessage(HttpStatusCode.BadRequest) { ReasonPhrase = "Bad Request" };
-            //}
 
             //TODO: Implement disposed
             //if (disposed)
@@ -218,10 +232,25 @@ namespace RestBus.AspNet
 
 
             //Send Response
+            HttpResponsePacket responsePkt;
+
+            try
+            {
+                responsePkt = msg.ToHttpResponsePacket();
+            }
+            catch(Exception ex)
+            {
+                responsePkt = CreateResponseFromException(ex).ToHttpResponsePacket();
+            }
+
+            //TODO: The Subscriber should do this from within SendResponse.
+            //Add/Update Subscriber-Id header
+            responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
+
             try
             {
                 //TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
-                subscriber.SendResponse(restbusContext, MessageHelpers.ToHttpResponse(responseMsg, msg));
+                subscriber.SendResponse(restbusContext, responsePkt);
             }
             catch
             {
@@ -229,18 +258,21 @@ namespace RestBus.AspNet
             }
         }
 
-        private HttpResponsePacket CreateResponsePacketFromMessage(HttpResponseMessage responseMsg, IRestBusSubscriber subscriber)
+        private static ServiceMessage CreateResponse(HttpStatusCode status, string reasonPhrase, string body = null)
         {
-            //TODO: Confirm that commas in response headers are merged iproperly into packet header
-            var responsePkt = new HttpResponsePacket(responseMsg);
+            var msg = new ServiceMessage();
+            ((Microsoft.AspNet.Http.Features.IHttpResponseFeature)msg).StatusCode = (int)status;
+            ((Microsoft.AspNet.Http.Features.IHttpResponseFeature)msg).ReasonPhrase = reasonPhrase;
 
-            //Add/Update Subscriber-Id header
-            responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
+            if(body != null)
+            {
+                ((Microsoft.AspNet.Http.Features.IHttpResponseFeature)msg).Body = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(body));
+            }
 
-            return responsePkt;
+            return msg;
         }
 
-        private HttpResponseMessage CreateResponseMessageFromException(Exception ex)
+        private ServiceMessage CreateResponseFromException(Exception ex)
         {
             var sb = new System.Text.StringBuilder();
             sb.Append("Exception: \r\n\r\n");
@@ -256,12 +288,7 @@ namespace RestBus.AspNet
                 sb.Append(ex.InnerException.StackTrace);
             }
 
-            return new HttpResponseMessage(HttpStatusCode.InternalServerError)
-            {
-                Content = new StringContent(sb.ToString()),
-                ReasonPhrase = "An unexpected exception was thrown"
-            };
-
+            return CreateResponse(HttpStatusCode.InternalServerError, "An unexpected exception was thrown.", body: sb.ToString());
         }
     }
 }

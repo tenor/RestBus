@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNet.Http;
 using Microsoft.AspNet.Http.Features;
+using Microsoft.AspNet.Http.Internal;
 using RestBus.Common;
 using System;
 using System.Collections.Generic;
@@ -11,88 +12,101 @@ namespace RestBus.AspNet
 {
     internal static class MessageHelpers
     {
-        internal static ServiceMessage ToServiceMessage (this HttpRequestPacket request)
+        const string HTTP_RESPONSE_VERSION = "1.1";
+        const string HTTP_RESPONSE_SERVER = "RestBus.AspNet";
+
+        internal static bool TryGetServiceMessage (this HttpRequestPacket request, out ServiceMessage message)
         {
             if (request == null) throw new ArgumentNullException("request");
 
-            var message = new ServiceMessage();
-            IHttpRequestFeature reqRes = message as IHttpRequestFeature;
-            if(request.Resource != null)
+            message = new ServiceMessage();
+
+            //Build Request
+            IHttpRequestFeature req = message as IHttpRequestFeature;
+
+            Uri uri;
+            try
             {
-                //TODO: Is QueryString Part of result.Path or is it clipped
-                //Should probably use GetUriFromResource() method to Parse Path, QueryString, PathBase AND PROTOCOL properly
-                if (request.Resource.StartsWith("/"))
-                {
-                    reqRes.Path = request.Resource;
-                }
-                else
-                {
-                    reqRes.Path = "/" + request.Resource;
-                }
+                uri = request.BuildUri(null, null);
             }
-            reqRes.Protocol = "HTTP/1.1"; //TODO: Change this
-            reqRes.QueryString = ""; //TODO: Get QueryString properly, 
+            catch
             {
-                var headers = new Dictionary<string, Microsoft.Framework.Primitives.StringValues>();
+                message = null;
+                return false;
+            }
+            req.Path = uri.AbsolutePath;
+
+            req.Protocol = "HTTP/" + request.Version;
+            req.QueryString = uri.Query;
+            req.Method = request.Method;
+            req.Body = new MemoryStream(request.Content);
+
+            //Add Request Headers
+            {
+                var headers = new HeaderDictionary();
 
                 foreach (var hdr in request.Headers)
                 {
-                    headers.Add(hdr.Key, new Microsoft.Framework.Primitives.StringValues(hdr.Value.ToArray()));
+                    //NOTE: Client already folds Request Headers into RequestPacket, so there's no need to fold it again here.
+                    headers.Add(hdr.Key, hdr.Value.ToArray());
                 }
-                reqRes.Headers = headers;
+                req.Headers = headers;
             }
             
-            reqRes.Method = request.Method;
-            reqRes.Body = new MemoryStream(request.Content);
 
-            //Response
+            //Create Response
             IHttpResponseFeature resp = message as IHttpResponseFeature;
-            resp.Body = new MemoryStream(); //TODO: How expensive is a brand new memorystream?
-            {
-                var headers = new Dictionary<string, Microsoft.Framework.Primitives.StringValues>();
-
-                //foreach (var hdr in request.Headers)
-                //{
-                //    headers.Add(hdr.Key, new Microsoft.Framework.Primitives.StringValues(hdr.Value.ToArray()));
-                //}
-                //reqRes.Headers = headers;
-
-                resp.Headers = new Dictionary<string, Microsoft.Framework.Primitives.StringValues>(); //TODO: Change this so it's read off a new response parameter object
-            }
             resp.StatusCode = 200;
 
-            return message;
+            //Add Response Headers
+            resp.Body = new MemoryStream();
+            {
+                var headers = new HeaderDictionary();
+
+                headers.Add("Server", HTTP_RESPONSE_SERVER);
+                resp.Headers = headers;
+
+                //TODO: Something to think about: Should host add Date response header.
+                //If so, shouldn't that be done at the time that the response is been transmitted
+                //In which case, the subscriber should be responsible for adding/overwriting that value.
+                //In any case, remember DateTime.UtcNow/Now is very slow, so use Environment.TickCount in addition to some
+                //other mechanism that limits the number of times, DateTime.UtcNow is polled.
+            }
+
+            return true;
 
         }
 
-        internal static HttpResponsePacket ToHttpResponse(HttpResponse response, ServiceMessage msg)
+        internal static HttpResponsePacket ToHttpResponsePacket(this ServiceMessage message)
         {
-            var rsp = new HttpResponsePacket();
+            if (message == null) throw new ArgumentNullException("message");
 
-            foreach (var hdr in response.Headers)
+            var response = new HttpResponsePacket();
+
+            var respFeature = message as IHttpResponseFeature;
+            if (respFeature.Headers != null)
             {
-                // TODO: Fix adding response headers
-                //AddHttpHeader(hdr);
-            }
-
-            //TODO: Decide if to read mostly from ServiceMessage or from response.
-
-            //rsp.Version = response.... //TODO: Add a default version here
-            rsp.StatusCode = (int)response.StatusCode;
-            rsp.StatusDescription = ((IHttpResponseFeature)msg).ReasonPhrase;
-
-            if (response.Body != null)
-            {
-                using (MemoryStream ms = new MemoryStream())
+                foreach (var hdr in respFeature.Headers)
                 {
-                    response.Body.Position = 0;
-                    response.Body.CopyTo(ms);
-                    rsp.Content = ms.ToArray();
+                    response.Headers.Add(hdr.Key, hdr.Value);
                 }
             }
 
-            return rsp;
+            response.Version = HTTP_RESPONSE_VERSION;
+            response.StatusCode = respFeature.StatusCode;
+            response.StatusDescription = respFeature.ReasonPhrase;
 
+            if (respFeature.Body != null)
+            {
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    respFeature.Body.Position = 0;
+                    respFeature.Body.CopyTo(ms);
+                    response.Content = ms.ToArray();
+                }
+            }
+
+            return response;
         }
     }
 }

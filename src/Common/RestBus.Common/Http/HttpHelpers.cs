@@ -49,12 +49,15 @@ namespace RestBus.Common.Http
             }
         }
 
+        ///TODO: COnsider having this method called only for RequestPacket. i.e. move to a method called RequestPacket.AddHeader
+        ///Response shouldn't fold values in IEnumerable(values), so ToResponsePacket shouldn't be calling it. 
         private static void AddHttpHeader(this HttpPacket packet, KeyValuePair<string, IEnumerable<string>> hdr)
         {
             if (packet == null) throw new ArgumentNullException("packet");
 
             if (packet.Headers.ContainsKey(hdr.Key))
             {
+                //TODO: If the key already exists (for ResponsePacket, fold it under *existing* entry.
                 ((List<string>)packet.Headers[hdr.Key]).Add(String.Join(", ", hdr.Value.ToArray()));
             }
             else
