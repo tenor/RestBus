@@ -10,7 +10,7 @@
     "Microsoft.AspNet.Http.Abstractions": "1.0.0-rc1-final",
     "Microsoft.AspNet.Http": "1.0.0-rc1-final",
     "System.Net.Http": "4.0.1-beta-23409",
-    "RestBus.Common": "0.5.3-*"
+    "RestBus.Common": "0.5.4-*"
   },
 
   "frameworks": {
