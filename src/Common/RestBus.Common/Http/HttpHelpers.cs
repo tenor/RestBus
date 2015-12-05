@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RestBus.Common.Http
 {
@@ -35,36 +32,15 @@ namespace RestBus.Common.Http
 
                 if (Array.IndexOf<String>(contentOnlyHeaders, hdrKey) >= 0)
                 {
-                    //TODO: Confirm if HttpResponseMessage/HttpRequestMessage will break headers into "," commas whereas in actuality header in Packet is an entire header
                     contentHeaders.Add(hdr.Key.Trim(), hdr.Value);
                 }
                 else
                 {
                     generalHeaders.Add(hdr.Key.Trim(), hdr.Value);
                 }
-
-                //TODO: Check if a string can be parsed properly into the typed header
-
-                //Test adding multiple headers of the same name will do. // Look up the Add overload that takes an ienumerable<string> to figure out its purpose.
             }
         }
 
-        ///TODO: COnsider having this method called only for RequestPacket. i.e. move to a method called RequestPacket.AddHeader
-        ///Response shouldn't fold values in IEnumerable(values), so ToResponsePacket shouldn't be calling it. 
-        private static void AddHttpHeader(this HttpPacket packet, KeyValuePair<string, IEnumerable<string>> hdr)
-        {
-            if (packet == null) throw new ArgumentNullException("packet");
-
-            if (packet.Headers.ContainsKey(hdr.Key))
-            {
-                //TODO: If the key already exists (for ResponsePacket, fold it under *existing* entry.
-                ((List<string>)packet.Headers[hdr.Key]).Add(String.Join(", ", hdr.Value.ToArray()));
-            }
-            else
-            {
-                packet.Headers.Add(hdr.Key, new List<string>() { String.Join(", ", hdr.Value.ToArray()) });
-            }
-        }
         #endregion
 
         #region Helper Methods to create new HttpRequestPacket / HttpResponsePackets from HttpRequestMessage / HttpResponseMessage
@@ -74,14 +50,14 @@ namespace RestBus.Common.Http
 
             foreach (var hdr in request.Headers)
             {
-                packet.AddHttpHeader(hdr);
+                packet.AddHeader(hdr);
             }
 
             if (request.Content != null)
             {
                 foreach (var hdr in request.Content.Headers)
                 {
-                    packet.AddHttpHeader(hdr);
+                    packet.AddHeader(hdr);
                 }
             }
 
@@ -108,14 +84,14 @@ namespace RestBus.Common.Http
 
             foreach (var hdr in response.Headers)
             {
-                packet.AddHttpHeader(hdr);
+                packet.AddHeader(hdr);
             }
 
             if (response.Content != null)
             {
                 foreach (var hdr in response.Content.Headers)
                 {
-                    packet.AddHttpHeader(hdr);
+                    packet.AddHeader(hdr);
                 }
             }
 
@@ -134,6 +110,47 @@ namespace RestBus.Common.Http
 
             return packet;
 
+        }
+
+        ///<summary>Adds a header to the request packet. </summary>
+        ///<remarks>NOTE: This method folds the headers as expected in WebAPI 2's Request.Header object.</remarks>
+        private static void AddHeader(this HttpRequestPacket packet, KeyValuePair<string, IEnumerable<string>> hdr)
+        {
+            if (packet == null) throw new ArgumentNullException("packet");
+
+            if (packet.Headers.ContainsKey(hdr.Key))
+            {
+                var headerValue = ((List<string>)packet.Headers[hdr.Key])[0];
+                if(String.IsNullOrEmpty(headerValue))
+                {
+                    headerValue = String.Join(", ", hdr.Value);
+                }
+                else
+                {
+                    headerValue = headerValue + ", " + String.Join(", ", hdr.Value);
+                }
+                ((List<string>)packet.Headers[hdr.Key])[0] = headerValue;
+            }
+            else
+            {
+                packet.Headers.Add(hdr.Key, new List<string>() { String.Join(", ", hdr.Value) });
+            }
+        }
+
+        ///<summary>Adds a header to the response packet. </summary>
+        ///<remarks>NOTE: This method does not fold the headers as expected in WebAPI 2's response stream.</remarks> 
+        private static void AddHeader(this HttpResponsePacket packet, KeyValuePair<string, IEnumerable<string>> hdr)
+        {
+            if (packet == null) throw new ArgumentNullException("packet");
+
+            if (packet.Headers.ContainsKey(hdr.Key))
+            {
+                ((List<string>)packet.Headers[hdr.Key]).AddRange(hdr.Value);
+            }
+            else
+            {
+                packet.Headers.Add(hdr.Key, new List<string>(hdr.Value));
+            }
         }
 
         #endregion

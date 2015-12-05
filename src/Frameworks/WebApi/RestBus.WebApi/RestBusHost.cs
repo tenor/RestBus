@@ -255,21 +255,13 @@ namespace RestBus.WebApi
 
         private static HttpResponsePacket CreateResponsePacketFromMessage(HttpResponseMessage responseMsg, IRestBusSubscriber subscriber)
         {
-            //TODO: Confirm that commas in response headers are merged properly into packet header
-            //It seems like header folding behavior in ToHttpResponsePacket() is wrong
-            //AddHeader("One, Two")
-            //AddHeader(["Three", "Four"])
-            //Should not return 
-            //"One, Two"
-            //"Three, Four" in the output
-            //It should be:
-            //"One, Two"
-            //"Three"
-            //"Four"
+            const string HTTP_RESPONSE_SERVER = "RestBus.WebApi";
+
             var responsePkt = responseMsg.ToHttpResponsePacket();
 
             //Add/Update Subscriber-Id header
             responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
+            responsePkt.Headers["Server"] = new string[] { HTTP_RESPONSE_SERVER };
 
             return responsePkt;
         }

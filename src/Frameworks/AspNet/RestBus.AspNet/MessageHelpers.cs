@@ -1,12 +1,9 @@
-﻿using Microsoft.AspNet.Http;
-using Microsoft.AspNet.Http.Features;
+﻿using Microsoft.AspNet.Http.Features;
 using Microsoft.AspNet.Http.Internal;
 using RestBus.Common;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace RestBus.AspNet
 {
@@ -63,6 +60,7 @@ namespace RestBus.AspNet
             {
                 var headers = new HeaderDictionary();
 
+                //TODO: Server should also be set when Response is being returned, so that it isn't overwritten.
                 headers.Add("Server", HTTP_RESPONSE_SERVER);
                 resp.Headers = headers;
 
