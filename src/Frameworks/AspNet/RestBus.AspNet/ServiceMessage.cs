@@ -1,23 +1,24 @@
-﻿using Microsoft.AspNet.Http.Features;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections;
-using Microsoft.Extensions.Primitives;
-using System.IO;
+﻿using Microsoft.AspNet.Http;
+using Microsoft.AspNet.Http.Features;
 using RestBus.Common;
-using Microsoft.AspNet.Http;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace RestBus.AspNet
 {
     internal class ServiceMessage : IFeatureCollection,
                                  IHttpRequestFeature,
-                                 IHttpResponseFeature
+                                 IHttpResponseFeature,
+                                 IHttpConnectionFeature
     {
         int featureRevision;
         object _currentIHttpRequestFeature;
         object _currentIHttpResponseFeature;
+        object _currentIHttpConnectionFeature;
         List<KeyValuePair<Type, object>> otherFeatures;
         InterlockedBoolean _disposed;
         string _scheme;
@@ -70,6 +71,12 @@ namespace RestBus.AspNet
         {
             _currentIHttpRequestFeature = this;
             _currentIHttpResponseFeature = this;
+            _currentIHttpConnectionFeature = this;
+
+            //Set connection feature properties
+            ((IHttpConnectionFeature)this).RemoteIpAddress = IPAddress.IPv6Any;
+            ((IHttpConnectionFeature)this).LocalIpAddress = null;
+            ((IHttpConnectionFeature)this).IsLocal = false;
         }
 
         #region IFeatureCollection Implementation
@@ -80,6 +87,7 @@ namespace RestBus.AspNet
             {
                 if (key == typeof(IHttpRequestFeature)) { return _currentIHttpRequestFeature; }
                 if (key == typeof(IHttpResponseFeature)) { return _currentIHttpResponseFeature; }
+                if (key == typeof(IHttpConnectionFeature)) { return _currentIHttpConnectionFeature; }
 
                 if (otherFeatures == null) return null;
                 foreach (var kv in otherFeatures)
@@ -95,6 +103,7 @@ namespace RestBus.AspNet
                 featureRevision++;
                 if (key == typeof(IHttpRequestFeature)) { _currentIHttpRequestFeature = value; }
                 if (key == typeof(IHttpResponseFeature)) { _currentIHttpResponseFeature = value; }
+                if (key == typeof(IHttpConnectionFeature)) { _currentIHttpConnectionFeature = value; }
 
                 if (otherFeatures == null)
                 {
@@ -159,7 +168,7 @@ namespace RestBus.AspNet
                 if (feature.Value != null)
                 {
                     disposable = feature.Value as IDisposable;
-                    if(disposable != null)
+                    if (disposable != null)
                     {
                         try
                         {
@@ -305,6 +314,19 @@ namespace RestBus.AspNet
         {
             OnCompleted(callback, state);
         }
+
+        #endregion
+
+        #region IHttpConnectionFeature Implementation
+        IPAddress IHttpConnectionFeature.RemoteIpAddress { get; set; }
+
+        IPAddress IHttpConnectionFeature.LocalIpAddress { get; set; }
+
+        int IHttpConnectionFeature.RemotePort { get; set; }
+
+        int IHttpConnectionFeature.LocalPort { get; set; }
+
+        bool IHttpConnectionFeature.IsLocal { get; set; }
 
         #endregion
     }
