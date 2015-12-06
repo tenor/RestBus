@@ -36,7 +36,7 @@ namespace RestBus.AspNet
             req.Protocol = "HTTP/" + request.Version;
             req.QueryString = uri.Query;
             req.Method = request.Method;
-            req.Body = new MemoryStream(request.Content);
+            req.Body = (request.Content == null || request.Content.Length == 0) ? null : new MemoryStream(request.Content);
 
             //Add Request Headers
             {
@@ -44,8 +44,15 @@ namespace RestBus.AspNet
 
                 foreach (var hdr in request.Headers)
                 {
+                    if (hdr.Key != null && hdr.Key.Trim().ToUpperInvariant() == "CONTENT-LENGTH") continue; // Content-length is calculated based on actual content.
+
                     //NOTE: Client already folds Request Headers into RequestPacket, so there's no need to fold it again here.
                     headers.Add(hdr.Key, hdr.Value.ToArray());
+                }
+
+                if (req.Body != null)
+                {
+                    headers.Add("Content-Length", request.Content.Length.ToString());
                 }
                 req.Headers = headers;
             }
@@ -54,9 +61,9 @@ namespace RestBus.AspNet
             //Create Response
             IHttpResponseFeature resp = message as IHttpResponseFeature;
             resp.StatusCode = 200;
+            resp.Body = new MemoryStream();
 
             //Add Response Headers
-            resp.Body = new MemoryStream();
             {
                 var headers = new HeaderDictionary();
 
