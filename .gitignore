@@ -31,7 +31,6 @@ obj/
 [Rr]elease*/
 Ankh.NoLoad
 .vs/
-*.lock.json
 
 #Tooling
 _ReSharper*/
@@ -40,6 +39,8 @@ _ReSharper*/
 
 #Project files
 #[Bb]uild/
+src/packages/
+*.lock.json
 
 #Subversion files
 #.svn
