@@ -28,7 +28,7 @@ namespace RestBus.Common.Http
 
                 hdrKey = hdr.Key.Trim().ToUpperInvariant();
 
-                if (hdrKey == "CONTENT-LENGTH") continue; //Content Length is automatically calculated
+                if (hdrKey == "CONTENT-LENGTH") continue; //Content Length is automatically calculated by System.Net.Http.ByteArrayContent
 
                 if (Array.IndexOf<String>(contentOnlyHeaders, hdrKey) >= 0)
                 {

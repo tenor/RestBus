@@ -251,11 +251,12 @@ namespace RestBus.RabbitMQ.Client
                                 if (res != null)
                                 {
                                     //Add/Update Content-Length Header
+                                    //TODO: Is there any need to add this here if it's subsequently removed/updated by TryGetHttpResponseMessage/HttpPacket.PopulateHeaders? (Is this useful in the exception/other path scenario?
                                     res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
                                 }
 
                                 Interlocked.Exchange(ref responsePacket, res);
-                                responsePacket = res;
+                                responsePacket = res; //TODO: This looks like it's unnecessary due to line above
                             }
 
                             //NOTE: The ManualResetEventSlim.Set() method can be called after the object has been disposed
