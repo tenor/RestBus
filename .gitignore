@@ -1,5 +1,3 @@
-#.gitignore sourced from http://stackoverflow.com/q/2143956
-
 #OS junk files
 [Tt]humbs.db
 *.DS_Store
@@ -32,6 +30,8 @@ obj/
 [Dd]ebug*/
 [Rr]elease*/
 Ankh.NoLoad
+.vs/
+*.lock.json
 
 #Tooling
 _ReSharper*/
