@@ -9,24 +9,24 @@
   "dependencies": {
     "Microsoft.AspNet.Http.Abstractions": "1.0.0-rc1-final",
     "Microsoft.AspNet.Http": "1.0.0-rc1-final",
-    "System.Net.Http": "4.0.1-beta-23409",
+    "System.Net.Http": "4.0.1-beta-23516",
     "RestBus.Common": "0.5.4-*"
   },
 
   "frameworks": {
-    "dnx451": {
+    "net451": {
       "frameworkAssemblies": {
         "System.Collections": "",
         "System.Runtime": ""
       }
     },
-    "dnxcore50": {
+    "dotnet5.4": {
       "dependencies": {
-        "Microsoft.CSharp": "4.0.0-beta-23019",
-        "System.Runtime": "4.0.21-beta-*",
-        "System.Collections": "4.0.10-beta-23019",
-        "System.Linq": "4.0.0-beta-23019",
-        "System.Threading": "4.0.10-beta-23019",
+        "Microsoft.CSharp": "4.0.1-beta-23516",
+        "System.Runtime": "4.0.21-beta-23516",
+        "System.Collections": "4.0.11-beta-23516",
+        "System.Linq": "4.0.1-beta-23516",
+        "System.Threading": "4.0.11-beta-23516",
         "System.Threading.Thread": "4.0.0-*"
 
       }
