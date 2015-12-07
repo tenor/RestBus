@@ -256,6 +256,7 @@ namespace RestBus.RabbitMQ.Subscription
                 request = HttpRequestPacket.Deserialize(evt.Body);
 
                 //Add/Update Content-Length Header
+                //TODO: Should this be moved into DeSerialize above -- considering Serialize removes the Content-Length?
                 request.Headers["Content-Length"] = new string[] { (request.Content == null ? 0 : request.Content.Length).ToString() };
 
                 //Add/Update Subscriber-Id header
@@ -348,6 +349,8 @@ namespace RestBus.RabbitMQ.Subscription
             {
 
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = context.CorrelationId };
+
+                //TODO: Add Date and Subscriber Id header to reponse before sending it
 
                 try
                 {

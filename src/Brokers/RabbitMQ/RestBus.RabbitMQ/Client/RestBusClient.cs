@@ -337,6 +337,8 @@ namespace RestBus.RabbitMQ.Client
                     responseArrivalNotification += arrival;
                 }
 
+                //TODO: Add Date header to packet produced by ToHttpRequestPacket before Serializing it.
+
                 //Send message
                 model.Channel.BasicPublish(exchangeName,
                                 messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),

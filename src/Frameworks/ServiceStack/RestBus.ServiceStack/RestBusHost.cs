@@ -227,8 +227,6 @@ namespace RestBus.ServiceStack
 		{
 			HttpResponsePacket response = new HttpResponsePacket();
 
-			//TODO: Note that when implementing this in WebAPI/MVC the "responsewrapper" will most likely split headers into groups seperated by commas
-
 			string trimmedKey;
 			foreach (string key in wrapper.Headers.AllKeys)
 			{
@@ -251,6 +249,7 @@ namespace RestBus.ServiceStack
 
 			//Add/Update Subscriber-Id header
 			response.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
+            //TODO: Investigate if servicestack V3 produces a Server header, if so add it here
 
 			response.Content = (wrapper.OutputStream as System.IO.MemoryStream).ToArray();
 			response.StatusCode = wrapper.StatusCode;
@@ -284,7 +283,9 @@ namespace RestBus.ServiceStack
                 Version = HTTP_RESPONSE_VERSION
             };
 
+            //TODO: Investigate if servicestack V3 produces a Server header, if so add it here
+
         }
 
-	}
+    }
 }

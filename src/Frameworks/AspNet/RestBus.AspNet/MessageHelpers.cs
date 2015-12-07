@@ -70,12 +70,6 @@ namespace RestBus.AspNet
                 //TODO: Server should also be set when Response is being returned, so that it isn't overwritten.
                 headers.Add("Server", HTTP_RESPONSE_SERVER);
                 resp.Headers = headers;
-
-                //TODO: Something to think about: Should host add Date response header.
-                //If so, shouldn't that be done at the time that the response is been transmitted
-                //In which case, the subscriber should be responsible for adding/overwriting that value.
-                //In any case, remember DateTime.UtcNow/Now is very slow, so use Environment.TickCount in addition to some
-                //other mechanism that limits the number of times, DateTime.UtcNow is polled.
             }
 
             return true;
