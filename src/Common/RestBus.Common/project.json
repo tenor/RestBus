@@ -1,0 +1,14 @@
+{
+  "frameworks": {
+    ".NETPortable,Version=v4.5,Profile=Profile7": { },
+    "dotnet5.2": {
+      "dependencies": {
+        "System.Net.Http": ""
+      }
+    }
+  },
+
+  "runtimes": {
+    "win-anycpu": { }
+  }
+}
