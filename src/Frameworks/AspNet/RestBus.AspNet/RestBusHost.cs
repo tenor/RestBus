@@ -1,38 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using RestBus.Common;
-using System.Threading;
-using System.Net;
-using Microsoft.AspNet.Builder;
-using System.Net.Http;
+﻿using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Http.Internal;
-using Microsoft.AspNet.Http;
+using RestBus.Common;
+using System;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RestBus.AspNet
 {
-    // This project can output the Class library as a NuGet Package.
-    // To enable this option, right-click on the project and select the Properties menu item. In the Build tab select "Produce outputs on build".
     public class RestBusHost : IDisposable
     {
-        //private static readonly Lazy<IPrincipal> anonymousPrincipal = new Lazy<IPrincipal>(() => new GenericPrincipal(new GenericIdentity(String.Empty), new string[0]), isThreadSafe: true);
         private readonly IRestBusSubscriber subscriber;
         private readonly RequestDelegate appFunc;
-        //private readonly RequestHandler requestHandler;
-        private string appVirtualPath;
         private bool hasStarted = false;
-
         InterlockedBoolean disposed;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="RestBusHost"/>
+        /// </summary>
+        /// <param name="subscriber">The RestBus Subscriber</param>
+        /// <param name="appBuilder">The ASP.NET AppBuilder</param>
         public RestBusHost(IRestBusSubscriber subscriber, IApplicationBuilder appBuilder)
         {
             this.appFunc = appBuilder.Build();
             this.subscriber = subscriber;
-            //this.requestHandler = new RequestHandler(config);
         }
 
 
+        /// <summary>
+        /// Starts the host
+        /// </summary>
         public void Start()
         {
             if (hasStarted) return;
@@ -45,17 +42,22 @@ namespace RestBus.AspNet
 
         }
 
+        /// <summary>
+        /// Disposes the host
+        /// </summary>
         public void Dispose()
         {
             if (disposed.IsFalse)
             {
                 disposed.Set(true);
-                //requestHandler.Dispose();
-                //configuration is disposed by requesthandler
                 subscriber.Dispose();
             }
         }
 
+
+        /// <summary>
+        /// Main loop which dequeues requests and spawns a new task to process it.
+        /// </summary>
         private void RunLoop()
         {
             MessageContext context = null;
@@ -90,6 +92,12 @@ namespace RestBus.AspNet
             }
         }
 
+        /// <summary>
+        /// Processes a dequeued request 
+        /// </summary>
+        /// <remarks>
+        /// This method runs in a new Task.
+        /// </remarks>
         private async Task Process(object state)
         {
             try
@@ -103,6 +111,9 @@ namespace RestBus.AspNet
             }
         }
 
+        /// <summary>
+        /// Processes a request.
+        /// </summary>
         private async Task ProcessRequest(MessageContext restbusContext, CancellationToken cancellationToken)
         {
             //NOTE: This method is called on a background thread and must be protected by an outer big-try catch
@@ -121,114 +132,39 @@ namespace RestBus.AspNet
                 }
                 else
                 {
+                    var httpContext = new DefaultHttpContext(msg);
+
                     //Call application
                     try
                     {
-                        var httpContext = new DefaultHttpContext(msg);
                         await appFunc.Invoke(httpContext).ConfigureAwait(false);
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
-                        msg = CreateResponseFromException(ex);
+                        ReportApplicationError(msg, ex);
+                    }
+                    finally
+                    {
+                        if (!msg.HasApplicationException)
+                        {
+                            await FireOnResponseStarting(msg);
+                        }
+
+                        await FireOnResponseCompleted(msg);
                     }
                 }
 
             }
 
 
+            //TODO: Test with full fledged ASP.NET 5 Application and confirm that the fancy exception message is returned.
 
-            //TODO: Implement disposed
-            //if (disposed)
-            //{
-            //    responseMsg = requestMsg.CreateErrorResponse(HttpStatusCode.ServiceUnavailable, "The server is no longer available.");
-            //}
-            //else
-            //{
-            //    requestHandler.EnsureInitialized();
-
-            //    // Add current synchronization context to request parameter
-            //    SynchronizationContext syncContext = SynchronizationContext.Current;
-            //    if (syncContext != null)
-            //    {
-            //        requestMsg.SetSynchronizationContext(syncContext);
-            //    }
-
-            //    // Add HttpConfiguration to request parameter
-            //    requestMsg.SetConfiguration(config);
-
-            //    // Ensure we have a principal, even if the host didn't give us one
-            //    IPrincipal originalPrincipal = Thread.CurrentPrincipal;
-            //    if (originalPrincipal == null)
-            //    {
-            //        Thread.CurrentPrincipal = anonymousPrincipal.Value;
-            //    }
-
-            //    // Ensure we have a principal on the request context (if there is a request context).
-            //    HttpRequestContext requestContext = requestMsg.GetRequestContext();
-
-            //    if (requestContext == null)
-            //    {
-            //        requestContext = new RequestBackedHttpRequestContext(requestMsg);
-
-            //        // if the host did not set a request context we will also set it back to the request.
-            //        requestMsg.SetRequestContext(requestContext);
-            //    }
-
-            //    try
-            //    {
-
-            //        try
-            //        {
-            //            responseMsg = await requestHandler.SendMessageAsync(requestMsg, cancellationToken);
-            //        }
-            //        catch (HttpResponseException exception)
-            //        {
-            //            responseMsg = exception.Response;
-            //        }
-            //        catch (NullReferenceException exception)
-            //        {
-            //            // There is a bug in older versions of HttpRoutingDispatcher which causes a null reference exception when
-            //            // a route could not be found
-            //            // This bug can be triggered by sending a request for a url that doesn't have a route
-            //            // This commit fixes the bug https://github.com/ASP-NET-MVC/aspnetwebstack/commit/6a0c03f9e549966a7f806f8b696ec4cb2ec272e6#diff-c89c7bee3d225a037a6d04e8e4447460
-
-            //            if (exception.TargetSite != null && exception.TargetSite.DeclaringType != null
-            //                && exception.TargetSite.DeclaringType.FullName == "System.Web.Http.Dispatcher.HttpRoutingDispatcher"
-            //                && exception.TargetSite.Name == "SendAsync")
-            //            {
-            //                //This is the bug, so send a 404 instead
-
-            //                const string NoRouteMatchedHttpPropertyKey = "MS_NoRouteMatched";
-
-            //                requestMsg.Properties.Add(NoRouteMatchedHttpPropertyKey, true);
-            //                responseMsg = requestMsg.CreateErrorResponse(
-            //                    HttpStatusCode.NotFound,
-            //                    String.Format("No HTTP resource was found that matches the request URI '{0}'.", requestMsg.RequestUri));
-
-            //            }
-            //            else
-            //            {
-            //                responseMsg = CreateResponseMessageFromException(exception);
-            //            }
-            //        }
-            //        catch (Exception exception)
-            //        {
-            //            responseMsg = CreateResponseMessageFromException(exception);
-            //        }
-
-            //        if (responseMsg == null)
-            //        {
-            //            //TODO: Not good, Log this
-            //            //TODO: derive exception from RestBus.Exceptions class
-            //            responseMsg = CreateResponseMessageFromException(new ApplicationException("Unable to get response"));
-            //        }
-
-            //    }
-            //    finally
-            //    {
-            //        Thread.CurrentPrincipal = originalPrincipal;
-            //    }
-            //}
+            if (msg.HasApplicationException)
+            {
+                //If request encountered an exception then return an Internal Server Error (with empty body) response.
+                msg.Dispose();
+                msg = CreateResponse(HttpStatusCode.InternalServerError, null);
+            }
 
 
             //Send Response
@@ -242,6 +178,7 @@ namespace RestBus.AspNet
             {
                 responsePkt = CreateResponseFromException(ex).ToHttpResponsePacket();
             }
+            msg.Dispose();
 
             //TODO: The Subscriber should do this from within SendResponse.
             //Add/Update Subscriber-Id header
@@ -256,8 +193,10 @@ namespace RestBus.AspNet
             {
                 //TODO: Log SendResponse error
             }
+
         }
 
+        #region Helpers
         private static ServiceMessage CreateResponse(HttpStatusCode status, string reasonPhrase, string body = null)
         {
             var msg = new ServiceMessage();
@@ -290,5 +229,50 @@ namespace RestBus.AspNet
 
             return CreateResponse(HttpStatusCode.InternalServerError, "An unexpected exception was thrown.", body: sb.ToString());
         }
+
+        private async Task FireOnResponseStarting(ServiceMessage msg)
+        {
+            var onStarting = msg._onStarting;
+            if (onStarting != null)
+            {
+                try
+                {
+                    foreach (var entry in onStarting)
+                    {
+                        await entry.Key.Invoke(entry.Value);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ReportApplicationError(msg, ex);
+                }
+            }
+        }
+
+        private async Task FireOnResponseCompleted(ServiceMessage msg)
+        {
+            var onCompleted = msg._onCompleted;
+            if (onCompleted != null)
+            {
+                foreach (var entry in onCompleted)
+                {
+                    try
+                    {
+                        await entry.Key.Invoke(entry.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        ReportApplicationError(msg, ex);
+                    }
+                }
+            }
+        }
+
+        private void ReportApplicationError(ServiceMessage msg, Exception ex)
+        {
+            msg._applicationException = ex;
+            //TODO: Log Application error
+        }
+        #endregion
     }
 }

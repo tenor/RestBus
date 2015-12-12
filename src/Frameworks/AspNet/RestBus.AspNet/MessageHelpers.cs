@@ -93,10 +93,18 @@ namespace RestBus.AspNet
 
             response.Version = HTTP_RESPONSE_VERSION;
             response.StatusCode = respFeature.StatusCode;
-            response.StatusDescription = respFeature.ReasonPhrase;
-
+            if(String.IsNullOrEmpty(respFeature.ReasonPhrase))
+            {
+                response.StatusDescription = ReasonPhrases.ToReasonPhrase(response.StatusCode) ?? "Unknown";
+            }
+            else
+            {
+                response.StatusDescription = respFeature.ReasonPhrase;
+            }
+            
             if (respFeature.Body != null)
             {
+                //TODO: Implement a pooled MemoryStream and replace MemoryStream throughout solution.
                 using (MemoryStream ms = new MemoryStream())
                 {
                     respFeature.Body.Position = 0;

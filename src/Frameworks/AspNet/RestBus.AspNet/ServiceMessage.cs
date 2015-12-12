@@ -25,21 +25,27 @@ namespace RestBus.AspNet
         string _pathBase;
         string _path;
         string _queryString;
-        InterlockedBoolean _responseHasStarted;
         readonly object _onStartingSync = new object();
         readonly object _onCompletedSync = new object();
-        List<KeyValuePair<Func<object, Task>, object>> _onStarting;
-        List<KeyValuePair<Func<object, Task>, object>> _onCompleted;
+        internal List<KeyValuePair<Func<object, Task>, object>> _onStarting;
+        internal List<KeyValuePair<Func<object, Task>, object>> _onCompleted;
+        internal Exception _applicationException;
 
-        internal bool ResponseHasStarted
+        internal bool HasResponseStarted
         {
             get
             {
-                return _responseHasStarted.IsTrue;
+                var body = ((IHttpResponseFeature)this).Body;
+                if (body == null) return false;
+                return body.Length > 0;
             }
-            set
+        }
+
+        internal bool HasApplicationException
+        {
+            get
             {
-                _responseHasStarted.Set(value);
+                return _applicationException != null;
             }
         }
 
@@ -78,6 +84,7 @@ namespace RestBus.AspNet
             ((IHttpConnectionFeature)this).LocalIpAddress = null;
             ((IHttpConnectionFeature)this).IsLocal = false;
         }
+
 
         #region IFeatureCollection Implementation
 
@@ -163,19 +170,22 @@ namespace RestBus.AspNet
             }
 
             IDisposable disposable;
-            foreach (var feature in otherFeatures)
+            if (otherFeatures != null)
             {
-                if (feature.Value != null)
+                foreach (var feature in otherFeatures)
                 {
-                    disposable = feature.Value as IDisposable;
-                    if (disposable != null)
+                    if (feature.Value != null)
                     {
-                        try
+                        disposable = feature.Value as IDisposable;
+                        if (disposable != null)
                         {
-                            disposable.Dispose();
-                        }
-                        catch
-                        {
+                            try
+                            {
+                                disposable.Dispose();
+                            }
+                            catch
+                            {
+                            }
                         }
                     }
                 }
@@ -300,8 +310,8 @@ namespace RestBus.AspNet
         bool IHttpResponseFeature.HasStarted
         {
             get
-            {
-                return ResponseHasStarted;
+            {                
+                return HasResponseStarted;
             }
         }
 
