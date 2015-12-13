@@ -107,6 +107,9 @@ namespace RestBus.AspNet
                 //TODO: Implement a pooled MemoryStream and replace MemoryStream throughout solution.
                 using (MemoryStream ms = new MemoryStream())
                 {
+                    //TODO: Handle cases where the stream Can't Read and Can't seek
+                    //Microsoft.VisualStudio.Web.BrowserLink.Runtime.ScriptInjectionFilterStream behaves this way.
+                    //How does Kestrel handle this?
                     respFeature.Body.Position = 0;
                     respFeature.Body.CopyTo(ms);
                     response.Content = ms.ToArray();

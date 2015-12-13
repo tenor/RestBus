@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace RestBus.AspNet
 {
+    //TODO: Describe what this class does
     public class RestBusHost : IDisposable
     {
         private readonly IRestBusSubscriber subscriber;
@@ -119,6 +120,7 @@ namespace RestBus.AspNet
             //NOTE: This method is called on a background thread and must be protected by an outer big-try catch
 
             ServiceMessage msg;
+            bool appInvoked = false;
             if (disposed.IsTrue)
             {
                 msg = CreateResponse(HttpStatusCode.ServiceUnavailable, "The server is no longer available.");
@@ -135,6 +137,7 @@ namespace RestBus.AspNet
                     var httpContext = new DefaultHttpContext(msg);
 
                     //Call application
+                    appInvoked = true;
                     try
                     {
                         await appFunc.Invoke(httpContext).ConfigureAwait(false);
@@ -145,19 +148,15 @@ namespace RestBus.AspNet
                     }
                     finally
                     {
+                        //TODO: Should FireOnResponseStarting be called, even though exception took place. See https://github.com/aspnet/KestrelHttpServer/issues/470 for resolution
                         if (!msg.HasApplicationException)
                         {
-                            await FireOnResponseStarting(msg);
-                        }
-
-                        await FireOnResponseCompleted(msg);
+                            await FireOnResponseStarting(msg).ConfigureAwait(false);
+                        }                        
                     }
                 }
 
             }
-
-
-            //TODO: Test with full fledged ASP.NET 5 Application and confirm that the fancy exception message is returned.
 
             if (msg.HasApplicationException)
             {
@@ -192,6 +191,12 @@ namespace RestBus.AspNet
             catch
             {
                 //TODO: Log SendResponse error
+            }
+
+            //Call OnCompleted callbacks
+            if(appInvoked)
+            {
+                await FireOnResponseCompleted(msg).ConfigureAwait(false);
             }
 
         }
