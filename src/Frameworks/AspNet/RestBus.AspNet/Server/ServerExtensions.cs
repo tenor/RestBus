@@ -8,6 +8,12 @@ namespace RestBus.AspNet.Server
     public static class ServerExtensions
     {
         // TODO: Think of a better name for this -- Is UseRestBusConfig or UseRestBusSetup better?
+
+        /// <summary>
+        /// Configures the RestBus server to use a specified subscriber
+        /// </summary>
+        /// <param name="app">The Application builder</param>
+        /// <param name="subscriber">The RestBus subscriber</param>
         public static void UseRestBusConfiguration( this IApplicationBuilder app, IRestBusSubscriber subscriber )
         {
             if (app == null) throw new ArgumentNullException("app");

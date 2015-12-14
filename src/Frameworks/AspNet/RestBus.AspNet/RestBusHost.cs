@@ -15,28 +15,11 @@ namespace RestBus.AspNet
         private bool hasStarted = false;
         InterlockedBoolean disposed;
 
-
-        //TODO: Move to UseRestBusHost extension
-        /*
         /// <summary>
-        /// Initializes a new instance of <see cref="RestBusHost"/>
+        /// Initializes a new instance of <see cref="RestBusHost{TContext}"/>
         /// </summary>
         /// <param name="subscriber">The RestBus Subscriber</param>
-        /// <param name="appBuilder">The ASP.NET AppBuilder</param>
-        internal RestBusHost(IRestBusSubscriber subscriber, IApplicationBuilder app)
-        {
-            var appFunc = app.Build();
-            this.subscriber = subscriber;
-
-            var logger = app.ApplicationServices.GetRequiredService<ILogger<HostingEngine>>();
-            var diagnosticSource = app.ApplicationServices.GetRequiredService<DiagnosticSource>();
-            var httpContextFactory = app.ApplicationServices.GetRequiredService<IHttpContextFactory>();
-
-            this.subscriber = subscriber;
-            this.application = new HostingApplication(appFunc, logger, diagnosticSource, httpContextFactory);
-        }
-        */
-
+        /// <param name="application">The HttpApplication</param>
         internal RestBusHost(IRestBusSubscriber subscriber, IHttpApplication<TContext> application)
         {
             this.subscriber = subscriber;
