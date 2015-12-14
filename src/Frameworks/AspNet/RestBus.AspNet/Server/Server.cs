@@ -39,7 +39,7 @@ namespace RestBus.AspNet.Server
 
         public void Start<TContext>(IHttpApplication<TContext> application)
         {
-            //TODO: A lock statement might be useful here.
+            //TODO: Code a better way to prevent same server from starting twice.
             if (_disposables != null)
             {
                 // The server has already started and/or has not been cleaned up yet
@@ -51,63 +51,14 @@ namespace RestBus.AspNet.Server
             {
                 var information = (ServerInformation)Features.Get<IServerInformation>();
 
-                //var host = new RestBusHost()
+                if(information.Subscriber == null)
+                {
+                    throw new InvalidOperationException($"RestBus subscriber could not be found. Add app.{nameof(ServerExtensions.UseRestBusConfiguration)} in Startup.Configure method!");
+                }
 
-                //TODO: Need to pull configuration in here.
-
-                //var host = new RestBusHost(null, application.CreateContext(Features));
-                //var trace = new KestrelTrace(_logger);
-                //var engine = new KestrelEngine(new ServiceContext
-                //{
-                //    FrameFactory = (context, remoteEP, localEP, prepareRequest) =>
-                //    {
-                //        return new Frame<TContext>(application, context, remoteEP, localEP, prepareRequest);
-                //    },
-                //    AppLifetime = _applicationLifetime,
-                //    Log = trace,
-                //    ThreadPool = new LoggingThreadPool(trace),
-                //    DateHeaderValueManager = dateHeaderValueManager,
-                //    ConnectionFilter = information.ConnectionFilter,
-                //    NoDelay = information.NoDelay
-                //});
-
-                //_disposables.Push(engine);
-                //_disposables.Push(dateHeaderValueManager);
-
-                //var threadCount = information.ThreadCount;
-
-                //if (threadCount <= 0)
-                //{
-                //    throw new ArgumentOutOfRangeException(nameof(threadCount),
-                //        threadCount,
-                //        "ThreadCount must be positive.");
-                //}
-
-                //engine.Start(threadCount);
-                //var atLeastOneListener = false;
-
-                //foreach (var address in information.Addresses)
-                //{
-                //    var parsedAddress = ServerAddress.FromUrl(address);
-                //    if (parsedAddress == null)
-                //    {
-                //        throw new FormatException("Unrecognized listening address: " + address);
-                //    }
-                //    else
-                //    {
-                //        atLeastOneListener = true;
-                //        _disposables.Push(engine.CreateServer(
-                //            parsedAddress));
-                //    }
-                //}
-
-                //if (!atLeastOneListener)
-                //{
-                //    throw new InvalidOperationException("No recognized listening addresses were configured.");
-                //}
-
-                //if(information.Addresses != )
-
+                var host = new RestBusHost<TContext>(information.Subscriber, application);
+                _disposables.Push(host);
+                host.Start();
             }
             catch
             {

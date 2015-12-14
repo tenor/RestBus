@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Http;
-using Microsoft.AspNet.Http.Internal;
+﻿using Microsoft.AspNet.Hosting.Server;
 using RestBus.Common;
 using System;
 using System.Net;
@@ -10,22 +8,39 @@ using System.Threading.Tasks;
 namespace RestBus.AspNet
 {
     //TODO: Describe what this class does
-    public class RestBusHost : IDisposable
+    internal class RestBusHost<TContext> : IDisposable
     {
         private readonly IRestBusSubscriber subscriber;
-        private readonly RequestDelegate appFunc;
+        private readonly IHttpApplication<TContext> application;
         private bool hasStarted = false;
         InterlockedBoolean disposed;
 
+
+        //TODO: Move to UseRestBusHost extension
+        /*
         /// <summary>
         /// Initializes a new instance of <see cref="RestBusHost"/>
         /// </summary>
         /// <param name="subscriber">The RestBus Subscriber</param>
         /// <param name="appBuilder">The ASP.NET AppBuilder</param>
-        internal RestBusHost(IRestBusSubscriber subscriber, IApplicationBuilder appBuilder)
+        internal RestBusHost(IRestBusSubscriber subscriber, IApplicationBuilder app)
         {
-            this.appFunc = appBuilder.Build();
+            var appFunc = app.Build();
             this.subscriber = subscriber;
+
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<HostingEngine>>();
+            var diagnosticSource = app.ApplicationServices.GetRequiredService<DiagnosticSource>();
+            var httpContextFactory = app.ApplicationServices.GetRequiredService<IHttpContextFactory>();
+
+            this.subscriber = subscriber;
+            this.application = new HostingApplication(appFunc, logger, diagnosticSource, httpContextFactory);
+        }
+        */
+
+        internal RestBusHost(IRestBusSubscriber subscriber, IHttpApplication<TContext> application)
+        {
+            this.subscriber = subscriber;
+            this.application = application;
         }
 
 
@@ -120,84 +135,103 @@ namespace RestBus.AspNet
         {
             //NOTE: This method is called on a background thread and must be protected by an outer big-try catch
 
-            ServiceMessage msg;
+            TContext context = default(TContext);
+            Exception appException = null;
+            ServiceMessage msg = null;
             bool appInvoked = false;
-            if (disposed.IsTrue)
+
+            try
             {
-                msg = CreateResponse(HttpStatusCode.ServiceUnavailable, "The server is no longer available.");
-            }
-            else
-            {
-                if (!restbusContext.Request.TryGetServiceMessage(out msg))
+                if (disposed.IsTrue)
                 {
-                    //Bad message
-                    msg = CreateResponse(HttpStatusCode.BadRequest, "Bad Request");
+                    msg = CreateResponse(HttpStatusCode.ServiceUnavailable, "The server is no longer available.");
                 }
                 else
                 {
-                    var httpContext = new DefaultHttpContext(msg);
+                    if (!restbusContext.Request.TryGetServiceMessage(out msg))
+                    {
+                        //Bad message
+                        msg = CreateResponse(HttpStatusCode.BadRequest, "Bad Request");
+                    }
+                    else
+                    {
+                        context = application.CreateContext(msg);
 
-                    //Call application
-                    appInvoked = true;
-                    try
-                    {
-                        await appFunc.Invoke(httpContext).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        ReportApplicationError(msg, ex);
-                    }
-                    finally
-                    {
-                        //TODO: Should FireOnResponseStarting be called, even though exception took place. See https://github.com/aspnet/KestrelHttpServer/issues/470 for resolution
-                        if (!msg.HasApplicationException)
+                        //Call application
+                        appInvoked = true;
+                        try
                         {
-                            await FireOnResponseStarting(msg).ConfigureAwait(false);
-                        }                        
+                            await application.ProcessRequestAsync(context).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            ReportApplicationError(msg, ex);
+                        }
+                        finally
+                        {
+                            //TODO: Should FireOnResponseStarting be called even though exception occured? See https://github.com/aspnet/KestrelHttpServer/issues/470 for resolution
+                            if (!msg.HasApplicationException)
+                            {
+                                await FireOnResponseStarting(msg).ConfigureAwait(false);
+                            }
+                        }
                     }
+
                 }
 
+                if (msg.HasApplicationException)
+                {
+                    appException = msg._applicationException;
+
+                    //If request encountered an exception then return an Internal Server Error (with empty body) response.
+                    msg.Dispose();
+                    msg = CreateResponse(HttpStatusCode.InternalServerError, null);
+                }
+
+
+                //Send Response
+                HttpResponsePacket responsePkt;
+
+                try
+                {
+                    responsePkt = msg.ToHttpResponsePacket();
+                }
+                catch (Exception ex)
+                {
+                    responsePkt = CreateResponseFromException(ex).ToHttpResponsePacket();
+                }
+
+                //TODO: The Subscriber should do this from within SendResponse.
+                //Add/Update Subscriber-Id header
+                responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
+
+                try
+                {
+                    //TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
+                    subscriber.SendResponse(restbusContext, responsePkt);
+                }
+                catch
+                {
+                    //TODO: Log SendResponse error
+                }
+
+                //Call OnCompleted callbacks
+                if (appInvoked)
+                {
+                    await FireOnResponseCompleted(msg).ConfigureAwait(false);
+                }
             }
-
-            if (msg.HasApplicationException)
+            finally
             {
-                //If request encountered an exception then return an Internal Server Error (with empty body) response.
-                msg.Dispose();
-                msg = CreateResponse(HttpStatusCode.InternalServerError, null);
-            }
+                if (appInvoked)
+                {
+                    application.DisposeContext(context, appException);
+                }
 
-
-            //Send Response
-            HttpResponsePacket responsePkt;
-
-            try
-            {
-                responsePkt = msg.ToHttpResponsePacket();
-            }
-            catch(Exception ex)
-            {
-                responsePkt = CreateResponseFromException(ex).ToHttpResponsePacket();
-            }
-            msg.Dispose();
-
-            //TODO: The Subscriber should do this from within SendResponse.
-            //Add/Update Subscriber-Id header
-            responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
-
-            try
-            {
-                //TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
-                subscriber.SendResponse(restbusContext, responsePkt);
-            }
-            catch
-            {
-                //TODO: Log SendResponse error
-            }
-
-            //Call OnCompleted callbacks
-            if(appInvoked)
-            {
-                await FireOnResponseCompleted(msg).ConfigureAwait(false);
+                if (msg != null)
+                {
+                    msg.Dispose();
+                }
             }
 
         }
