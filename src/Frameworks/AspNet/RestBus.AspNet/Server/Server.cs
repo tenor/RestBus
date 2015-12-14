@@ -50,7 +50,8 @@ namespace RestBus.AspNet.Server
             try
             {
                 var information = (ServerInformation)Features.Get<IServerInformation>();
-                Console.WriteLine("Started");
+
+                //var host = new RestBusHost()
 
                 //TODO: Need to pull configuration in here.
 

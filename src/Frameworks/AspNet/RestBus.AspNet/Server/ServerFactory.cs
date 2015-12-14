@@ -24,6 +24,7 @@ namespace RestBus.AspNet.Server
         {
             var information = new ServerInformation(configuration);
             var serverFeatures = new FeatureCollection();
+            serverFeatures.Set<IServerInformation>(information);
             serverFeatures.Set<IServerAddressesFeature>(information);
             return new Server(serverFeatures, _appLifetime, _loggerFactory.CreateLogger("RestBus.AspNet"));
         }

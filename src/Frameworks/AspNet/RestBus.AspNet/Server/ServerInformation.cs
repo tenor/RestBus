@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using RestBus.Common;
 
 namespace RestBus.AspNet.Server
 {
@@ -18,6 +19,8 @@ namespace RestBus.AspNet.Server
 
         public ICollection<string> Addresses { get; }
 
+        public IRestBusSubscriber Subscriber { get; internal set; }
+
         private static ICollection<string> GetAddresses(IConfiguration configuration)
         {
             var addresses = new List<string>();
@@ -29,7 +32,7 @@ namespace RestBus.AspNet.Server
                 addresses.Add(urls);
             }
 
-            return addresses;
+            return addresses.AsReadOnly();
         }
     }
 }

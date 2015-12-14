@@ -22,7 +22,7 @@ namespace RestBus.AspNet
         /// </summary>
         /// <param name="subscriber">The RestBus Subscriber</param>
         /// <param name="appBuilder">The ASP.NET AppBuilder</param>
-        public RestBusHost(IRestBusSubscriber subscriber, IApplicationBuilder appBuilder)
+        internal RestBusHost(IRestBusSubscriber subscriber, IApplicationBuilder appBuilder)
         {
             this.appFunc = appBuilder.Build();
             this.subscriber = subscriber;
@@ -32,7 +32,7 @@ namespace RestBus.AspNet
         /// <summary>
         /// Starts the host
         /// </summary>
-        public void Start()
+        internal void Start()
         {
             if (hasStarted) return;
 
