@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNet.Builder;
+using Microsoft.AspNet.Hosting;
 using Microsoft.AspNet.Hosting.Internal;
 using Microsoft.AspNet.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,9 +34,15 @@ namespace RestBus.AspNet
             var application = new HostingApplication(appFunc, logger, diagnosticSource, httpContextFactory);
 
             var host = new RestBusHost<HostingApplication.Context>(subscriber, application);
-            host.Start();
 
-            //TODO: Add host Disposal code
+            //Register host for disposal
+            var appLifeTime = app.ApplicationServices.GetRequiredService<IApplicationLifetime>();
+
+            appLifeTime.ApplicationStopping.Register(() => host.Dispose()); //TODO: Make ApplicationStopping event stop dequeueing items (StopPollingQueue)
+            appLifeTime.ApplicationStopped.Register(() => host.Dispose());
+
+            //Start host
+            host.Start();
         }
 
     }
