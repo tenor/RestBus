@@ -47,6 +47,7 @@ namespace RestBus.RabbitMQ.Subscription
 
         public void Start()
         {
+            //TODO: //Use InterlockedBoolean.SetIf here and throw InvalidOperationException if already started.
             if (isStarted) return;
             isStarted = true;
 

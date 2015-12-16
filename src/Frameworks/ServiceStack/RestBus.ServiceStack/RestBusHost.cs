@@ -90,7 +90,7 @@ namespace RestBus.ServiceStack
 		{
 			if (hasStarted) return;
 
-			//TODO: Add some sync here so that multiple threads are not created.
+			//TODO: Add some sync here so that multiple threads are not created. (Use InterlockedBoolean.SetIF here and throw exception if already started.)
 			hasStarted = true;
 			subscriber.Start();
 

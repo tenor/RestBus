@@ -32,6 +32,7 @@ namespace RestBus.AspNet
         /// </summary>
         internal void Start()
         {
+            //TODO: //Use InterlockedBoolean.SetIf here and throw InvalidOperationException if already started.
             if (Interlocked.CompareExchange(ref hasStarted, -1, 0) == -1)
             {
                 throw new InvalidOperationException("RestBus host has already started!");
