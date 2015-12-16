@@ -12,7 +12,7 @@ namespace RestBus.AspNet
     {
         private readonly IRestBusSubscriber subscriber;
         private readonly IHttpApplication<TContext> application;
-        private bool hasStarted = false;
+        private int hasStarted = 0;
         InterlockedBoolean disposed;
 
         /// <summary>
@@ -32,10 +32,11 @@ namespace RestBus.AspNet
         /// </summary>
         internal void Start()
         {
-            if (hasStarted) return;
+            if (Interlocked.CompareExchange(ref hasStarted, -1, 0) == -1)
+            {
+                throw new InvalidOperationException("RestBus host has already started!");
+            }
 
-            //TODO: Add some sync here so that multiple threads are not created.
-            hasStarted = true;
             subscriber.Start();
 
             Task.Factory.StartNew(RunLoop, creationOptions: TaskCreationOptions.LongRunning);
