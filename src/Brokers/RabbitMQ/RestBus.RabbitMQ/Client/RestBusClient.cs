@@ -251,6 +251,13 @@ namespace RestBus.RabbitMQ.Client
                             {
                                 if (res != null)
                                 {
+                                    //Add Date Header
+                                    string dateHeaderValue;
+                                    if (Shared.TryGetHttpDateFromUnixTimeSeconds(a.BasicProperties.Timestamp.UnixTime, out dateHeaderValue))
+                                    {
+                                        res.Headers["Date"] = new string[] { dateHeaderValue };
+                                    }
+
                                     //Add/Update Content-Length Header
                                     //TODO: Is there any need to add this here if it's subsequently removed/updated by TryGetHttpResponseMessage/HttpPacket.PopulateHeaders? (Is this useful in the exception/other path scenario?
                                     res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
@@ -337,8 +344,6 @@ namespace RestBus.RabbitMQ.Client
 
                     responseArrivalNotification += arrival;
                 }
-
-                //TODO: Add Date header to packet produced by ToHttpRequestPacket before Serializing it.
 
                 //Send message
                 model.Channel.BasicPublish(exchangeName,

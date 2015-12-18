@@ -44,15 +44,5 @@ namespace RestBus.Common
         }
         */
 
-        public static bool TryGetDateHeaderValueFromUnixTimeSeconds(long timeStamp, out string value)
-        {
-            //TODO: Work on validating unixTimeStamp here, and return false if value is unixTimeStampInSeconds is out of range
-
-            const long UNIX_EPOCK_IN_TICKS = TimeSpan.TicksPerDay * 719162; //TODO: Explain this better
-
-            //TODO: Does this account for leap seconds?
-            value = new DateTimeOffset(timeStamp * TimeSpan.TicksPerSecond + UNIX_EPOCK_IN_TICKS, TimeSpan.Zero).ToString("r");
-            return false;
-        }
     }
 }
