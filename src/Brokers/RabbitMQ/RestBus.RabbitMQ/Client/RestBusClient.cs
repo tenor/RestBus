@@ -19,6 +19,8 @@ namespace RestBus.RabbitMQ.Client
     public class RestBusClient : HttpMessageInvoker
     {
         const string REQUEST_OPTIONS_KEY = "_RestBus_request_options";
+        static SequenceGenerator clientIdGen = SequenceGenerator.FromUtcNow();
+        static SequenceGenerator correlationIdGen = SequenceGenerator.FromUtcNow();
 
         readonly IMessageMapper messageMapper;
         readonly ExchangeInfo exchangeInfo;
@@ -31,7 +33,6 @@ namespace RestBus.RabbitMQ.Client
         event Action<BasicDeliverEventArgs> responseArrivalNotification = null;
         AmqpChannelPooler _clientPool;
 
-
         readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
@@ -41,7 +42,6 @@ namespace RestBus.RabbitMQ.Client
         private Uri baseAddress;
         private HttpRequestHeaders defaultRequestHeaders;
         private TimeSpan timeout;
-
 
         public const int HEART_BEAT = 30;
 
@@ -56,7 +56,7 @@ namespace RestBus.RabbitMQ.Client
             //Configure RestBus fields/properties
             this.messageMapper = messageMapper;
             this.exchangeInfo = messageMapper.GetExchangeInfo();
-            this.clientId = AmqpUtils.GetRandomId();
+            this.clientId = clientIdGen.GetNextId();
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo);
             this.callbackQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
 
@@ -203,7 +203,7 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
                 //TODO: if exchangeInfo wants a Durable Queue
 
-                string correlationId = AmqpUtils.GetRandomId();
+                string correlationId = correlationIdGen.GetNextId();
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
 
                 TimeSpan requestTimeout = GetRequestTimeout(requestOptions);

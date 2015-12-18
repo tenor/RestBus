@@ -40,28 +40,10 @@ namespace RestBus.RabbitMQ
 			return workQueueRoutingKey;
 		}
 
-        static Random rnd = new Random();
-        static object rndSync = new object();
-		public static string GetRandomId()
-		{
-            //TODO: Implement a simple Thread Safe Random Generator (Preferred since thread local random generators can coincidentally use the same seed)
-            //or use ThreadStatic or ThreadLocal
-            //as described in the following posts:
-            //
-            // http://blogs.msdn.com/b/pfxteam/archive/2009/02/19/9434171.aspx
-            // http://msmvps.com/blogs/jon_skeet/archive/2009/11/04/revisiting-randomness.aspx
-
-            lock (rndSync)
-            {
-                return ((long)(rnd.NextDouble() * (Int32.MaxValue - 1))).ToString("x");
-            }
-		}
-
 		public static TimeSpan GetWorkQueueExpiry()
 		{
 			return TimeSpan.FromHours(24);
 		}
-
 
 		public static TimeSpan GetCallbackQueueExpiry()
 		{

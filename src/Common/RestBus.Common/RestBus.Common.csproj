@@ -40,6 +40,7 @@
   <ItemGroup>
     <Compile Include="Amqp\ExchangeInfo.cs" />
     <Compile Include="Amqp\IMessageMapper.cs" />
+    <Compile Include="SequenceGenerator.cs" />
     <Compile Include="Shared.cs" />
     <Compile Include="CommonUtils.cs" />
     <Compile Include="MessageContext.cs" />

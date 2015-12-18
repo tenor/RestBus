@@ -12,8 +12,10 @@ namespace RestBus.RabbitMQ.Subscription
 {
     public class RestBusSubscriber : IRestBusSubscriber
     {
+        static SequenceGenerator subscriberIdGen = SequenceGenerator.FromUtcNow();
+
         //TODO: Error handling on the subscriber when the queue(s) expires
-        
+
         IConnection conn;
         IModel workChannel;
         IModel subscriberChannel;
@@ -34,7 +36,7 @@ namespace RestBus.RabbitMQ.Subscription
         {
 
             exchangeInfo = messageMapper.GetExchangeInfo();
-            subscriberId = AmqpUtils.GetRandomId();
+            subscriberId = subscriberIdGen.GetNextId();
 
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeInfo.ServerAddress;
