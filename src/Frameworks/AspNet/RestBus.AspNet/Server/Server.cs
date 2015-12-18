@@ -58,6 +58,9 @@ namespace RestBus.AspNet.Server
 
                 var host = new RestBusHost<TContext>(information.Subscriber, application);
                 _disposables.Push(host);
+
+                //TODO: Make IApplicationLifeTime.Stopping to stop polling the queue.
+
                 host.Start();
             }
             catch

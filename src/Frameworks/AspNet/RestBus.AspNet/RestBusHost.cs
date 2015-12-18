@@ -154,7 +154,7 @@ namespace RestBus.AspNet
                         }
                         finally
                         {
-                            //TODO: Should FireOnResponseStarting be called even though exception occured? See https://github.com/aspnet/KestrelHttpServer/issues/470 for resolution
+                            //Call FireOnResponseStarting if message didn't encounter an exception.
                             if (!msg.HasApplicationException)
                             {
                                 await FireOnResponseStarting(msg).ConfigureAwait(false);
