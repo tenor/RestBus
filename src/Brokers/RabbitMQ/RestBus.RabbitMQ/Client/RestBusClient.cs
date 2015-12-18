@@ -186,8 +186,9 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: Check if cancellation token was set before operation even began
                 var taskSource = new TaskCompletionSource<HttpResponseMessage>();
 
-                //NOTE: You're not supposed to share channels across threads but I believe we're fine here.
+                //NOTE: You're not supposed to share channels across threads but Iin this situation where only one thread can have access to a channel at a time, all's good.
 
+                //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
                 model = pooler.GetModel(ChannelFlags.None);
 
                 TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);

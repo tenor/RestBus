@@ -4,6 +4,7 @@ using RabbitMQ.Client.Framing;
 using RabbitMQ.Util;
 using RestBus.Common;
 using RestBus.Common.Amqp;
+using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.Threading;
 
@@ -16,6 +17,7 @@ namespace RestBus.RabbitMQ.Subscription
         IConnection conn;
         IModel workChannel;
         IModel subscriberChannel;
+        AmqpChannelPooler _subscriberPool;
         QueueingBasicConsumer workConsumer;
         QueueingBasicConsumer subscriberConsumer;
         string subscriberId;
@@ -84,6 +86,11 @@ namespace RestBus.RabbitMQ.Subscription
                 }
             }
 
+            if (_subscriberPool != null)
+            {
+                _subscriberPool.Dispose();
+            }
+
             if (conn != null)
             {
                 try
@@ -107,12 +114,15 @@ namespace RestBus.RabbitMQ.Subscription
             //TODO: CreateConnection() can always throw BrokerUnreachableException so keep that in mind when calling
             conn = connectionFactory.CreateConnection();
 
+            _subscriberPool = new AmqpChannelPooler(conn);
+
             //Create shared queue
             SharedQueue<BasicDeliverEventArgs> queue = new SharedQueue<BasicDeliverEventArgs>();
 
             //Create work channel and declare exchanges and queues
             workChannel = conn.CreateModel();
-            
+
+            //TODO: Work this into subscriber dispose and restart
             /* Work this into subscriber dispose and restart
             //Cancel consumers on server
             if(workCTag != null)
@@ -318,6 +328,11 @@ namespace RestBus.RabbitMQ.Subscription
                 subscriberChannel.Dispose();
             }
 
+            if (_subscriberPool != null)
+            {
+                _subscriberPool.Dispose();
+            }
+
             if (conn != null)
             {
                 try
@@ -345,24 +360,33 @@ namespace RestBus.RabbitMQ.Subscription
                 throw new ApplicationException("This is Bad");
             }
 
-            //TODO: Channel Pool this connection 
-            using (IModel channel = conn.CreateModel())
+            var pooler = _subscriberPool;
+            AmqpModelContainer model = null;
+            try
             {
-
+                model = pooler.GetModel(ChannelFlags.None);
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = context.CorrelationId };
 
                 //TODO: Add Date and Subscriber Id header to reponse before sending it
 
                 try
                 {
-                    channel.BasicPublish(String.Empty,
+                    model.Channel.BasicPublish(String.Empty,
                                     context.ReplyToQueue,
                                     basicProperties,
                                     response.Serialize());
                 }
-                catch { 
+                catch {
                     //TODO: Log execption
                 }
+            }
+            finally
+            {
+                if(model != null)
+                {
+                    model.Close();
+                }
+
             }
 
         }
