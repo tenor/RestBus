@@ -10,24 +10,25 @@ namespace RestBus.RabbitMQ
 	internal static class AmqpUtils
 	{
 		const string exchangePrefix = "restbus:";
-		const string workQueuePrefix = "restbus-wq-";
-		const string callbackQueuePrefix = "restbus-cq-";
-		const string subscriberQueuePrefix = "restbus-sq-";
+        const string queuePrefix = "restbus";
+        const string workQueuePath = "wq";
+        const string callbackQueuePath = "cq/";
+        const string subscriberQueuePath = "sq/";
 		const string workQueueRoutingKey = "";
 
 		public static string GetCallbackQueueName(ExchangeInfo exchangeInfo, string clientId)
 		{
-			return callbackQueuePrefix + exchangeInfo.Exchange + clientId;
+			return queuePrefix + exchangeInfo.Exchange + callbackQueuePath + clientId;
 		}
 
 		public static string GetSubscriberQueueName(ExchangeInfo exchangeInfo, string subscriberId)
 		{
-			return subscriberQueuePrefix + exchangeInfo.Exchange + subscriberId;
+			return queuePrefix + exchangeInfo.Exchange + subscriberQueuePath + subscriberId;
 		}
 
 		public static string GetWorkQueueName(ExchangeInfo exchangeInfo)
 		{
-			return workQueuePrefix + exchangeInfo.Exchange;
+			return queuePrefix + exchangeInfo.Exchange + workQueuePath;
 		}
 
 		public static string GetExchangeName(ExchangeInfo exchangeInfo)
