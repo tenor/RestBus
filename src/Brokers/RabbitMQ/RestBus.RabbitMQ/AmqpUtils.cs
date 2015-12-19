@@ -61,7 +61,7 @@ namespace RestBus.RabbitMQ
         //started silmulataneously will generate the same same sequence since it's time based.
         public static string GetNewExclusiveQueueId()
         {
-            byte[] buffer = new byte[64];
+            byte[] buffer = new byte[8];
             Common.SynchronizedRandom.Instance.NextBytes(buffer);
             var base64str = Convert.ToBase64String(buffer, Base64FormattingOptions.None);
 
