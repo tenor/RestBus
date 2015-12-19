@@ -13,6 +13,9 @@ namespace RestBus.AspNet.Server
         private readonly IApplicationLifetime _applicationLifetime;
         private readonly ILogger _logger;
 
+        internal const string ConfigServerArgumentName = "server"; // The argument passed to Microsoft.AspNet.Hosting.Program.Main()
+        internal const string ConfigServerAssembly = "RestBus.AspNet"; // The server assembly name passed to Microsoft.AspNet.Hosting.Program.Main()
+
         public Server(IFeatureCollection features, IApplicationLifetime applicationLifetime, ILogger logger)
         {
             if (features == null)

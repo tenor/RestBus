@@ -6,7 +6,7 @@ namespace RestBus.AspNet.Server
     {
         public static void Main(string[] args)
         {
-            var mergedArgs = new[] { "--server", "RestBus.AspNet" }.Concat(args).ToArray();
+            var mergedArgs = new[] { "--" + Server.ConfigServerArgumentName, Server.ConfigServerAssembly }.Concat(args).ToArray();
             Microsoft.AspNet.Hosting.Program.Main(mergedArgs);
         }
     }

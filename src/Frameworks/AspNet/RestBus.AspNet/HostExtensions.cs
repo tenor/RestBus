@@ -15,14 +15,32 @@ namespace RestBus.AspNet
         //TODO: See if it's possible to prevent middleware from being added after RunRestBusHost() is called, subsequent calls to RunRestBusHost must succeed.
 
         /// <summary>
-        /// Starts a new <see cref="RestBusHost{TContext}"/> using the specified subscriber.
+        /// Starts running a new RestBus host.
         /// </summary>
         /// <param name="app">The Application builder</param>
         /// <param name="subscriber">The RestBus subscriber</param>
         public static void RunRestBusHost(this IApplicationBuilder app, IRestBusSubscriber subscriber)
         {
+            RunRestBusHost(app, subscriber, false);
+        }
+
+        /// <summary>
+        /// Starts running a new RestBus host.
+        /// </summary>
+        /// <param name="app">The Application builder</param>
+        /// <param name="subscriber">The RestBus subscriber</param>
+        /// <param name="continueIfRestBusServer">Set to false to not run the host if the application server is the RestBus.AspNet server</param>
+        public static void RunRestBusHost(this IApplicationBuilder app, IRestBusSubscriber subscriber, bool continueIfRestBusServer)
+        {
             if (app == null) throw new ArgumentNullException("app");
             if (subscriber == null) throw new ArgumentNullException("subscriber");
+
+            if (!continueIfRestBusServer && 
+                app.ApplicationServices.GetRequiredService<IHostingEnvironment>().Configuration[Server.Server.ConfigServerArgumentName] == Server.Server.ConfigServerAssembly)
+            {
+                //The application is running RestBusServer, so exit
+                return;
+            }
 
             var appFunc = app.Build();
 
