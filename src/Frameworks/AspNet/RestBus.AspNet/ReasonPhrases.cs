@@ -73,13 +73,13 @@
                 case 412:
                     return "Precondition Failed";
                 case 413:
-                    return "Request Entity Too Large";
+                    return "Payload Too Large";
                 case 414:
-                    return "Request-URI Too Long";
+                    return "URI Too Long";
                 case 415:
                     return "Unsupported Media Type";
                 case 416:
-                    return "Requested Range Not Satisfiable";
+                    return "Range Not Satisfiable";
                 case 417:
                     return "Expectation Failed";
                 case 418:
