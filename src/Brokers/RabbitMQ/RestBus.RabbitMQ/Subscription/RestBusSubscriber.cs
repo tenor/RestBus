@@ -268,13 +268,6 @@ namespace RestBus.RabbitMQ.Subscription
             {
                 request = HttpRequestPacket.Deserialize(evt.Body);
 
-                //Add Date Header
-                string dateHeaderValue;
-                if (Shared.TryGetHttpDateFromUnixTimeSeconds(evt.BasicProperties.Timestamp.UnixTime, out dateHeaderValue))
-                {
-                    request.Headers["Date"] = new string[] { dateHeaderValue };
-                }
-
                 //Add/Update Content-Length Header
                 //TODO: Should this be moved into DeSerialize above -- considering Serialize removes the Content-Length?
                 request.Headers["Content-Length"] = new string[] { (request.Content == null ? 0 : request.Content.Length).ToString() };

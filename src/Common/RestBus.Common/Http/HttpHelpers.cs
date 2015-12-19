@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
@@ -14,13 +15,21 @@ namespace RestBus.Common.Http
 
         #region Helper Methods to Populate to and from HttpRequestMessage / HttpResponseMessage headers
 
+        //TODO: Investigate if it's worth turning this into a dictionary
         static string[] contentOnlyHeaders = { "ALLOW", "CONTENT-DISPOSITION", "CONTENT-ENCODING", "CONTENT-LANGUAGE", "CONTENT-LOCATION", "CONTENT-MD5",
                                              "CONTENT-RANGE", "CONTENT-TYPE", "EXPIRES", "LAST-MODIFIED", "CONTENT-LENGTH"  };
 
+        /// <summary>
+        /// Populates contentheaders and generalheaders with headers from the <see cref="HttpPacket"/>>
+        /// </summary>
+        /// <param name="packet"></param>
+        /// <param name="contentHeaders"></param>
+        /// <param name="generalHeaders"></param>
         public static void PopulateHeaders(this HttpPacket packet, HttpContentHeaders contentHeaders, HttpHeaders generalHeaders)
         {
             if (packet == null) throw new ArgumentNullException("packet");
 
+            bool dateHeaderProcessed = false;
             string hdrKey;
             foreach (var hdr in packet.Headers)
             {
@@ -28,7 +37,27 @@ namespace RestBus.Common.Http
 
                 hdrKey = hdr.Key.Trim().ToUpperInvariant();
 
-                if (hdrKey == "CONTENT-LENGTH") continue; //Content Length is automatically calculated by System.Net.Http.ByteArrayContent
+                if (hdrKey == "CONTENT-LENGTH")
+                {
+                    continue; //Content Length is automatically calculated by System.Net.Http.ByteArrayContent
+                }
+                else if (hdrKey == "DATE")
+                {
+                    if (dateHeaderProcessed) continue; //Already Processed
+                    dateHeaderProcessed = true;
+
+                    //Date Header in wrong format causes exception in System.Net.Http.HttpResponseMessage/HttpRequestMessage
+                    //TODO: Confirm that this exception still occurs in the newer Nuget version of System.Net.Http
+
+                    //Check if the date string is in RFC 1123 format
+                    var val = (hdr.Value == null || !hdr.Value.Any()) ? null : hdr.Value.First().Trim();
+                    if(val != null && Common.Shared.IsValidHttpDate(val))
+                    {
+                        generalHeaders.Add("Date", val);
+                    }
+
+                    continue;
+                }
 
                 if (Array.IndexOf<String>(contentOnlyHeaders, hdrKey) >= 0)
                 {
