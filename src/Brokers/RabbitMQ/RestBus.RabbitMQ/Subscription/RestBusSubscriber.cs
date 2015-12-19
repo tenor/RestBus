@@ -268,10 +268,6 @@ namespace RestBus.RabbitMQ.Subscription
             {
                 request = HttpRequestPacket.Deserialize(evt.Body);
 
-                //Add/Update Content-Length Header
-                //TODO: Should this be moved into DeSerialize above -- considering Serialize removes the Content-Length?
-                request.Headers["Content-Length"] = new string[] { (request.Content == null ? 0 : request.Content.Length).ToString() };
-
                 //Add/Update Subscriber-Id header
                 request.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { this.subscriberId };
 

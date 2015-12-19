@@ -20,6 +20,12 @@ namespace RestBus.ServiceStack
 
         public RequestWrapper(HttpRequestPacket request)
         {
+            //Add Content-Length Header if request has content.
+            if (request.Content != null && request.Content.Length > 0)
+            {
+                request.Headers["Content-Length"] = new string[] { request.Content.Length.ToString() };
+            }
+
             this.request = request;
         }
 

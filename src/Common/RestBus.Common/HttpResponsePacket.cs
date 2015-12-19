@@ -95,7 +95,7 @@ namespace RestBus.Common
 
                         for (int i = 3; i < components.Length; i++)
                         {
-                            //TODO: Should I convert this to a string builder. Is it worth it?
+                            //TODO: Convert to a string builder? Is it worth it?
                             statusDescription += (" " + components[i]);
                         }
                         response.StatusDescription = statusDescription;
