@@ -7,8 +7,6 @@ namespace RestBus.AspNet.Server
 {
     public static class ServerExtensions
     {
-        // TODO: Think of a better name for this -- Is UseRestBusConfig or UseRestBusSetup better?
-
         /// <summary>
         /// Configures the RestBus server to use a specified subscriber
         /// </summary>

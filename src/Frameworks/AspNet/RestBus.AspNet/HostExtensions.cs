@@ -12,15 +12,14 @@ namespace RestBus.AspNet
 {
     public static class HostExtensions
     {
-        //TODO: Is 'RunRestBusHost' a better name? For: It's not technically middleware, and it's supposed to be called last in the pipeline. Against: The app 'uses' the host.
-        //TODO: Test when UseRestBusHost is not the last call for the pipeline.
+        //TODO: See if it's possible to prevent middleware from being added after RunRestBusHost() is called, subsequent calls to RunRestBusHost must succeed.
 
         /// <summary>
         /// Starts a new <see cref="RestBusHost{TContext}"/> using the specified subscriber.
         /// </summary>
         /// <param name="app">The Application builder</param>
         /// <param name="subscriber">The RestBus subscriber</param>
-        public static void UseRestBusHost(this IApplicationBuilder app, IRestBusSubscriber subscriber)
+        public static void RunRestBusHost(this IApplicationBuilder app, IRestBusSubscriber subscriber)
         {
             if (app == null) throw new ArgumentNullException("app");
             if (subscriber == null) throw new ArgumentNullException("subscriber");
