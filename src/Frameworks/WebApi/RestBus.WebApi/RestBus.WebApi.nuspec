@@ -11,7 +11,7 @@
     <copyright>Copyright 2015</copyright>
     <tags>webapi amqp rabbitmq messaging queueing restbus rest http</tags>
     <dependencies>
-       <dependency id="RestBus.Common" version="0.5.7-beta" />
+       <dependency id="RestBus.Common" version="0.5.9-beta" />
     </dependencies>
   </metadata>
 </package>
