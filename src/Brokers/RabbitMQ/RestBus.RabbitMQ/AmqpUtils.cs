@@ -56,6 +56,19 @@ namespace RestBus.RabbitMQ
 			return TimeSpan.FromMinutes(1);
 		}
 
+        //This method is used to generate queue names for exclusive queues because there is a chance 
+        //that by using the SequenceGenerator, two instances (processes or threads) of a client or server
+        //started silmulataneously will generate the same same sequence since it's time based.
+        public static string GetNewExclusiveQueueId()
+        {
+            byte[] buffer = new byte[64];
+            Common.SynchronizedRandom.Instance.NextBytes(buffer);
+            var base64str = Convert.ToBase64String(buffer, Base64FormattingOptions.None);
+
+            //Return a url-safe variant of Base64 where + becomes ~ and / become -
+            return base64str.Replace('+', '~').Replace('/', '-');
+        }
+
 
 		//NOTE This is the only method that cannot be moved into RestBus.Common so keep that in mind if intergrating other Amqp brokers
 		public static void DeclareExchangeAndQueues(IModel channel, ExchangeInfo exchangeInfo, object syncObject, string subscriberId )

@@ -19,7 +19,6 @@ namespace RestBus.RabbitMQ.Client
     public class RestBusClient : HttpMessageInvoker
     {
         const string REQUEST_OPTIONS_KEY = "_RestBus_request_options";
-        static SequenceGenerator clientIdGen = SequenceGenerator.FromUtcNow();
         static SequenceGenerator correlationIdGen = SequenceGenerator.FromUtcNow();
 
         readonly IMessageMapper messageMapper;
@@ -56,7 +55,7 @@ namespace RestBus.RabbitMQ.Client
             //Configure RestBus fields/properties
             this.messageMapper = messageMapper;
             this.exchangeInfo = messageMapper.GetExchangeInfo();
-            this.clientId = clientIdGen.GetNextId();
+            this.clientId = AmqpUtils.GetNewExclusiveQueueId();
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo);
             this.callbackQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
 
