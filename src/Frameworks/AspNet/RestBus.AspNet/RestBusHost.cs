@@ -230,7 +230,9 @@ namespace RestBus.AspNet
 
             if(body != null)
             {
-                ((Microsoft.AspNet.Http.Features.IHttpResponseFeature)msg).Body = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(body));
+                msg.CreateResponseBody();
+                var buffer = System.Text.Encoding.UTF8.GetBytes(body);
+                msg.OriginalResponseBody.Write(buffer, 0, buffer.Length);
             }
 
             return msg;

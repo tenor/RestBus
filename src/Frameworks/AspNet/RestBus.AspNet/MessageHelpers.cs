@@ -36,7 +36,11 @@ namespace RestBus.AspNet
             req.Protocol = "HTTP/" + request.Version;
             req.QueryString = uri.Query;
             req.Method = request.Method;
-            req.Body = (request.Content == null || request.Content.Length == 0) ? null : new MemoryStream(request.Content);
+
+            if (request.Content != null && request.Content.Length > 0)
+            {
+                message.CreateRequestBody(request.Content);
+            }
 
             //Add Request Headers
             {
@@ -50,18 +54,18 @@ namespace RestBus.AspNet
                     headers.Add(hdr.Key, hdr.Value.ToArray());
                 }
 
-                if (req.Body != null)
+                if (message.OriginalRequestBody != null)
                 {
                     headers.Add("Content-Length", request.Content.Length.ToString());
                 }
                 req.Headers = headers;
             }
-            
+
 
             //Create Response
+            message.CreateResponseBody();
             IHttpResponseFeature resp = message as IHttpResponseFeature;
             resp.StatusCode = 200;
-            resp.Body = new MemoryStream();
 
             //Add Response Headers
             {
@@ -102,18 +106,11 @@ namespace RestBus.AspNet
                 response.StatusDescription = respFeature.ReasonPhrase;
             }
             
-            if (respFeature.Body != null)
+            if (message.OriginalResponseBody != null && message.OriginalResponseBody.CanRead)
             {
-                //TODO: Implement a pooled MemoryStream and replace MemoryStream throughout solution.
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    //TODO: Handle cases where the stream Can't Read and Can't seek
-                    //Microsoft.VisualStudio.Web.BrowserLink.Runtime.ScriptInjectionFilterStream behaves this way.
-                    //How does Kestrel handle this?
-                    respFeature.Body.Position = 0;
-                    respFeature.Body.CopyTo(ms);
-                    response.Content = ms.ToArray();
-                }
+                //NOTE: OriginalResponseBody.CanRead will be false if the stream was disposed.
+
+                response.Content = message.OriginalResponseBody.ToArray();
             }
 
             return response;

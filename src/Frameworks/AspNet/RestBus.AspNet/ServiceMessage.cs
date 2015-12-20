@@ -35,9 +35,8 @@ namespace RestBus.AspNet
         {
             get
             {
-                var body = ((IHttpResponseFeature)this).Body;
-                if (body == null) return false;
-                return body.Length > 0;
+                if (OriginalResponseBody == null) return false;
+                return OriginalResponseBody.Length > 0;
             }
         }
 
@@ -47,6 +46,24 @@ namespace RestBus.AspNet
             {
                 return _applicationException != null;
             }
+        }
+
+        internal MemoryStream OriginalResponseBody { get; private set; }
+
+        internal MemoryStream OriginalRequestBody { get; private set; }
+
+        internal void CreateResponseBody()
+        {
+            //TODO: Implement a pooled MemoryStream and replace MemoryStream throughout solution.
+            OriginalResponseBody = new MemoryStream();
+            ((IHttpResponseFeature)this).Body = OriginalResponseBody;
+        }
+
+        internal void CreateRequestBody(byte[] content)
+        {
+            //TODO: Implement a pooled MemoryStream and replace MemoryStream throughout solution.
+            OriginalRequestBody = new MemoryStream(content);
+            ((IHttpRequestFeature)this).Body = OriginalRequestBody;
         }
 
         public void OnStarting(Func<object, Task> callback, object state)
@@ -84,7 +101,6 @@ namespace RestBus.AspNet
             ((IHttpConnectionFeature)this).LocalIpAddress = null;
             ((IHttpConnectionFeature)this).IsLocal = false;
         }
-
 
         #region IFeatureCollection Implementation
 
@@ -151,20 +167,20 @@ namespace RestBus.AspNet
             if (_disposed.IsTrue) return;
             _disposed.Set(true);
 
-            if (((IHttpRequestFeature)this).Body != null)
+            if (OriginalRequestBody != null)
             {
                 try
                 {
-                    ((IHttpRequestFeature)this).Body.Dispose();
+                    OriginalRequestBody.Dispose();
                 }
                 catch { }
             }
 
-            if (((IHttpResponseFeature)this).Body != null)
+            if (OriginalResponseBody != null)
             {
                 try
                 {
-                    ((IHttpResponseFeature)this).Body.Dispose();
+                    OriginalResponseBody.Dispose();
                 }
                 catch { }
             }
