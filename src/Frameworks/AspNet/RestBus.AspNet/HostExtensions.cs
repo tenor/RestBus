@@ -19,6 +19,7 @@ namespace RestBus.AspNet
         /// </summary>
         /// <param name="app">The Application builder</param>
         /// <param name="subscriber">The RestBus subscriber</param>
+        /// <remarks>The RestBus host will not be started if the application is running a RestBus server.</remarks>
         public static void RunRestBusHost(this IApplicationBuilder app, IRestBusSubscriber subscriber)
         {
             RunRestBusHost(app, subscriber, false);
