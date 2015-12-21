@@ -13,7 +13,7 @@
     <DefaultLanguage>en-US</DefaultLanguage>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{786C830F-07A1-408B-BD7F-6EE04809D6DB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <TargetFrameworkProfile>Profile75</TargetFrameworkProfile>
+    <TargetFrameworkProfile>Profile7</TargetFrameworkProfile>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -21,7 +21,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NETFX_CORE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -29,16 +29,77 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;NETFX_CORE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\..\..\tools\key.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <!-- A reference to the entire .NET Framework is automatically included -->
+    <EmbeddedResource Include="Client\Formatting\CommonWebApiResources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>CommonWebApiResources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Client\Formatting\Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
+    <Compile Include="Client\Formatting\CloneableExtensions.cs" />
+    <Compile Include="Client\Formatting\CommonWebApiResources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CommonWebApiResources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Client\Formatting\DelegatingEnumerable.cs" />
+    <Compile Include="Client\Formatting\DelegatingStream.cs" />
+    <Compile Include="Client\Formatting\Error.cs" />
+    <Compile Include="Client\Formatting\FormattingUtilities.cs" />
+    <Compile Include="Client\Formatting\IFormatterLogger.cs" />
+    <Compile Include="Client\Formatting\IRequiredMemberSelector.cs" />
+    <Compile Include="Client\Formatting\JsonContractResolver.cs" />
+    <Compile Include="Client\Formatting\JsonMediaTypeFormatter.cs" />
+    <Compile Include="Client\Formatting\MediaTypeConstants.cs" />
+    <Compile Include="Client\Formatting\MediaTypeFormatter.cs" />
+    <Compile Include="Client\Formatting\MediaTypeMapping.cs" />
+    <Compile Include="Client\Formatting\NonClosingDelegatingStream.cs" />
+    <Compile Include="Client\Formatting\ObjectContent.cs" />
+    <Compile Include="Client\Formatting\ObjectContentOfT.cs" />
+    <Compile Include="Client\Formatting\ParsedMediaTypeHeaderValue.cs" />
+    <Compile Include="Client\Formatting\Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Client\Formatting\RequestHeaderMapping.cs" />
+    <Compile Include="Client\Formatting\StringComparisonHelper.cs" />
+    <Compile Include="Client\Formatting\TaskHelpers.cs" />
+    <Compile Include="Client\Formatting\TaskHelpersExtensions.cs" />
+    <Compile Include="Client\Formatting\TypeExtensions.cs" />
+    <Compile Include="Client\Formatting\XmlHttpRequestHeaderMapping.cs" />
+    <Compile Include="Client\Formatting\XmlMediaTypeFormatter.cs" />
+    <Compile Include="Client\RequestCookieCollection.cs" />
+    <Compile Include="Client\RequestHeaders.cs" />
+    <Compile Include="Client\RequestOptions.cs" />
+    <Compile Include="Client\RestBusClientExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.5.0.8\lib\portable-net45+wp80+win8\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
