@@ -23,10 +23,8 @@ namespace RestBus.RabbitMQ.Subscription
         string subscriberId;
         ExchangeInfo exchangeInfo;
         object exchangeDeclareSync = new object();
+        InterlockedBoolean hasStarted;
         volatile bool disposed = false;
-
-        //TODO: Consider converting this to an int so that you can do Interlocked.Exchange here(Is that neccessary?)
-        bool isStarted = false;
         SharedQueue<BasicDeliverEventArgs> lastProcessedQueue = null;
         readonly ConnectionFactory connectionFactory;
 
@@ -49,9 +47,11 @@ namespace RestBus.RabbitMQ.Subscription
 
         public void Start()
         {
-            //TODO: //Use InterlockedBoolean.SetIf here and throw InvalidOperationException if already started.
-            if (isStarted) return;
-            isStarted = true;
+            if (!hasStarted.SetTrueIf(false))
+            {
+                throw new InvalidOperationException("RestBus Subscriber has already started!");
+            }
+
 
             Restart();
 
@@ -60,7 +60,7 @@ namespace RestBus.RabbitMQ.Subscription
 
         public void Restart()
         {
-            isStarted = true;
+            hasStarted.Set(true);
 
             //CLose connections and channels
             if (subscriberChannel != null)

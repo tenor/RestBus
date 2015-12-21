@@ -20,7 +20,7 @@ namespace RestBus.AspNet
         object _currentIHttpResponseFeature;
         object _currentIHttpConnectionFeature;
         List<KeyValuePair<Type, object>> otherFeatures;
-        InterlockedBoolean _disposed;
+        volatile bool _disposed;
         string _scheme;
         string _pathBase;
         string _path;
@@ -164,8 +164,8 @@ namespace RestBus.AspNet
 
         public void Dispose()
         {
-            if (_disposed.IsTrue) return;
-            _disposed.Set(true);
+            if (_disposed) return;
+            _disposed = true;
 
             if (OriginalRequestBody != null)
             {

@@ -12,8 +12,8 @@ namespace RestBus.AspNet
     {
         private readonly IRestBusSubscriber subscriber;
         private readonly IHttpApplication<TContext> application;
-        private int hasStarted = 0;
-        InterlockedBoolean disposed;
+        InterlockedBoolean hasStarted;
+        volatile bool disposed;
 
         /// <summary>
         /// Initializes a new instance of <see cref="RestBusHost{TContext}"/>
@@ -32,8 +32,7 @@ namespace RestBus.AspNet
         /// </summary>
         internal void Start()
         {
-            //TODO: //Use InterlockedBoolean.SetIf here and throw InvalidOperationException if already started.
-            if (Interlocked.CompareExchange(ref hasStarted, -1, 0) == -1)
+            if (!hasStarted.SetTrueIf(false))
             {
                 throw new InvalidOperationException("RestBus host has already started!");
             }
@@ -49,9 +48,9 @@ namespace RestBus.AspNet
         /// </summary>
         public void Dispose()
         {
-            if (disposed.IsFalse)
+            if (!disposed)
             {
-                disposed.Set(true);
+                disposed = true;
                 subscriber.Dispose();
             }
         }
@@ -78,7 +77,7 @@ namespace RestBus.AspNet
                     }
 
                     //Exit method if host has been disposed
-                    if (disposed.IsTrue)
+                    if (disposed)
                     {
                         break;
                     }
@@ -127,7 +126,7 @@ namespace RestBus.AspNet
 
             try
             {
-                if (disposed.IsTrue)
+                if (disposed)
                 {
                     msg = CreateResponse(HttpStatusCode.ServiceUnavailable, "The server is no longer available.");
                 }

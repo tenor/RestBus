@@ -12,7 +12,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
     internal sealed class AmqpChannelPooler : IDisposable
     {
         readonly IConnection conn;
-        InterlockedBoolean _disposed;
+        volatile bool _disposed;
 
 #if ENABLE_CHANNELPOOLING
 
@@ -23,7 +23,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
         public bool IsDisposed
         {
-            get { return _disposed.IsTrue; }
+            get { return _disposed; }
         }
 
         public AmqpChannelPooler(IConnection conn)
@@ -85,7 +85,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
 #if ENABLE_CHANNELPOOLING
 
-            if (_disposed.IsTrue || HasModelExpired(Environment.TickCount, modelContainer))
+            if (_disposed || HasModelExpired(Environment.TickCount, modelContainer))
             {
                 DisposeModel(modelContainer);
                 return;
@@ -114,7 +114,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
             //It's possible for the disposed flag to be set (and the pool flushed) right after the first _disposed check
             //but before the modelContainer was added, so check again. 
-            if (_disposed.IsTrue)
+            if (_disposed)
             {
                 Flush();
             }
@@ -128,7 +128,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
         public void Dispose()
         {
-            _disposed.Set(true);
+            _disposed = true;
 
 #if ENABLE_CHANNELPOOLING
             Flush();

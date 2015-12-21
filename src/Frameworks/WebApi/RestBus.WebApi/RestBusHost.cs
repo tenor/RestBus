@@ -19,10 +19,7 @@ namespace RestBus.WebApi
         private readonly HttpConfiguration config;
         private readonly RequestHandler requestHandler;
         private string appVirtualPath;
-        private bool hasStarted = false;
-
-
-        //TODO: Switch this to something you can do compareExchange with in both hosts
+        InterlockedBoolean hasStarted;
         volatile bool disposed = false;
 
         public RestBusHost(IRestBusSubscriber subscriber, HttpConfiguration config)
@@ -35,10 +32,10 @@ namespace RestBus.WebApi
 
         public void Start()
         {
-            if (hasStarted) return;
-
-            //TODO: Add some sync here so that multiple threads are not created.
-            hasStarted = true;
+            if (!hasStarted.SetTrueIf(false))
+            {
+                throw new InvalidOperationException("RestBus host has already started!");
+            }
             subscriber.Start();
 
             System.Threading.Thread msgLooper = new System.Threading.Thread(RunLoop);

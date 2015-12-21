@@ -35,7 +35,7 @@ namespace RestBus.RabbitMQ.Client
         readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
-        InterlockedBoolean disposed;
+        volatile bool disposed;
 
         private bool hasKickStarted = false;
         private Uri baseAddress;
@@ -152,7 +152,7 @@ namespace RestBus.RabbitMQ.Client
                throw new InvalidOperationException("The request URI must either be set or BaseAddress must be set");
             }
 
-            if (disposed.IsTrue) throw new ObjectDisposedException("Client has been disposed");
+            if (disposed) throw new ObjectDisposedException("Client has been disposed");
             hasKickStarted = true;
             PrepareMessage(request);
 
@@ -712,7 +712,7 @@ namespace RestBus.RabbitMQ.Client
         {
             //TODO: Confirm that this does in fact kill all background threads
 
-            disposed.Set(true);
+            disposed = true;
 
             if (_clientPool != null) _clientPool.Dispose();
 
@@ -930,7 +930,7 @@ namespace RestBus.RabbitMQ.Client
 
         private void EnsureNotStartedOrDisposed()
         {
-            if (disposed.IsTrue) throw new ObjectDisposedException(GetType().FullName);
+            if (disposed) throw new ObjectDisposedException(GetType().FullName);
             if (hasKickStarted) throw new InvalidOperationException("This instance has already started one or more requests. Properties can only be modified before sending the first request.");
         }
 
@@ -967,7 +967,7 @@ namespace RestBus.RabbitMQ.Client
         {
             while (true)
             {
-                if (disposed.IsTrue) throw new ObjectDisposedException("Client has been disposed");
+                if (disposed) throw new ObjectDisposedException("Client has been disposed");
 
                 object obj = callbackConsumer.Queue.DequeueNoWait(null);
 

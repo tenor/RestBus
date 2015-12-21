@@ -19,7 +19,7 @@ namespace RestBus.ServiceStack
 			= new Dictionary<Type, IMessageHandlerFactory>();
 
 		private readonly IRestBusSubscriber subscriber;
-		private bool hasStarted = false;
+		InterlockedBoolean hasStarted;
 		volatile bool disposed = false;
 
 		public RestBusHost(IRestBusSubscriber subscriber)
@@ -88,11 +88,12 @@ namespace RestBus.ServiceStack
 
 		public void Start()
 		{
-			if (hasStarted) return;
+            if (!hasStarted.SetTrueIf(false))
+            {
+                throw new InvalidOperationException("RestBus host has already started!");
+            }
 
-			//TODO: Add some sync here so that multiple threads are not created. (Use InterlockedBoolean.SetIF here and throw exception if already started.)
-			hasStarted = true;
-			subscriber.Start();
+            subscriber.Start();
 
 			System.Threading.Thread msgLooper = new System.Threading.Thread(RunLoop);
 			msgLooper.Name = "RestBus ServiceStack Host";
