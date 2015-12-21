@@ -7,11 +7,11 @@
     <authors>$author$</authors>
     <owners>$author$</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Web API support for RestBus</description>
+    <description>Web API 2 support for RestBus</description>
     <copyright>Copyright 2015</copyright>
     <tags>webapi amqp rabbitmq messaging queueing restbus rest http</tags>
     <dependencies>
-       <dependency id="RestBus.Common" version="0.5.9-beta" />
+       <dependency id="RestBus.Common" version="0.6.0-beta" />
     </dependencies>
   </metadata>
 </package>
