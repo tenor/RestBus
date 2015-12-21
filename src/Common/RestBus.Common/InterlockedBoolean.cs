@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 
 namespace RestBus.Common
 {
@@ -8,12 +9,12 @@ namespace RestBus.Common
     /// Do not pass this struct to methods/indexers etc. as it will be copied.
     /// </summary>
     /// <remarks>
-    /// Consider using a volatile bool field instead, unless you need CompareExchange (SetIf) operations.
+    /// Consider using a volatile bool field instead of this type, unless you need CompareExchange (SetIf) operations.
     /// </remarks>
-    public struct InterlockedBoolean
+    public struct InterlockedBoolean : IComparable, IComparable<InterlockedBoolean>, IComparable<bool>, IEquatable<InterlockedBoolean>, IEquatable<bool>
     {
         const int FALSE = 0;
-        const int TRUE = -1;
+        const int TRUE = ~FALSE; //-1
         private int _value; //Will be initialized as False
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace RestBus.Common
         {
             get
             {
-                return !IsFalse;
+                return _value != FALSE;
             }
         }
 
@@ -79,10 +80,59 @@ namespace RestBus.Common
             return SetIf(valueEquals, false);
         }
 
-        public override string ToString()
+        public int CompareTo(object obj)
         {
-            return (_value == TRUE ? true : false).ToString(); 
+            if(obj == null)
+            {
+                return 1;
+            }
+
+            if (obj is InterlockedBoolean)
+            {
+                return CompareTo((InterlockedBoolean)obj);
+            }
+
+            if(obj is bool)
+            {
+                return CompareTo((bool)obj);
+            }
+
+            throw new Exception("Object must be of type InterlockedBoolean or Boolean");
         }
 
+        public int CompareTo(InterlockedBoolean other)
+        {
+            return _value.CompareTo(other._value);
+        }
+
+        public int CompareTo(bool other)
+        {
+            return IsTrue.CompareTo(other);
+        }
+
+        public bool Equals(InterlockedBoolean other)
+        {
+            return _value.Equals(other._value);
+        }
+
+        public bool Equals(bool other)
+        {
+            return IsTrue.Equals(other);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return base.Equals(obj);
+        }
+
+        public override string ToString()
+        {
+            return IsTrue.ToString();
+        }
+
+        public override int GetHashCode()
+        {
+            return IsTrue.GetHashCode();
+        }
     }
 }
