@@ -5,7 +5,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RestBus.RabbitMQ.Client
+namespace RestBus.Client
 {
     public class RequestCookieCollection : IDictionary<string, string>
     {

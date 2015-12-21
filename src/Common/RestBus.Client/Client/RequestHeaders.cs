@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RestBus.RabbitMQ.Client
+namespace RestBus.Client
 {
     public class RequestHeaders : IEnumerable<KeyValuePair<string, IEnumerable<string>>>, System.Collections.IEnumerable
     {

@@ -1,7 +1,7 @@
 //Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Formatting/MediaTypeMapping.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
-namespace RestBus.RabbitMQ.Client.Formatting
+namespace RestBus.Client.Formatting
 {
     using System;
     using System.Net.Http;

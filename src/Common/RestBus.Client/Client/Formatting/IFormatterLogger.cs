@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
 using System;
-namespace RestBus.RabbitMQ.Client.Formatting
+namespace RestBus.Client.Formatting
 {
     /// <summary>
     /// Interface to log events that occur during formatter reads.

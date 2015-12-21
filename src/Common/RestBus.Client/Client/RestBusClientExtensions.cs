@@ -1,4 +1,4 @@
-using RestBus.RabbitMQ.Client.Formatting;
+using RestBus.Client.Formatting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RestBus.RabbitMQ.Client
+namespace RestBus.Client
 {
     public static class RestBusClientExtensions
     {

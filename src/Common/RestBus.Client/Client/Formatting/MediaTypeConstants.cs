@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
 
-namespace RestBus.RabbitMQ.Client.Formatting
+namespace RestBus.Client.Formatting
 {
 
     using System;
