@@ -134,5 +134,35 @@ namespace RestBus.Common
         {
             return IsTrue.GetHashCode();
         }
+
+        public static bool operator ==(InterlockedBoolean a, InterlockedBoolean b)
+        {
+            return a._value == b._value;
+        }
+
+        public static bool operator !=(InterlockedBoolean a, InterlockedBoolean b)
+        {
+            return a._value != b._value;
+        }
+
+        public static bool operator ==(InterlockedBoolean a, bool b)
+        {
+            return a.IsTrue == b;
+        }
+
+        public static bool operator !=(InterlockedBoolean a, bool b)
+        {
+            return a.IsTrue != b;
+        }
+
+        public static bool operator ==(bool a, InterlockedBoolean b)
+        {
+            return a == b.IsTrue;
+        }
+
+        public static bool operator !=(bool a, InterlockedBoolean b)
+        {
+            return a != b.IsTrue;
+        }
     }
 }
