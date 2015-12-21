@@ -30,13 +30,13 @@ namespace RestBus.AspNet
         /// </summary>
         /// <param name="app">The Application builder</param>
         /// <param name="subscriber">The RestBus subscriber</param>
-        /// <param name="continueIfRestBusServer">Set to false to not run the host if the application server is the RestBus.AspNet server</param>
-        public static void RunRestBusHost(this IApplicationBuilder app, IRestBusSubscriber subscriber, bool continueIfRestBusServer)
+        /// <param name="skipRestBusServerCheck">Set to true to run the host even if the application server is the RestBus.AspNet server</param>
+        public static void RunRestBusHost(this IApplicationBuilder app, IRestBusSubscriber subscriber, bool skipRestBusServerCheck)
         {
             if (app == null) throw new ArgumentNullException("app");
             if (subscriber == null) throw new ArgumentNullException("subscriber");
 
-            if (!continueIfRestBusServer && 
+            if (!skipRestBusServerCheck && 
                 app.ApplicationServices.GetRequiredService<IHostingEnvironment>().Configuration[Server.Server.ConfigServerArgumentName] == Server.Server.ConfigServerAssembly)
             {
                 //The application is running RestBusServer, so exit
