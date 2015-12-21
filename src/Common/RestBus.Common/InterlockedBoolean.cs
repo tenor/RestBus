@@ -10,6 +10,7 @@ namespace RestBus.Common
     /// </summary>
     /// <remarks>
     /// Consider using a volatile bool field instead of this type, unless you need CompareExchange (SetIf) operations.
+    /// This type is implicitly convertible to boolean.
     /// </remarks>
     public struct InterlockedBoolean : IComparable, IComparable<InterlockedBoolean>, IComparable<bool>, IEquatable<InterlockedBoolean>, IEquatable<bool>
     {
@@ -163,6 +164,11 @@ namespace RestBus.Common
         public static bool operator !=(bool a, InterlockedBoolean b)
         {
             return a != b.IsTrue;
+        }
+
+        public static implicit operator bool(InterlockedBoolean val)
+        {
+            return val.IsTrue;
         }
     }
 }
