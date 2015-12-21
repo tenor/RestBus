@@ -1,10 +1,12 @@
-//Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Internal/NonClosingDelegatingStream.cs
+//Sourced (and modified) from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Internal/NonClosingDelegatingStream.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
 namespace RestBus.RabbitMQ.Client.Formatting
 {
     using System;
     using System.IO;
+
+#if !NETFX_CORE
 
     /// <summary>
     /// Stream that doesn't close the inner stream when closed. This is to work around a limitation
@@ -25,4 +27,6 @@ namespace RestBus.RabbitMQ.Client.Formatting
         {
         }
     }
+
+#endif
 }
