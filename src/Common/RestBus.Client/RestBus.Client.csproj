@@ -53,7 +53,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\Formatting\CloneableExtensions.cs" />
     <Compile Include="Client\Formatting\CommonWebApiResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

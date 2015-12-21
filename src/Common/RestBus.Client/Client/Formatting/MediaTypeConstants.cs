@@ -1,4 +1,4 @@
-//Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Formatting/MediaTypeConstants.cs
+//Sourced (and modified) from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Formatting/MediaTypeConstants.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
 
@@ -14,12 +14,12 @@ namespace RestBus.RabbitMQ.Client.Formatting
     /// </summary>
     internal static class MediaTypeConstants
     {
-        private static readonly MediaTypeHeaderValue _defaultApplicationXmlMediaType = new MediaTypeHeaderValue("application/xml");
-        private static readonly MediaTypeHeaderValue _defaultTextXmlMediaType = new MediaTypeHeaderValue("text/xml");
-        private static readonly MediaTypeHeaderValue _defaultApplicationJsonMediaType = new MediaTypeHeaderValue("application/json");
-        private static readonly MediaTypeHeaderValue _defaultTextJsonMediaType = new MediaTypeHeaderValue("text/json");
-        private static readonly MediaTypeHeaderValue _defaultApplicationOctetStreamMediaType = new MediaTypeHeaderValue("application/octet-stream");
-        private static readonly MediaTypeHeaderValue _defaultApplicationFormUrlEncodedMediaType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
+        private static readonly string _defaultApplicationXmlMediaType = "application/xml";
+        private static readonly string _defaultTextXmlMediaType = "text/xml";
+        private static readonly string _defaultApplicationJsonMediaType = "application/json";
+        private static readonly string _defaultTextJsonMediaType = "text/json";
+        private static readonly string _defaultApplicationOctetStreamMediaType = "application/octet-stream";
+        private static readonly string _defaultApplicationFormUrlEncodedMediaType = "application/x-www-form-urlencoded";
 
         /// <summary>
         /// Gets a <see cref="MediaTypeHeaderValue"/> instance representing <c>application/octet-stream</c>.
@@ -29,7 +29,7 @@ namespace RestBus.RabbitMQ.Client.Formatting
         /// </value>
         public static MediaTypeHeaderValue ApplicationOctetStreamMediaType
         {
-            get { return _defaultApplicationOctetStreamMediaType.Clone(); }
+            get { return new MediaTypeHeaderValue(_defaultApplicationOctetStreamMediaType); }
         }
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace RestBus.RabbitMQ.Client.Formatting
         /// </value>
         public static MediaTypeHeaderValue ApplicationXmlMediaType
         {
-            get { return _defaultApplicationXmlMediaType.Clone(); }
+            get { return new MediaTypeHeaderValue(_defaultApplicationXmlMediaType); }
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace RestBus.RabbitMQ.Client.Formatting
         /// </value>
         public static MediaTypeHeaderValue ApplicationJsonMediaType
         {
-            get { return _defaultApplicationJsonMediaType.Clone(); }
+            get { return new MediaTypeHeaderValue(_defaultApplicationJsonMediaType); }
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace RestBus.RabbitMQ.Client.Formatting
         /// </value>
         public static MediaTypeHeaderValue TextXmlMediaType
         {
-            get { return _defaultTextXmlMediaType.Clone(); }
+            get { return new MediaTypeHeaderValue(_defaultTextXmlMediaType); }
         }
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace RestBus.RabbitMQ.Client.Formatting
         /// </value>
         public static MediaTypeHeaderValue TextJsonMediaType
         {
-            get { return _defaultTextJsonMediaType.Clone(); }
+            get { return new MediaTypeHeaderValue(_defaultTextJsonMediaType); }
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace RestBus.RabbitMQ.Client.Formatting
         /// </value>
         public static MediaTypeHeaderValue ApplicationFormUrlEncodedMediaType
         {
-            get { return _defaultApplicationFormUrlEncodedMediaType.Clone(); }
+            get { return new MediaTypeHeaderValue(_defaultApplicationFormUrlEncodedMediaType); }
         }
     }
 }

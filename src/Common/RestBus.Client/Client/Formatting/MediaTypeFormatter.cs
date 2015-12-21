@@ -282,7 +282,7 @@ namespace RestBus.RabbitMQ.Client.Formatting
 
             if (mediaType != null)
             {
-                headers.ContentType = mediaType.Clone();
+                headers.ContentType = new MediaTypeHeaderValue(mediaType.MediaType);
             }
 
             // If content type is not set then set it based on supported media types.
@@ -291,7 +291,7 @@ namespace RestBus.RabbitMQ.Client.Formatting
                 MediaTypeHeaderValue defaultMediaType = SupportedMediaTypes.FirstOrDefault();
                 if (defaultMediaType != null)
                 {
-                    headers.ContentType = defaultMediaType.Clone();
+                    headers.ContentType = new MediaTypeHeaderValue(defaultMediaType.MediaType);
                 }
             }
 
