@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "Newtonsoft.Json": "5.0.8"
+  },
+  "frameworks": {
+    ".NETPortable,Version=v4.5,Profile=Profile7": { },
+    "dotnet5.2": {
+      "dependencies": {
+      }
+    }
+  },
+
+  "runtimes": {
+    "win-anycpu": { }
+  }
+}
