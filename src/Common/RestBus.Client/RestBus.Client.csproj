@@ -63,6 +63,7 @@
     <Compile Include="Formatting\Error.cs" />
     <Compile Include="Formatting\FormattingUtilities.cs" />
     <Compile Include="Formatting\IFormatterLogger.cs" />
+    <Compile Include="Formatting\Internal\ReadOnlyStreamWithEncodingPreamble.cs" />
     <Compile Include="Formatting\IRequiredMemberSelector.cs" />
     <Compile Include="Formatting\JsonContractResolver.cs" />
     <Compile Include="Formatting\JsonMediaTypeFormatter.cs" />

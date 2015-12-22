@@ -3,6 +3,7 @@
 
 namespace RestBus.Client.Formatting
 {
+    using Internal;
     using System;
     using System.Collections.Concurrent;
     using System.ComponentModel;

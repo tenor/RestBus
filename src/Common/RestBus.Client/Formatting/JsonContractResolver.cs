@@ -1,8 +1,9 @@
-//Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Formatting/JsonContractResolver.cs
+//Sourced from https://aspnetwebstack.codeplex.com/SourceControl/latest#src/System.Net.Http.Formatting/Formatting/JsonContractResolver.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
 namespace RestBus.Client.Formatting
 {
+#if !NETFX_CORE
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -12,14 +13,26 @@ namespace RestBus.Client.Formatting
     using Newtonsoft.Json.Serialization;
 
 
-    // Default Contract resolver for JsonMediaTypeFormatter
-    // Uses the IRequiredMemberSelector to choose required members
-    internal class JsonContractResolver : DefaultContractResolver
+    /// <summary>
+    /// Represents the default <see cref="IContractResolver"/> used by <see cref="BaseJsonMediaTypeFormatter"/>.
+    /// It uses the formatter's <see cref="IRequiredMemberSelector"/> to select required members and recognizes
+    /// the <see cref="SerializableAttribute"/> type annotation.
+    /// </summary>
+    public class JsonContractResolver : DefaultContractResolver
     {
         private readonly MediaTypeFormatter _formatter;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JsonContractResolver" /> class.
+        /// </summary>
+        /// <param name="formatter">The formatter to use for resolving required members.</param>
         public JsonContractResolver(MediaTypeFormatter formatter)
         {
+            if (formatter == null)
+            {
+                throw Error.ArgumentNull("formatter");
+            }
+
             _formatter = formatter;
             // Need this setting to have [Serializable] types serialized correctly
             IgnoreSerializableAttribute = false;
@@ -40,6 +53,7 @@ namespace RestBus.Client.Formatting
             }
         }
 
+        /// <inheritdoc />
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
             JsonProperty property = base.CreateProperty(member, memberSerialization);
@@ -47,4 +61,5 @@ namespace RestBus.Client.Formatting
             return property;
         }
     }
+#endif
 }
