@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "Newtonsoft.Json": "5.0.8"
+    "Newtonsoft.Json": "7.0.1"
   },
   "frameworks": {
     ".NETPortable,Version=v4.5,Profile=Profile7": { },
