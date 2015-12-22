@@ -45,11 +45,12 @@ namespace RestBus.AspNet
 
             var appFunc = app.Build();
 
-            var logger = app.ApplicationServices.GetRequiredService<ILogger<HostingEngine>>();
+            var _loggerFactory = app.ApplicationServices.GetRequiredService<ILoggerFactory>();
             var diagnosticSource = app.ApplicationServices.GetRequiredService<DiagnosticSource>();
             var httpContextFactory = app.ApplicationServices.GetRequiredService<IHttpContextFactory>();
 
-            var application = new HostingApplication(appFunc, logger, diagnosticSource, httpContextFactory);
+            //TODO: Work on counting instances (all hosts + server)  and adding the count to the logger name e.g RestBus.AspNet (2), consider including the typename as well.
+            var application = new HostingApplication(appFunc, _loggerFactory.CreateLogger(Server.Server.ConfigServerAssembly), diagnosticSource, httpContextFactory);
 
             var host = new RestBusHost<HostingApplication.Context>(subscriber, application);
 
