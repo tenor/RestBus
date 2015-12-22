@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RestBus.Client
+namespace RestBus.Client.Http
 {
     public class RequestHeaders : IEnumerable<KeyValuePair<string, IEnumerable<string>>>, System.Collections.IEnumerable
     {

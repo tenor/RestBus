@@ -1,6 +1,6 @@
 //Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/Common/TaskHelpersExtensions.cs
 
-namespace RestBus.Client.Formatting
+namespace RestBus.Client.Http.Formatting
 {
     // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace RestBus.Client.Formatting {
+namespace RestBus.Client.Http.Formatting {
     using System;
     using System.Reflection;
     
@@ -40,7 +40,7 @@ namespace RestBus.Client.Formatting {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("RestBus.Client.Formatting.CommonWebApiResources", typeof(CommonWebApiResources).GetTypeInfo().Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("RestBus.Client.Http.Formatting.CommonWebApiResources", typeof(CommonWebApiResources).GetTypeInfo().Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

@@ -1,7 +1,7 @@
 //Sourced from https://aspnetwebstack.codeplex.com/SourceControl/latest#src/System.Net.Http.Formatting/Formatting/JsonContractResolver.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
-namespace RestBus.Client.Formatting
+namespace RestBus.Client.Http.Formatting
 {
 #if !NETFX_CORE
     using System;

@@ -1,4 +1,4 @@
-using RestBus.Client.Formatting;
+using RestBus.Client.Http.Formatting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RestBus.Client
+namespace RestBus.Client.Http
 {
     public static class RestBusClientExtensions
     {

@@ -1,7 +1,7 @@
 //Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Formatting/IRequiredMemberSelector.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
-namespace RestBus.Client.Formatting
+namespace RestBus.Client.Http.Formatting
 {
     using System.Reflection;
 
