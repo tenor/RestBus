@@ -4,6 +4,7 @@
 namespace RestBus.Client.Http.Formatting
 {
 #if !NETFX_CORE
+
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -18,7 +19,7 @@ namespace RestBus.Client.Http.Formatting
     /// It uses the formatter's <see cref="IRequiredMemberSelector"/> to select required members and recognizes
     /// the <see cref="SerializableAttribute"/> type annotation.
     /// </summary>
-    public class JsonContractResolver : DefaultContractResolver
+    internal class JsonContractResolver : DefaultContractResolver
     {
         private readonly MediaTypeFormatter _formatter;
 
@@ -61,5 +62,6 @@ namespace RestBus.Client.Http.Formatting
             return property;
         }
     }
+
 #endif
 }

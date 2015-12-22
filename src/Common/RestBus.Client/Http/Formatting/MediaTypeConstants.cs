@@ -1,4 +1,4 @@
-//Sourced (and modified) from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Formatting/MediaTypeConstants.cs
+//Sourced (and modified) from https://aspnetwebstack.codeplex.com/SourceControl/latest#src/System.Net.Http.Formatting/Formatting/MediaTypeConstants.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
 

@@ -1,8 +1,9 @@
-//Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/ObjectContentOfT.cs
+//Sourced from https://aspnetwebstack.codeplex.com/SourceControl/latest#src/System.Net.Http.Formatting/ObjectContentOfT.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
-namespace RestBus.Client.Http.Formatting
+namespace RestBus.Client.Http
 {
+    using Formatting;
     using System.Net.Http.Headers;
 
     /// <summary>

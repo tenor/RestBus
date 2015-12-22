@@ -1,4 +1,4 @@
-//Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Formatting/MediaTypeFormatter.cs
+//Sourced from https://aspnetwebstack.codeplex.com/SourceControl/latest#src/System.Net.Http.Formatting/Formatting/MediaTypeFormatter.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
 namespace RestBus.Client.Http.Formatting
@@ -20,8 +20,8 @@ namespace RestBus.Client.Http.Formatting
     using System;
     using System.Net.Http;
     using System.Net;
-
-
+    using System.Threading;
+    using Internal;
     /// <summary>
     /// Base class to handle serializing and deserializing strongly-typed objects using <see cref="ObjectContent"/>.
     /// </summary>
@@ -36,15 +36,47 @@ namespace RestBus.Client.Http.Formatting
         private static Lazy<int> _defaultMaxHttpCollectionKeys = new Lazy<int>(InitializeDefaultCollectionKeySize, true); // Max number of keys is 1000
         private static int _maxHttpCollectionKeys = -1;
 
+        private readonly List<MediaTypeHeaderValue> _supportedMediaTypes;
+        private readonly List<Encoding> _supportedEncodings;
+#if !NETFX_CORE // No MediaTypeMappings in portable library or IRequiredMemberSelector (no model state on client)
+        private readonly List<MediaTypeMapping> _mediaTypeMappings;
+        private IRequiredMemberSelector _requiredMemberSelector;
+#endif
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MediaTypeFormatter"/> class.
         /// </summary>
         protected MediaTypeFormatter()
         {
-            SupportedMediaTypes = new MediaTypeHeaderValueCollection();
-            SupportedEncodings = new Collection<Encoding>();
-#if !NETFX_CORE
-            MediaTypeMappings = new Collection<MediaTypeMapping>();
+            _supportedMediaTypes = new List<MediaTypeHeaderValue>();
+            SupportedMediaTypes = new MediaTypeHeaderValueCollection(_supportedMediaTypes);
+            _supportedEncodings = new List<Encoding>();
+            SupportedEncodings = new Collection<Encoding>(_supportedEncodings);
+#if !NETFX_CORE // No MediaTypeMappings in portable library
+            _mediaTypeMappings = new List<MediaTypeMapping>();
+            MediaTypeMappings = new Collection<MediaTypeMapping>(_mediaTypeMappings);
+#endif
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MediaTypeFormatter"/> class.
+        /// </summary>
+        /// <param name="formatter">The <see cref="MediaTypeFormatter"/> instance to copy settings from.</param>
+        protected MediaTypeFormatter(MediaTypeFormatter formatter)
+        {
+            if (formatter == null)
+            {
+                throw Error.ArgumentNull("formatter");
+            }
+
+            _supportedMediaTypes = formatter._supportedMediaTypes;
+            SupportedMediaTypes = formatter.SupportedMediaTypes;
+            _supportedEncodings = formatter._supportedEncodings;
+            SupportedEncodings = formatter.SupportedEncodings;
+#if !NETFX_CORE // No MediaTypeMappings in portable library or IRequiredMemberSelector (no model state on client)
+            _mediaTypeMappings = formatter._mediaTypeMappings;
+            MediaTypeMappings = formatter.MediaTypeMappings;
+            _requiredMemberSelector = formatter._requiredMemberSelector;
 #endif
         }
 
@@ -79,6 +111,11 @@ namespace RestBus.Client.Http.Formatting
         /// </summary>
         public Collection<MediaTypeHeaderValue> SupportedMediaTypes { get; private set; }
 
+        internal List<MediaTypeHeaderValue> SupportedMediaTypesInternal
+        {
+            get { return _supportedMediaTypes; }
+        }
+
         /// <summary>
         /// Gets the mutable collection of character encodings supported by
         /// this <see cref="MediaTypeFormatter"/> instance. The encodings are
@@ -86,7 +123,12 @@ namespace RestBus.Client.Http.Formatting
         /// </summary>
         public Collection<Encoding> SupportedEncodings { get; private set; }
 
-#if !NETFX_CORE
+        internal List<Encoding> SupportedEncodingsInternal
+        {
+            get { return _supportedEncodings; }
+        }
+
+#if !NETFX_CORE // No MediaTypeMappings in portable library
         /// <summary>
         /// Gets the mutable collection of <see cref="MediaTypeMapping"/> elements used
         /// by this <see cref="MediaTypeFormatter"/> instance to determine the
@@ -94,11 +136,33 @@ namespace RestBus.Client.Http.Formatting
         /// </summary>
         public Collection<MediaTypeMapping> MediaTypeMappings { get; private set; }
 
+        internal List<MediaTypeMapping> MediaTypeMappingsInternal
+        {
+            get { return _mediaTypeMappings; }
+        }
+#endif
+
+#if !NETFX_CORE // IRequiredMemberSelector is not in portable libraries because there is no model state on the client.
         /// <summary>
         /// Gets or sets the <see cref="IRequiredMemberSelector"/> used to determine required members.
         /// </summary>
-        public IRequiredMemberSelector RequiredMemberSelector { get; set; }
+        public virtual IRequiredMemberSelector RequiredMemberSelector
+        {
+            get
+            {
+                return _requiredMemberSelector;
+            }
+            set
+            {
+                _requiredMemberSelector = value;
+            }
+        }
 #endif
+
+        internal virtual bool CanWriteAnyTypes
+        {
+            get { return true; }
+        }
 
         /// <summary>
         /// Returns a <see cref="Task"/> to deserialize an object of the given <paramref name="type"/> from the given <paramref name="readStream"/>
@@ -116,10 +180,39 @@ namespace RestBus.Client.Http.Formatting
         /// <param name="formatterLogger">The <see cref="IFormatterLogger"/> to log events to.</param>
         /// <returns>A <see cref="Task"/> whose result will be an object of the given type.</returns>
         /// <exception cref="NotSupportedException">Derived types need to support reading.</exception>
-        /// <seealso cref="CanWriteType(Type)"/>
+        /// <seealso cref="CanReadType(Type)"/>
         public virtual Task<object> ReadFromStreamAsync(Type type, Stream readStream, HttpContent content, IFormatterLogger formatterLogger)
         {
             throw Error.NotSupported(Properties.Resources.MediaTypeFormatterCannotRead, GetType().Name);
+        }
+
+        /// <summary>
+        /// Returns a <see cref="Task"/> to deserialize an object of the given <paramref name="type"/> from the given <paramref name="readStream"/>
+        /// </summary>
+        /// <remarks>
+        /// <para>This implementation throws a <see cref="NotSupportedException"/>. Derived types should override this method if the formatter
+        /// supports reading.</para>
+        /// <para>An implementation of this method should NOT close <paramref name="readStream"/> upon completion. The stream will be closed independently when
+        /// the <see cref="HttpContent"/> instance is disposed.
+        /// </para>
+        /// </remarks>
+        /// <param name="type">The type of the object to deserialize.</param>
+        /// <param name="readStream">The <see cref="Stream"/> to read.</param>
+        /// <param name="content">The <see cref="HttpContent"/> if available. It may be <c>null</c>.</param>
+        /// <param name="formatterLogger">The <see cref="IFormatterLogger"/> to log events to.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>A <see cref="Task"/> whose result will be an object of the given type.</returns>
+        /// <exception cref="NotSupportedException">Derived types need to support reading.</exception>
+        /// <seealso cref="CanReadType(Type)"/>
+        public virtual Task<object> ReadFromStreamAsync(Type type, Stream readStream, HttpContent content,
+            IFormatterLogger formatterLogger, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return TaskHelpers.Canceled<object>();
+            }
+
+            return ReadFromStreamAsync(type, readStream, content, formatterLogger);
         }
 
         /// <summary>
@@ -140,8 +233,37 @@ namespace RestBus.Client.Http.Formatting
         /// <param name="transportContext">The <see cref="TransportContext"/> if available. It may be <c>null</c>.</param>
         /// <returns>A <see cref="Task"/> that will perform the write.</returns>
         /// <exception cref="NotSupportedException">Derived types need to support writing.</exception>
-        /// <seealso cref="CanReadType(Type)"/>
+        /// <seealso cref="CanWriteType(Type)"/>
         public virtual Task WriteToStreamAsync(Type type, object value, Stream writeStream, HttpContent content, TransportContext transportContext)
+        {
+            // HttpContent.SerializeToStreamAsync doesn't take in a CancellationToken. So, there is no easy way to get the CancellationToken
+            // to the formatter while writing response. We are cheating here by passing fake cancellation tokens. We should fix this
+            // when we fix HttpContent.
+            return WriteToStreamAsync(type, value, writeStream, content, transportContext, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Returns a <see cref="Task"/> that serializes the given <paramref name="value"/> of the given <paramref name="type"/>
+        /// to the given <paramref name="writeStream"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>This implementation throws a <see cref="NotSupportedException"/>. Derived types should override this method if the formatter
+        /// supports reading.</para>
+        /// <para>An implementation of this method should NOT close <paramref name="writeStream"/> upon completion. The stream will be closed independently when
+        /// the <see cref="HttpContent"/> instance is disposed.
+        /// </para>
+        /// </remarks>
+        /// <param name="type">The type of the object to write.</param>
+        /// <param name="value">The object value to write.  It may be <c>null</c>.</param>
+        /// <param name="writeStream">The <see cref="Stream"/> to which to write.</param>
+        /// <param name="content">The <see cref="HttpContent"/> if available. It may be <c>null</c>.</param>
+        /// <param name="transportContext">The <see cref="TransportContext"/> if available. It may be <c>null</c>.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>A <see cref="Task"/> that will perform the write.</returns>
+        /// <exception cref="NotSupportedException">Derived types need to support writing.</exception>
+        /// <seealso cref="CanWriteType(Type)"/>
+        public virtual Task WriteToStreamAsync(Type type, object value, Stream writeStream, HttpContent content,
+            TransportContext transportContext, CancellationToken cancellationToken)
         {
             throw Error.NotSupported(Properties.Resources.MediaTypeFormatterCannotWrite, GetType().Name);
         }
@@ -164,29 +286,7 @@ namespace RestBus.Client.Http.Formatting
 
         private static int InitializeDefaultCollectionKeySize()
         {
-#if NETFX_CORE
-        return Int32.MaxValue;
-#else
-            // we first detect if we are running on 4.5, return Max value if we are.
-            Type comparerType = Type.GetType(IWellKnownComparerTypeName, throwOnError: false);
-
-            if (comparerType != null)
-            {
-                return Int32.MaxValue;
-            }
-
-            // we should try to read it from the AppSettings 
-            // if we found the aspnet settings configured, we will use that. Otherwise, we used the default 
-            NameValueCollection settings = ConfigurationManager.AppSettings;
-            int result;
-
-            if (settings == null || !Int32.TryParse(settings["aspnet:MaxHttpCollectionKeys"], out result) || result < 0)
-            {
-                result = DefaultMaxHttpCollectionKeys;
-            }
-
-            return result;
-#endif
+            return Int32.MaxValue;
         }
 
         /// <summary>
@@ -224,6 +324,7 @@ namespace RestBus.Client.Http.Formatting
         /// <returns>The <see cref="Encoding"/> to use when reading the request or writing the response.</returns>
         public Encoding SelectCharacterEncoding(HttpContentHeaders contentHeaders)
         {
+            // Performance-sensitive
             Encoding encoding = null;
             if (contentHeaders != null && contentHeaders.ContentType != null)
             {
@@ -231,9 +332,15 @@ namespace RestBus.Client.Http.Formatting
                 string charset = contentHeaders.ContentType.CharSet;
                 if (!String.IsNullOrWhiteSpace(charset))
                 {
-                    encoding =
-                        SupportedEncodings.FirstOrDefault(
-                            enc => charset.Equals(enc.WebName, StringComparison.OrdinalIgnoreCase));
+                    for (int i = 0; i < _supportedEncodings.Count; i++)
+                    {
+                        Encoding supportedEncoding = _supportedEncodings[i];
+                        if (charset.Equals(supportedEncoding.WebName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            encoding = supportedEncoding;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -241,7 +348,10 @@ namespace RestBus.Client.Http.Formatting
             {
                 // We didn't find a character encoding match based on the content headers.
                 // Instead we try getting the default character encoding.
-                encoding = SupportedEncodings.FirstOrDefault();
+                if (_supportedEncodings.Count > 0)
+                {
+                    encoding = _supportedEncodings[0];
+                }
             }
 
             if (encoding == null)
@@ -288,7 +398,11 @@ namespace RestBus.Client.Http.Formatting
             // If content type is not set then set it based on supported media types.
             if (headers.ContentType == null)
             {
-                MediaTypeHeaderValue defaultMediaType = SupportedMediaTypes.FirstOrDefault();
+                MediaTypeHeaderValue defaultMediaType = null;
+                if (_supportedMediaTypes.Count > 0)
+                {
+                    defaultMediaType = _supportedMediaTypes[0];
+                }
                 if (defaultMediaType != null)
                 {
                     headers.ContentType = new MediaTypeHeaderValue(defaultMediaType.MediaType);
@@ -298,7 +412,11 @@ namespace RestBus.Client.Http.Formatting
             // If content type charset parameter is not set then set it based on the supported encodings.
             if (headers.ContentType != null && headers.ContentType.CharSet == null)
             {
-                Encoding defaultEncoding = SupportedEncodings.FirstOrDefault();
+                Encoding defaultEncoding = null;
+                if (_supportedEncodings.Count > 0)
+                {
+                    defaultEncoding = _supportedEncodings[0];
+                }
                 if (defaultEncoding != null)
                 {
                     headers.ContentType.CharSet = defaultEncoding.WebName;
@@ -395,6 +513,11 @@ namespace RestBus.Client.Http.Formatting
         internal class MediaTypeHeaderValueCollection : Collection<MediaTypeHeaderValue>
         {
             private static readonly Type _mediaTypeHeaderValueType = typeof(MediaTypeHeaderValue);
+
+            internal MediaTypeHeaderValueCollection(IList<MediaTypeHeaderValue> list)
+                : base(list)
+            {
+            }
 
             /// <summary>
             /// Inserts the <paramref name="item"/> into the collection at the specified <paramref name="index"/>.

@@ -46,44 +46,45 @@
       <LastGenOutput>CommonWebApiResources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <EmbeddedResource Include="Http\Formatting\Properties\Resources.resx">
+    <EmbeddedResource Include="Http\Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Http\Formatting\BaseJsonMediaTypeFormatter.cs" />
     <Compile Include="Http\Formatting\CommonWebApiResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>CommonWebApiResources.resx</DependentUpon>
     </Compile>
     <Compile Include="Http\Formatting\DelegatingEnumerable.cs" />
-    <Compile Include="Http\Formatting\DelegatingStream.cs" />
-    <Compile Include="Http\Formatting\Error.cs" />
-    <Compile Include="Http\Formatting\FormattingUtilities.cs" />
+    <Compile Include="Http\Internal\DelegatingStream.cs" />
+    <Compile Include="Http\Common\Error.cs" />
+    <Compile Include="Http\FormattingUtilities.cs" />
     <Compile Include="Http\Formatting\IFormatterLogger.cs" />
-    <Compile Include="Http\Formatting\Internal\ReadOnlyStreamWithEncodingPreamble.cs" />
+    <Compile Include="Http\Internal\ReadOnlyStreamWithEncodingPreamble.cs" />
     <Compile Include="Http\Formatting\IRequiredMemberSelector.cs" />
     <Compile Include="Http\Formatting\JsonContractResolver.cs" />
     <Compile Include="Http\Formatting\JsonMediaTypeFormatter.cs" />
     <Compile Include="Http\Formatting\MediaTypeConstants.cs" />
     <Compile Include="Http\Formatting\MediaTypeFormatter.cs" />
     <Compile Include="Http\Formatting\MediaTypeMapping.cs" />
-    <Compile Include="Http\Formatting\NonClosingDelegatingStream.cs" />
-    <Compile Include="Http\Formatting\ObjectContent.cs" />
-    <Compile Include="Http\Formatting\ObjectContentOfT.cs" />
+    <Compile Include="Http\Internal\NonClosingDelegatingStream.cs" />
+    <Compile Include="Http\ObjectContent.cs" />
+    <Compile Include="Http\ObjectContentOfT.cs" />
     <Compile Include="Http\Formatting\ParsedMediaTypeHeaderValue.cs" />
-    <Compile Include="Http\Formatting\Properties\Resources.Designer.cs">
+    <Compile Include="Http\Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Http\Formatting\RequestHeaderMapping.cs" />
     <Compile Include="Http\Formatting\StringComparisonHelper.cs" />
-    <Compile Include="Http\Formatting\TaskHelpers.cs" />
-    <Compile Include="Http\Formatting\TaskHelpersExtensions.cs" />
-    <Compile Include="Http\Formatting\TypeExtensions.cs" />
+    <Compile Include="Http\Common\TaskHelpers.cs" />
+    <Compile Include="Http\Common\TaskHelpersExtensions.cs" />
+    <Compile Include="Http\Internal\TypeExtensions.cs" />
     <Compile Include="Http\Formatting\XmlHttpRequestHeaderMapping.cs" />
     <Compile Include="Http\Formatting\XmlMediaTypeFormatter.cs" />
     <Compile Include="RequestCookieCollection.cs" />

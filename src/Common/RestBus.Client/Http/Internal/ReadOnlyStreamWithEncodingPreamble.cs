@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RestBus.Client.Http.Formatting.Internal
+namespace RestBus.Client.Http.Internal
 {
     /// <summary>
     /// This implements a read-only, forward-only stream around another readable stream, to ensure

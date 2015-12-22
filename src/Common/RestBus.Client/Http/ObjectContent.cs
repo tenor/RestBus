@@ -1,8 +1,10 @@
-//Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/ObjectContent.cs
+//Sourced from https://aspnetwebstack.codeplex.com/SourceControl/latest#src/System.Net.Http.Formatting/ObjectContent.cs
 // Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
-namespace RestBus.Client.Http.Formatting
+namespace RestBus.Client.Http
 {
+    using Internal;
+    using Formatting;
     using System;
     using System.Diagnostics.CodeAnalysis;
     using System.Diagnostics.Contracts;
@@ -96,7 +98,7 @@ namespace RestBus.Client.Http.Formatting
         public object Value
         {
             get { return _value; }
-            set { VerifyAndSetObject(value); }
+            set { _value = value; }
         }
 
         internal static MediaTypeHeaderValue BuildHeaderValue(string mediaType)
@@ -129,7 +131,7 @@ namespace RestBus.Client.Http.Formatting
         private static bool IsTypeNullable(Type type)
         {
             return !type.IsValueType() ||
-                    (type.IsGenericType() &&
+                   (type.IsGenericType() &&
                     type.GetGenericTypeDefinition() == typeof(Nullable<>));
         }
 

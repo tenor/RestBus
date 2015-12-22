@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace RestBus.Client.Http.Formatting.Properties {
+namespace RestBus.Client.Http.Properties {
     using System;
     using System.Reflection;
     
@@ -40,7 +40,7 @@ namespace RestBus.Client.Http.Formatting.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("RestBus.Client.Http.Formatting.Properties.Resources", typeof(Resources).GetTypeInfo().Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("RestBus.Client.Http.Properties.Resources", typeof(Resources).GetTypeInfo().Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -94,6 +94,78 @@ namespace RestBus.Client.Http.Formatting.Properties {
         internal static string AsyncResult_ResultMismatch {
             get {
                 return ResourceManager.GetString("AsyncResult_ResultMismatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Found zero byte ranges. There must be at least one byte range provided..
+        /// </summary>
+        internal static string ByteRangeStreamContentNoRanges {
+            get {
+                return ResourceManager.GetString("ByteRangeStreamContentNoRanges", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The range unit &apos;{0}&apos; is not valid. The range must have a unit of &apos;{1}&apos;..
+        /// </summary>
+        internal static string ByteRangeStreamContentNotBytesRange {
+            get {
+                return ResourceManager.GetString("ByteRangeStreamContentNotBytesRange", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The stream over which &apos;{0}&apos; provides a range view must have a length greater than or equal to 1..
+        /// </summary>
+        internal static string ByteRangeStreamEmpty {
+            get {
+                return ResourceManager.GetString("ByteRangeStreamEmpty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The &apos;From&apos; value of the range must be less than or equal to {0}..
+        /// </summary>
+        internal static string ByteRangeStreamInvalidFrom {
+            get {
+                return ResourceManager.GetString("ByteRangeStreamInvalidFrom", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to None of the requested ranges ({0}) overlap with the current extent of the selected resource..
+        /// </summary>
+        internal static string ByteRangeStreamNoneOverlap {
+            get {
+                return ResourceManager.GetString("ByteRangeStreamNoneOverlap", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The requested range ({0}) does not overlap with the current extent of the selected resource..
+        /// </summary>
+        internal static string ByteRangeStreamNoOverlap {
+            get {
+                return ResourceManager.GetString("ByteRangeStreamNoOverlap", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The stream over which &apos;{0}&apos; provides a range view must be seekable..
+        /// </summary>
+        internal static string ByteRangeStreamNotSeekable {
+            get {
+                return ResourceManager.GetString("ByteRangeStreamNotSeekable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This is a read-only stream..
+        /// </summary>
+        internal static string ByteRangeStreamReadOnly {
+            get {
+                return ResourceManager.GetString("ByteRangeStreamReadOnly", resourceCulture);
             }
         }
         
@@ -296,6 +368,24 @@ namespace RestBus.Client.Http.Formatting.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The &apos;{0}&apos; method returned null. It must return a JSON serializer instance..
+        /// </summary>
+        internal static string JsonSerializerFactoryReturnedNull {
+            get {
+                return ResourceManager.GetString("JsonSerializerFactoryReturnedNull", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The &apos;{0}&apos; method threw an exception when attempting to create a JSON serializer..
+        /// </summary>
+        internal static string JsonSerializerFactoryThrew {
+            get {
+                return ResourceManager.GetString("JsonSerializerFactoryThrew", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The maximum read depth ({0}) has been exceeded because the form url-encoded data being read has more levels of nesting than is allowed..
         /// </summary>
         internal static string MaxDepthExceeded {
@@ -310,6 +400,42 @@ namespace RestBus.Client.Http.Formatting.Properties {
         internal static string MaxHttpCollectionKeyLimitReached {
             get {
                 return ResourceManager.GetString("MaxHttpCollectionKeyLimitReached", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Error parsing BSON data; unable to read content as a {0}..
+        /// </summary>
+        internal static string MediaTypeFormatter_BsonParseError_MissingData {
+            get {
+                return ResourceManager.GetString("MediaTypeFormatter_BsonParseError_MissingData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Error parsing BSON data; unexpected dictionary content: {0} entries, first key &apos;{1}&apos;..
+        /// </summary>
+        internal static string MediaTypeFormatter_BsonParseError_UnexpectedData {
+            get {
+                return ResourceManager.GetString("MediaTypeFormatter_BsonParseError_UnexpectedData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The &apos;{0}&apos; method returned null. It must return a JSON reader instance..
+        /// </summary>
+        internal static string MediaTypeFormatter_JsonReaderFactoryReturnedNull {
+            get {
+                return ResourceManager.GetString("MediaTypeFormatter_JsonReaderFactoryReturnedNull", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The &apos;{0}&apos; method returned null. It must return a JSON writer instance..
+        /// </summary>
+        internal static string MediaTypeFormatter_JsonWriterFactoryReturnedNull {
+            get {
+                return ResourceManager.GetString("MediaTypeFormatter_JsonWriterFactoryReturnedNull", resourceCulture);
             }
         }
         
@@ -548,20 +674,20 @@ namespace RestBus.Client.Http.Formatting.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The &apos;{0}&apos; method in &apos;{1}&apos; returned null. It must return a RemoteStreamResult instance containing a writable stream and a valid URL..
+        /// </summary>
+        internal static string RemoteStreamInfoCannotBeNull {
+            get {
+                return ResourceManager.GetString("RemoteStreamInfoCannotBeNull", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The &apos;{0}&apos; serializer cannot serialize the type &apos;{1}&apos;..
         /// </summary>
         internal static string SerializerCannotSerializeType {
             get {
                 return ResourceManager.GetString("SerializerCannotSerializeType", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to &apos;undefined&apos;.
-        /// </summary>
-        internal static string UndefinedMediaType {
-            get {
-                return ResourceManager.GetString("UndefinedMediaType", resourceCulture);
             }
         }
         
@@ -580,6 +706,24 @@ namespace RestBus.Client.Http.Formatting.Properties {
         internal static string UnsupportedIndent {
             get {
                 return ResourceManager.GetString("UnsupportedIndent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The object of type &apos;{0}&apos; returned by {1} must be an instance of either XmlObjectSerializer or XmlSerializer..
+        /// </summary>
+        internal static string XmlMediaTypeFormatter_InvalidSerializerType {
+            get {
+                return ResourceManager.GetString("XmlMediaTypeFormatter_InvalidSerializerType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The object returned by {0} must not be a null value..
+        /// </summary>
+        internal static string XmlMediaTypeFormatter_NullReturnedSerializer {
+            get {
+                return ResourceManager.GetString("XmlMediaTypeFormatter_NullReturnedSerializer", resourceCulture);
             }
         }
     }

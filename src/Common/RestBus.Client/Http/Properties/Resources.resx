@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- Sourced from https://github.com/mono/aspnetwebstack/blob/master/src/System.Net.Http.Formatting/Properties/Resources.resx -->
   <!-- 
     Microsoft ResX Schema 
     
@@ -217,9 +216,6 @@
   <data name="SerializerCannotSerializeType" xml:space="preserve">
     <value>The '{0}' serializer cannot serialize the type '{1}'.</value>
   </data>
-  <data name="UndefinedMediaType" xml:space="preserve">
-    <value>'undefined'</value>
-  </data>
   <data name="UnsupportedIndent" xml:space="preserve">
     <value>Indentation is not supported by '{0}'.</value>
   </data>
@@ -291,5 +287,56 @@
   </data>
   <data name="ReadAsHttpMessageUnexpectedTermination" xml:space="preserve">
     <value>Unexpected end of HTTP message stream. HTTP message is not complete.</value>
+  </data>
+  <data name="ByteRangeStreamContentNotBytesRange" xml:space="preserve">
+    <value>The range unit '{0}' is not valid. The range must have a unit of '{1}'.</value>
+  </data>
+  <data name="ByteRangeStreamInvalidFrom" xml:space="preserve">
+    <value>The 'From' value of the range must be less than or equal to {0}.</value>
+  </data>
+  <data name="ByteRangeStreamNoneOverlap" xml:space="preserve">
+    <value>None of the requested ranges ({0}) overlap with the current extent of the selected resource.</value>
+  </data>
+  <data name="ByteRangeStreamNoOverlap" xml:space="preserve">
+    <value>The requested range ({0}) does not overlap with the current extent of the selected resource.</value>
+  </data>
+  <data name="ByteRangeStreamNotSeekable" xml:space="preserve">
+    <value>The stream over which '{0}' provides a range view must be seekable.</value>
+  </data>
+  <data name="ByteRangeStreamReadOnly" xml:space="preserve">
+    <value>This is a read-only stream.</value>
+  </data>
+  <data name="ByteRangeStreamContentNoRanges" xml:space="preserve">
+    <value>Found zero byte ranges. There must be at least one byte range provided.</value>
+  </data>
+  <data name="ByteRangeStreamEmpty" xml:space="preserve">
+    <value>The stream over which '{0}' provides a range view must have a length greater than or equal to 1.</value>
+  </data>
+  <data name="XmlMediaTypeFormatter_InvalidSerializerType" xml:space="preserve">
+    <value>The object of type '{0}' returned by {1} must be an instance of either XmlObjectSerializer or XmlSerializer.</value>
+  </data>
+  <data name="XmlMediaTypeFormatter_NullReturnedSerializer" xml:space="preserve">
+    <value>The object returned by {0} must not be a null value.</value>
+  </data>
+  <data name="JsonSerializerFactoryReturnedNull" xml:space="preserve">
+    <value>The '{0}' method returned null. It must return a JSON serializer instance.</value>
+  </data>
+  <data name="JsonSerializerFactoryThrew" xml:space="preserve">
+    <value>The '{0}' method threw an exception when attempting to create a JSON serializer.</value>
+  </data>
+  <data name="MediaTypeFormatter_JsonReaderFactoryReturnedNull" xml:space="preserve">
+    <value>The '{0}' method returned null. It must return a JSON reader instance.</value>
+  </data>
+  <data name="MediaTypeFormatter_JsonWriterFactoryReturnedNull" xml:space="preserve">
+    <value>The '{0}' method returned null. It must return a JSON writer instance.</value>
+  </data>
+  <data name="MediaTypeFormatter_BsonParseError_MissingData" xml:space="preserve">
+    <value>Error parsing BSON data; unable to read content as a {0}.</value>
+  </data>
+  <data name="MediaTypeFormatter_BsonParseError_UnexpectedData" xml:space="preserve">
+    <value>Error parsing BSON data; unexpected dictionary content: {0} entries, first key '{1}'.</value>
+  </data>
+  <data name="RemoteStreamInfoCannotBeNull" xml:space="preserve">
+    <value>The '{0}' method in '{1}' returned null. It must return a RemoteStreamResult instance containing a writable stream and a valid URL.</value>
   </data>
 </root>

@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace RestBus.Client.Http
+namespace RestBus.Client
 {
     public class RequestHeaders : IEnumerable<KeyValuePair<string, IEnumerable<string>>>, System.Collections.IEnumerable
     {
