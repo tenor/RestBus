@@ -1,11 +1,7 @@
+using RestBus.Client;
 using RestBus.Common.Amqp;
-using RestBus.RabbitMQ.Client;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ
 {
@@ -78,7 +74,7 @@ namespace RestBus.RabbitMQ
 
         protected RequestOptions GetRequestOptions(HttpRequestMessage request)
         {
-            return RestBusClient.GetRequestOptions(request);
+            return MessageInvokerBase.GetRequestOptions(request);
         }
 
     }

@@ -602,7 +602,7 @@ namespace RestBus.Client
             }
 
             //Attach options to request
-            RestBusClient.SetRequestOptions(request, options);
+            MessageInvokerBase.SetRequestOptions(request, options);
         }
 
 
