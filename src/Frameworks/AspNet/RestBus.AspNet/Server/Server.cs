@@ -59,6 +59,8 @@ namespace RestBus.AspNet.Server
                     throw new InvalidOperationException($"RestBus subscriber could not be found. To use the RestBus server, call app.{nameof(ServerExtensions.ConfigureRestBusServer)} in Startup.Configure method and specify a subscriber to use!");
                 }
 
+                //TODO: Add _logger properly
+
                 var host = new RestBusHost<TContext>(information.Subscriber, application);
                 _disposables.Push(host);
 
