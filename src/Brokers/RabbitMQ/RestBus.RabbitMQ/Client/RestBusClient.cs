@@ -28,7 +28,7 @@ namespace RestBus.RabbitMQ.Client
         readonly string exchangeName;
         readonly string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
-        QueueingBasicConsumer callbackConsumer = null;
+        volatile QueueingBasicConsumer callbackConsumer = null;
         IConnection conn = null;
         event Action<BasicDeliverEventArgs> responseArrivalNotification = null;
         AmqpChannelPooler _clientPool;
