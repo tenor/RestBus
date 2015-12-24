@@ -466,6 +466,7 @@ namespace RestBus.RabbitMQ.Client
                     Thread callBackProcessor = new Thread(p =>
                     {
                         IConnection callbackConn = null;
+                        AmqpChannelPooler pool = null;
                         try
                         {
                             //NOTE: This is the only place where connections are created in the client
@@ -475,7 +476,8 @@ namespace RestBus.RabbitMQ.Client
                             //Swap out client connection and pooler, so other threads can use the new objects:
 
                             //First Swap out old pool with new pool
-                            var oldpool = Interlocked.Exchange(ref _clientPool, new AmqpChannelPooler(callbackConn));
+                            pool = new AmqpChannelPooler(callbackConn);
+                            var oldpool = Interlocked.Exchange(ref _clientPool, pool);
 
                             //then swap out old connection with new one
                             var oldconn = Interlocked.Exchange(ref conn, callbackConn);
@@ -487,11 +489,15 @@ namespace RestBus.RabbitMQ.Client
                             }
 
                             //Dispose old connection
-                            DisposeConnection(oldconn); 
+                            DisposeConnection(oldconn);
 
                             //Start consumer
-                            using (IModel channel = callbackConn.CreateModel())
+                            AmqpModelContainer channelContainer = null;
+                            try
                             {
+                                channelContainer = pool.GetModel(ChannelFlags.None);
+                                IModel channel = channelContainer.Channel;
+
                                 //Declare call back queue
                                 var callbackQueueArgs = new Dictionary<string, object>();
                                 callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
@@ -552,6 +558,10 @@ namespace RestBus.RabbitMQ.Client
                                 }
 
                             }
+                            finally
+                            {
+                                if (channelContainer != null) channelContainer.Close();
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -571,9 +581,9 @@ namespace RestBus.RabbitMQ.Client
                         }
                         finally
                         {
-                            if (_clientPool != null)
+                            if (pool != null)
                             {
-                                _clientPool.Dispose();
+                                pool.Dispose();
                             }
                             DisposeConnection(callbackConn);
                         }

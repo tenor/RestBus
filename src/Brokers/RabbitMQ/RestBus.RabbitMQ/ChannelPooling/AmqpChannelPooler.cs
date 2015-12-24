@@ -1,7 +1,4 @@
-﻿#define ENABLE_CHANNELPOOLING
-
-using RabbitMQ.Client;
-using RestBus.Common;
+﻿using RabbitMQ.Client;
 using System;
 using System.Collections.Concurrent;
 
@@ -11,10 +8,11 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
     internal sealed class AmqpChannelPooler : IDisposable
     {
+        readonly object syncModelCreate = new object();
         readonly IConnection conn;
         volatile bool _disposed;
 
-#if ENABLE_CHANNELPOOLING
+#if !DISABLE_CHANNELPOOLING
 
         readonly ConcurrentDictionary<ChannelFlags, ConcurrentQueue<AmqpModelContainer>> _pool = new ConcurrentDictionary<ChannelFlags, ConcurrentQueue<AmqpModelContainer>>();
         static readonly int MODEL_EXPIRY_TIMESPAN = (int)TimeSpan.FromMinutes(5).TotalMilliseconds;
@@ -33,7 +31,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
         internal AmqpModelContainer GetModel(ChannelFlags flags)
         {
-#if ENABLE_CHANNELPOOLING
+#if !DISABLE_CHANNELPOOLING
 
             //Search pool for a model:
             AmqpModelContainer model = null;
@@ -66,14 +64,20 @@ namespace RestBus.RabbitMQ.ChannelPooling
             if (model == null)
             {
                 //Wasn't found, so create a new one
-                model = new AmqpModelContainer(conn.CreateModel(), flags, this);
+                lock(syncModelCreate)
+                {
+                    model = new AmqpModelContainer(conn.CreateModel(), flags, this);
+                }
             }
 
             return model;
 
 
 #else
-            return new AmqpModelContainer( conn.CreateModel(), flags, this);
+            lock(syncModelCreate)
+            {
+                return new AmqpModelContainer( conn.CreateModel(), flags, this);
+            }
 #endif
 
         }
@@ -83,7 +87,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
             // NOTE: do not call AmqpModelContainer.Close() here.
             // That method calls this method.
 
-#if ENABLE_CHANNELPOOLING
+#if !DISABLE_CHANNELPOOLING
 
             if (_disposed || HasModelExpired(Environment.TickCount, modelContainer))
             {
@@ -130,14 +134,14 @@ namespace RestBus.RabbitMQ.ChannelPooling
         {
             _disposed = true;
 
-#if ENABLE_CHANNELPOOLING
+#if !DISABLE_CHANNELPOOLING
             Flush();
 #endif
             
 
         }
 
-#if ENABLE_CHANNELPOOLING
+#if !DISABLE_CHANNELPOOLING
         private void Flush()
         {
             var snapshot = _pool.ToArray();
