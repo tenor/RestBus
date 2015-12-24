@@ -1,3 +1,5 @@
+#define DIAGS_CONSUMER
+
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Framing;
@@ -40,6 +42,10 @@ namespace RestBus.RabbitMQ.Client
         private Uri baseAddress;
         private HttpRequestHeaders defaultRequestHeaders;
         private TimeSpan timeout;
+
+        #if DIAGS_CONSUMER
+        System.Collections.Concurrent.ConcurrentQueue<string> consumerDiags = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        #endif
 
         internal const int HEART_BEAT = 30;
 
@@ -469,6 +475,23 @@ namespace RestBus.RabbitMQ.Client
                 lock (callbackConsumerStartSync)
                 {
                     if (!(callbackConsumer == null || conn == null || !callbackConsumer.IsRunning || !conn.IsOpen)) return;
+
+#if DIAGS_CONSUMER
+
+                    string diag = "consumer is null: " + (callbackConsumer == null) + ", conn is null: " + (conn == null);
+
+                    if (callbackConsumer != null)
+                    {
+                        diag += ", consumer is running: " + (callbackConsumer.IsRunning);
+                    }
+
+                    if (conn != null)
+                    {
+                        diag += ", conn is open: " + (conn.IsOpen);
+                    }
+
+                    consumerDiags.Enqueue(diag);
+#endif
 
                     //This method waits on this signal to make sure the callbackprocessor thread either started successfully or failed.
                     ManualResetEventSlim consumerSignal = new ManualResetEventSlim(false);
