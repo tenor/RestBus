@@ -36,12 +36,12 @@ namespace RestBus.RabbitMQ.Client
         int lastExchangeDeclareTickCount = 0;
         volatile bool disposed;
 
-        private bool hasKickStarted = false;
+        volatile bool hasKickStarted = false;
         private Uri baseAddress;
         private HttpRequestHeaders defaultRequestHeaders;
         private TimeSpan timeout;
 
-        public const int HEART_BEAT = 30;
+        internal const int HEART_BEAT = 30;
 
         /// <summary>Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.</summary>
         public RestBusClient(IMessageMapper messageMapper) : base(new HttpClientHandler(), true)
@@ -467,6 +467,7 @@ namespace RestBus.RabbitMQ.Client
                     {
                         IConnection callbackConn = null;
                         AmqpChannelPooler pool = null;
+                        QueueingBasicConsumer consumer = null;
                         try
                         {
                             //NOTE: This is the only place where connections are created in the client
@@ -504,7 +505,8 @@ namespace RestBus.RabbitMQ.Client
 
                                 channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 
-                                callbackConsumer = new QueueingBasicConsumer(channel);
+                                consumer = new QueueingBasicConsumer(channel);
+                                Interlocked.Exchange(ref callbackConsumer, consumer);
                                 channel.BasicConsume(callbackQueueName, false, callbackConsumer);
 
                                 //Notify outer thread that channel has started consumption
@@ -555,12 +557,26 @@ namespace RestBus.RabbitMQ.Client
                                     //Acknowledge receipt
                                     channel.BasicAck(evt.DeliveryTag, false);
 
+                                    //TODO: Check if client is disposed here and exit loop.
+
                                 }
 
                             }
                             finally
                             {
-                                if (channelContainer != null) channelContainer.Close();
+                                if (channelContainer != null)
+                                {
+                                    if (consumer != null)
+                                    {
+                                        try
+                                        {
+                                            channelContainer.Channel.BasicCancel(consumer.ConsumerTag);
+                                        }
+                                        catch { }
+                                    }
+
+                                    channelContainer.Close();
+                                }
                             }
                         }
                         catch (Exception ex)
