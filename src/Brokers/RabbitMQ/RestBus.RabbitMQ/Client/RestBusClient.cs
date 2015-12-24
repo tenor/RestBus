@@ -189,13 +189,24 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
                 model = pooler.GetModel(ChannelFlags.None);
 
+                //Redeclare exchanges and queues every 30 seconds or the first time client is sending a message
                 TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
-                if (lastExchangeDeclareTickCount == 0 || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
+                bool firstDeclare = lastExchangeDeclareTickCount == 0;
+                if (firstDeclare || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
                 {
-                    //Redeclare exchanges and queues every 30 seconds
-
-                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                    if (!firstDeclare)
+                    {
+                        //All threads must attempt to declare exchanges and queues if it hasn't been previously declared 
+                        //(for instance, all threads were started at once)
+                        //So do not swap out this value on first declare
+                        Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                    }
                     AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
+                    if(firstDeclare)
+                    {
+                        //Swap out this value after declaring on firstdeclare
+                        Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                    }
                 }
 
                 //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
