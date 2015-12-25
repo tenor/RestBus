@@ -5,6 +5,7 @@ using RabbitMQ.Util;
 using RestBus.Common;
 using RestBus.Common.Amqp;
 using RestBus.RabbitMQ.ChannelPooling;
+using RestBus.RabbitMQ.Consumer;
 using System;
 using System.Threading;
 
@@ -18,14 +19,14 @@ namespace RestBus.RabbitMQ.Subscription
         AmqpChannelPooler _subscriberPool;
         AmqpModelContainer workChannel;
         AmqpModelContainer subscriberChannel;
-        QueueingBasicConsumer workConsumer;
-        QueueingBasicConsumer subscriberConsumer;
+        ConcurrentQueueingConsumer workConsumer;
+        ConcurrentQueueingConsumer subscriberConsumer;
         readonly string subscriberId;
         readonly ExchangeInfo exchangeInfo;
         object exchangeDeclareSync = new object();
         InterlockedBoolean hasStarted;
         volatile bool disposed = false;
-        SharedQueue<BasicDeliverEventArgs> lastProcessedQueue = null;
+        ConcurrentQueueingConsumer lastProcessedConsumerQueue = null;
         readonly ConnectionFactory connectionFactory;
 
         public RestBusSubscriber(IMessageMapper messageMapper )
@@ -119,9 +120,6 @@ namespace RestBus.RabbitMQ.Subscription
 
             //Use pool reference henceforth.
 
-            //Create shared queue
-            SharedQueue<BasicDeliverEventArgs> queue = new SharedQueue<BasicDeliverEventArgs>();
-
             //Create work channel and declare exchanges and queues
             Interlocked.Exchange(ref workChannel, pool.GetModel(ChannelFlags.Consumer));
 
@@ -151,13 +149,13 @@ namespace RestBus.RabbitMQ.Subscription
             AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeInfo, exchangeDeclareSync, subscriberId);
 
             //Listen on work queue
-            Interlocked.Exchange(ref workConsumer, new QueueingBasicConsumer(workChannel.Channel, queue));
+            Interlocked.Exchange(ref workConsumer, new ConcurrentQueueingConsumer(workChannel.Channel));
             string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
             workChannel.Channel.BasicConsume(workQueueName, false, workConsumer);
 
             //Listen on subscriber queue
             Interlocked.Exchange(ref subscriberChannel, pool.GetModel(ChannelFlags.Consumer));
-            Interlocked.Exchange(ref subscriberConsumer, new QueueingBasicConsumer(subscriberChannel.Channel, queue));
+            Interlocked.Exchange(ref subscriberConsumer, new ConcurrentQueueingConsumer(subscriberChannel.Channel));
             string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
             subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, false, subscriberConsumer);
         }
@@ -173,33 +171,33 @@ namespace RestBus.RabbitMQ.Subscription
             HttpRequestPacket request;
             IBasicProperties properties;
 
-            SharedQueue<BasicDeliverEventArgs> queue1 = null, queue2 = null;
+            ConcurrentQueueingConsumer queue1 = null, queue2 = null;
 
             while (true)
             {
                 if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
-                if (lastProcessedQueue == subscriberConsumer.Queue)
+                if (lastProcessedConsumerQueue == subscriberConsumer)
                 {
-                    queue1 = workConsumer.Queue;
-                    queue2 = subscriberConsumer.Queue;
+                    queue1 = workConsumer;
+                    queue2 = subscriberConsumer;
                 }
                 else
                 {
-                    queue1 = subscriberConsumer.Queue;
-                    queue2 = workConsumer.Queue;
+                    queue1 = subscriberConsumer;
+                    queue2 = workConsumer;
                 }
 
                 try
                 {
                     if (TryGetRequest(queue1, out request, out properties))
                     {
-                        lastProcessedQueue = queue1;
+                        lastProcessedConsumerQueue = queue1;
                         break;
                     }
 
                     if (TryGetRequest(queue2, out request, out properties))
                     {
-                        lastProcessedQueue = queue2;
+                        lastProcessedConsumerQueue = queue2;
                         break;
                     }
                 }
@@ -243,33 +241,26 @@ namespace RestBus.RabbitMQ.Subscription
 
         }
 
-        private bool TryGetRequest(SharedQueue<BasicDeliverEventArgs> queue, out HttpRequestPacket request, out IBasicProperties properties)
+        private bool TryGetRequest(ConcurrentQueueingConsumer consumer, out HttpRequestPacket request, out IBasicProperties properties)
         {
-            object obj;
-            BasicDeliverEventArgs evt;
             request = null;
             properties = null;
 
-            obj = queue.DequeueNoWait(null);
-            if (obj != null)
-            {
-                 evt = (BasicDeliverEventArgs)obj;
-            }
-            else
+            BasicDeliverEventArgs item;
+            if (!consumer.TryInstantDequeue(out item))
             {
                 return false;
             }
 
-
             //Get message properties
-            properties = evt.BasicProperties;
+            properties = item.BasicProperties;
 
             //Deserialize message
             bool wasDeserialized = true;
 
             try
             {
-                request = HttpRequestPacket.Deserialize(evt.Body);
+                request = HttpRequestPacket.Deserialize(item.Body);
 
                 //Add/Update Subscriber-Id header
                 request.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { this.subscriberId };
@@ -283,29 +274,29 @@ namespace RestBus.RabbitMQ.Subscription
 
 
             //Ack or reject message
-            if (evt.ConsumerTag == workConsumer.ConsumerTag)
+            if (item.ConsumerTag == workConsumer.ConsumerTag)
             {
                 if (wasDeserialized)
                 {
-                    workConsumer.Model.BasicAck(evt.DeliveryTag, false);
+                    workConsumer.Model.BasicAck(item.DeliveryTag, false);
                     return true;
                 }
                 else
                 {
-                    workConsumer.Model.BasicReject(evt.DeliveryTag, false);
+                    workConsumer.Model.BasicReject(item.DeliveryTag, false);
                     return false;
                 }
             }
-            else if (evt.ConsumerTag == subscriberConsumer.ConsumerTag)
+            else if (item.ConsumerTag == subscriberConsumer.ConsumerTag)
             {
                 if (wasDeserialized)
                 {
-                    subscriberConsumer.Model.BasicAck(evt.DeliveryTag, false);
+                    subscriberConsumer.Model.BasicAck(item.DeliveryTag, false);
                     return true;
                 }
                 else
                 {
-                    subscriberConsumer.Model.BasicReject(evt.DeliveryTag, false);
+                    subscriberConsumer.Model.BasicReject(item.DeliveryTag, false);
                     return false;
                 }
             }

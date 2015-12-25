@@ -6,6 +6,7 @@ using RestBus.Common;
 using RestBus.Common.Amqp;
 using RestBus.Common.Http;
 using RestBus.RabbitMQ.ChannelPooling;
+using RestBus.RabbitMQ.Consumer;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -26,7 +27,7 @@ namespace RestBus.RabbitMQ.Client
         readonly string exchangeName;
         readonly string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
-        QueueingBasicConsumer callbackConsumer;
+        ConcurrentQueueingConsumer callbackConsumer;
         IConnection conn;
         AmqpChannelPooler _clientPool;
         volatile bool isInConsumerLoop;
@@ -480,7 +481,7 @@ namespace RestBus.RabbitMQ.Client
                     {
                         IConnection callbackConn = null;
                         AmqpChannelPooler pool = null;
-                        QueueingBasicConsumer consumer = null;
+                        ConcurrentQueueingConsumer consumer = null;
                         try
                         {
                             //NOTE: This is the only place where connections are created in the client
@@ -518,7 +519,7 @@ namespace RestBus.RabbitMQ.Client
 
                                 channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 
-                                consumer = new QueueingBasicConsumer(channel);
+                                consumer = new ConcurrentQueueingConsumer(channel);
 
                                 //Set consumerCancelled to true on consumer cancellation
                                 consumerCancelled = false;
@@ -533,7 +534,6 @@ namespace RestBus.RabbitMQ.Client
                                 //Notify outer thread that channel has started consumption
                                 consumerSignal.Set();
 
-                                object obj;
                                 BasicDeliverEventArgs evt;
 
                                 isInConsumerLoop = true;
@@ -542,15 +542,13 @@ namespace RestBus.RabbitMQ.Client
                                 {
                                     try
                                     {
-                                        obj = DequeueCallbackQueue();
+                                        evt = DequeueCallbackQueue();
                                     }
                                     catch
                                     {
                                         //TODO: Log this exception except it's ObjectDisposedException
                                         throw;
                                     }
-
-                                    evt = (BasicDeliverEventArgs)obj;
 
                                     try
                                     {
@@ -690,17 +688,16 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
-        private object DequeueCallbackQueue()
+        private BasicDeliverEventArgs DequeueCallbackQueue()
         {
             while (true)
             {
                 if (disposed) throw new ObjectDisposedException("Client has been disposed");
 
-                object obj = callbackConsumer.Queue.DequeueNoWait(null);
-
-                if (obj != null)
+                BasicDeliverEventArgs item;
+                if (callbackConsumer.TryInstantDequeue(out item))
                 {
-                    return obj;
+                    return item;
                 }
 
                 Thread.Sleep(1);
