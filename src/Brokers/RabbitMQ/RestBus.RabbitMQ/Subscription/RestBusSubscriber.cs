@@ -151,12 +151,16 @@ namespace RestBus.RabbitMQ.Subscription
             //Listen on work queue
             Interlocked.Exchange(ref workConsumer, new ConcurrentQueueingConsumer(workChannel.Channel));
             string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
+
+            workChannel.Channel.BasicQos(0, 50, false);
             workChannel.Channel.BasicConsume(workQueueName, false, workConsumer);
 
             //Listen on subscriber queue
             Interlocked.Exchange(ref subscriberChannel, pool.GetModel(ChannelFlags.Consumer));
             Interlocked.Exchange(ref subscriberConsumer, new ConcurrentQueueingConsumer(subscriberChannel.Channel));
             string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
+
+            subscriberChannel.Channel.BasicQos(0, 50, false);
             subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, false, subscriberConsumer);
         }
 

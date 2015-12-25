@@ -526,6 +526,7 @@ namespace RestBus.RabbitMQ.Client
                                 consumer.ConsumerCancelled += (s, e) => { consumerCancelled = true; };
 
                                 //Start consumer
+                                channel.BasicQos(0, 50, false);
                                 channel.BasicConsume(callbackQueueName, false, consumer);
 
                                 //Set callbackConsumer to consumer
