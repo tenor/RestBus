@@ -579,8 +579,8 @@ namespace RestBus.RabbitMQ.Client
                                     //Acknowledge receipt
                                     channel.BasicAck(evt.DeliveryTag, false);
 
-                                    //Exit loop if consumer is cancelled or client is disposed.
-                                    if (disposed || consumerCancelled)
+                                    //Exit loop if consumer is cancelled.
+                                    if (consumerCancelled)
                                     {
                                         break;
                                     }
@@ -593,7 +593,7 @@ namespace RestBus.RabbitMQ.Client
 
                                 if (channelContainer != null)
                                 {
-                                    if (consumer != null)
+                                    if (consumer != null && !consumerCancelled)
                                     {
                                         try
                                         {
