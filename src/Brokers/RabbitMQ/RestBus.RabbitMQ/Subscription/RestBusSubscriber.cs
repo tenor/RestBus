@@ -15,13 +15,13 @@ namespace RestBus.RabbitMQ.Subscription
         //TODO: Error handling on the subscriber when the queue(s) expires
 
         IConnection conn;
-        IModel workChannel;
-        IModel subscriberChannel;
         AmqpChannelPooler _subscriberPool;
+        AmqpModelContainer workChannel;
+        AmqpModelContainer subscriberChannel;
         QueueingBasicConsumer workConsumer;
         QueueingBasicConsumer subscriberConsumer;
-        string subscriberId;
-        ExchangeInfo exchangeInfo;
+        readonly string subscriberId;
+        readonly ExchangeInfo exchangeInfo;
         object exchangeDeclareSync = new object();
         InterlockedBoolean hasStarted;
         volatile bool disposed = false;
@@ -114,13 +114,16 @@ namespace RestBus.RabbitMQ.Subscription
             //TODO: CreateConnection() can always throw BrokerUnreachableException so keep that in mind when calling
             conn = connectionFactory.CreateConnection();
 
-            _subscriberPool = new AmqpChannelPooler(conn);
+            var pool = new AmqpChannelPooler(conn);
+            Interlocked.Exchange(ref _subscriberPool, pool);
+
+            //Use pool reference henceforth.
 
             //Create shared queue
             SharedQueue<BasicDeliverEventArgs> queue = new SharedQueue<BasicDeliverEventArgs>();
 
             //Create work channel and declare exchanges and queues
-            workChannel = conn.CreateModel();
+            Interlocked.Exchange(ref workChannel, pool.GetModel(ChannelFlags.Consumer));
 
             //TODO: Work this into subscriber dispose and restart
             /* Work this into subscriber dispose and restart
@@ -145,18 +148,18 @@ namespace RestBus.RabbitMQ.Subscription
              */
 
             //Redeclare exchanges and queues
-            AmqpUtils.DeclareExchangeAndQueues(workChannel, exchangeInfo, exchangeDeclareSync, subscriberId);
+            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeInfo, exchangeDeclareSync, subscriberId);
 
             //Listen on work queue
-            workConsumer = new QueueingBasicConsumer(workChannel, queue);
+            Interlocked.Exchange(ref workConsumer, new QueueingBasicConsumer(workChannel.Channel, queue));
             string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
-            workChannel.BasicConsume(workQueueName, false, workConsumer);
+            workChannel.Channel.BasicConsume(workQueueName, false, workConsumer);
 
             //Listen on subscriber queue
-            subscriberChannel = conn.CreateModel();
-            subscriberConsumer = new QueueingBasicConsumer(subscriberChannel, queue);
+            Interlocked.Exchange(ref subscriberChannel, pool.GetModel(ChannelFlags.Consumer));
+            Interlocked.Exchange(ref subscriberConsumer, new QueueingBasicConsumer(subscriberChannel.Channel, queue));
             string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
-            subscriberChannel.BasicConsume(subscriberWorkQueueName, false, subscriberConsumer);
+            subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, false, subscriberConsumer);
         }
 
         //Will block until a request is received from either queue
@@ -164,6 +167,8 @@ namespace RestBus.RabbitMQ.Subscription
         {
             if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
             if(workConsumer == null || subscriberConsumer == null) throw new InvalidOperationException("Start the subscriber prior to calling Dequeue");
+
+            //TODO: Test what happens if either of these consumers are cancelled by the server, should consumer.Cancelled be handled?
 
             HttpRequestPacket request;
             IBasicProperties properties;
@@ -316,12 +321,12 @@ namespace RestBus.RabbitMQ.Subscription
             disposed = true;
             if (workChannel != null)
             {
-                workChannel.Dispose();
+                workChannel.Close();
             }
 
             if (subscriberChannel != null)
             {
-                subscriberChannel.Dispose();
+                subscriberChannel.Close();
             }
 
             if (_subscriberPool != null)

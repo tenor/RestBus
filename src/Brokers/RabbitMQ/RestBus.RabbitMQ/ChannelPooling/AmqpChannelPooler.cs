@@ -2,10 +2,8 @@
 using System;
 using System.Collections.Concurrent;
 
-
 namespace RestBus.RabbitMQ.ChannelPooling
 {
-
     internal sealed class AmqpChannelPooler : IDisposable
     {
         readonly IConnection conn;
@@ -88,8 +86,8 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
 #if !DISABLE_CHANNELPOOLING
 
-            //Do not return channel to pool if either
-            //1. Client is disposed
+            //Do not return channel to pool if either:
+            //1. Pooler is disposed
             //2. Channel is consumer related
             //3. Channel has expired
             if (_disposed || modelContainer.Flags == ChannelFlags.Consumer || HasModelExpired(Environment.TickCount, modelContainer))
@@ -170,6 +168,11 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
 #endif
 
+        private AmqpModelContainer CreateModel(ChannelFlags flags)
+        {
+            return new AmqpModelContainer(conn.CreateModel(), flags, this);
+        }
+
         private static void DisposeModel(AmqpModelContainer modelContainer)
         {
             if (modelContainer != null && modelContainer.Channel != null)
@@ -180,11 +183,6 @@ namespace RestBus.RabbitMQ.ChannelPooling
                 }
                 catch { }
             }
-        }
-
-        private AmqpModelContainer CreateModel(ChannelFlags flags)
-        {
-            return new AmqpModelContainer(conn.CreateModel(), flags, this);
         }
     }
 }
