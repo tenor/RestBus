@@ -1,5 +1,3 @@
-#define DIAGS_CONSUMER
-
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Framing;
@@ -43,10 +41,6 @@ namespace RestBus.RabbitMQ.Client
         private Uri baseAddress;
         private HttpRequestHeaders defaultRequestHeaders;
         private TimeSpan timeout;
-
-        #if DIAGS_CONSUMER
-        System.Collections.Concurrent.ConcurrentQueue<string> consumerDiags = new System.Collections.Concurrent.ConcurrentQueue<string>();
-        #endif
 
         internal const int HEART_BEAT = 30;
 
@@ -477,23 +471,6 @@ namespace RestBus.RabbitMQ.Client
                 {
                     if (!(callbackConsumer == null || conn == null || !isInConsumerLoop || !conn.IsOpen)) return;
 
-                    #if DIAGS_CONSUMER
-
-                        string diagLog = "consumer is null: " + (callbackConsumer == null) + ", conn is null: " + (conn == null);
-
-                        if (callbackConsumer != null)
-                        {
-                            diagLog += ", consumer is running: " + (callbackConsumer.IsRunning);
-                        }
-
-                        if (conn != null)
-                        {
-                            diagLog += ", conn is open: " + (conn.IsOpen);
-                        }
-
-                        consumerDiags.Enqueue(diagLog);
-                    #endif
-
                     //This method waits on this signal to make sure the callbackprocessor thread either started successfully or failed.
                     ManualResetEventSlim consumerSignal = new ManualResetEventSlim(false);
                     Exception consumerSignalException = null;
@@ -542,10 +519,7 @@ namespace RestBus.RabbitMQ.Client
 
                                 consumer = new QueueingBasicConsumer(channel);
                                 Interlocked.Exchange(ref callbackConsumer, consumer);
-                                var consumerTag = channel.BasicConsume(callbackQueueName, false, callbackConsumer);
-                                #if DIAGS_CONSUMER
-                                    consumerDiags.Enqueue("Consumer tag: " + consumerTag);
-                                #endif
+                                channel.BasicConsume(callbackQueueName, false, callbackConsumer);
 
                                 //Notify outer thread that channel has started consumption
                                 consumerSignal.Set();
