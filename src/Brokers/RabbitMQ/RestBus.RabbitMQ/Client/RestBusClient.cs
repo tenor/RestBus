@@ -28,15 +28,16 @@ namespace RestBus.RabbitMQ.Client
         readonly string exchangeName;
         readonly string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
-        volatile QueueingBasicConsumer callbackConsumer = null;
-        IConnection conn = null;
-        event Action<BasicDeliverEventArgs> responseArrivalNotification = null;
+        QueueingBasicConsumer callbackConsumer;
+        IConnection conn;
         AmqpChannelPooler _clientPool;
+        volatile bool isInConsumerLoop;
+        event Action<BasicDeliverEventArgs> responseArrivalNotification;
 
         readonly object callbackConsumerStartSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
-        volatile bool disposed;
+        volatile bool disposed = false;
 
         volatile bool hasKickStarted = false;
         private Uri baseAddress;
@@ -470,11 +471,11 @@ namespace RestBus.RabbitMQ.Client
         {
             //TODO: Double-checked locking -- make this better
             //TODO: Consider moving the conn related checks into a pooler method
-            if (callbackConsumer == null || conn == null || !callbackConsumer.IsRunning || !conn.IsOpen)
+            if (callbackConsumer == null || conn == null || !isInConsumerLoop || !conn.IsOpen)
             {
                 lock (callbackConsumerStartSync)
                 {
-                    if (!(callbackConsumer == null || conn == null || !callbackConsumer.IsRunning || !conn.IsOpen)) return;
+                    if (!(callbackConsumer == null || conn == null || !isInConsumerLoop || !conn.IsOpen)) return;
 
                     #if DIAGS_CONSUMER
 
@@ -554,6 +555,7 @@ namespace RestBus.RabbitMQ.Client
 
                                 while (true)
                                 {
+                                    isInConsumerLoop = true;
 
                                     try
                                     {
@@ -594,13 +596,15 @@ namespace RestBus.RabbitMQ.Client
                                     //Acknowledge receipt
                                     channel.BasicAck(evt.DeliveryTag, false);
 
-                                    //TODO: Check if client is disposed here and exit loop.
+                                    //TODO: Check if client is disposed here or when consumer cancels and exit loop.
 
                                 }
 
                             }
                             finally
                             {
+                                isInConsumerLoop = false;
+
                                 if (channelContainer != null)
                                 {
                                     if (consumer != null)
