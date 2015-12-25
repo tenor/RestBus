@@ -14,7 +14,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
 #if !DISABLE_CHANNELPOOLING
 
         readonly ConcurrentDictionary<ChannelFlags, ConcurrentQueue<AmqpModelContainer>> _pool = new ConcurrentDictionary<ChannelFlags, ConcurrentQueue<AmqpModelContainer>>();
-        static readonly int MODEL_EXPIRY_TIMESPAN = (int)TimeSpan.FromMinutes(5).TotalMilliseconds;
+        static readonly int MODEL_EXPIRY_TIMESPAN = (int)TimeSpan.FromMinutes(1).TotalMilliseconds;
 
 #endif
 
