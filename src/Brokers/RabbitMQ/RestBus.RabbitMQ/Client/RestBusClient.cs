@@ -525,7 +525,7 @@ namespace RestBus.RabbitMQ.Client
                                 consumer.ConsumerCancelled += (s, e) => { consumerCancelled = true; };
 
                                 //Start consumer
-                                channel.BasicConsume(callbackQueueName, false, callbackConsumer);
+                                channel.BasicConsume(callbackQueueName, false, consumer);
 
                                 //Set callbackConsumer to consumer
                                 Interlocked.Exchange(ref callbackConsumer, consumer);
