@@ -30,6 +30,7 @@ namespace RestBus.RabbitMQ.Client
         IConnection conn;
         AmqpChannelPooler _clientPool;
         volatile bool isInConsumerLoop;
+        volatile bool consumerCancelled;
         event Action<BasicDeliverEventArgs> responseArrivalNotification;
 
         readonly object callbackConsumerStartSync = new object();
@@ -518,8 +519,16 @@ namespace RestBus.RabbitMQ.Client
                                 channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 
                                 consumer = new QueueingBasicConsumer(channel);
-                                Interlocked.Exchange(ref callbackConsumer, consumer);
+
+                                //Set consumerCancelled to true on consumer cancellation
+                                consumerCancelled = false;
+                                consumer.ConsumerCancelled += (s, e) => { consumerCancelled = true; };
+
+                                //Start consumer
                                 channel.BasicConsume(callbackQueueName, false, callbackConsumer);
+
+                                //Set callbackConsumer to consumer
+                                Interlocked.Exchange(ref callbackConsumer, consumer);
 
                                 //Notify outer thread that channel has started consumption
                                 consumerSignal.Set();
@@ -527,10 +536,10 @@ namespace RestBus.RabbitMQ.Client
                                 object obj;
                                 BasicDeliverEventArgs evt;
 
+                                isInConsumerLoop = true;
+
                                 while (true)
                                 {
-                                    isInConsumerLoop = true;
-
                                     try
                                     {
                                         obj = DequeueCallbackQueue();
@@ -570,8 +579,11 @@ namespace RestBus.RabbitMQ.Client
                                     //Acknowledge receipt
                                     channel.BasicAck(evt.DeliveryTag, false);
 
-                                    //TODO: Check if client is disposed here or when consumer cancels and exit loop.
-
+                                    //Exit loop if consumer is cancelled or client is disposed.
+                                    if (disposed || consumerCancelled)
+                                    {
+                                        break;
+                                    }
                                 }
 
                             }
