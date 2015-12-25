@@ -509,7 +509,7 @@ namespace RestBus.RabbitMQ.Client
                             AmqpModelContainer channelContainer = null;
                             try
                             {
-                                channelContainer = pool.GetModel(ChannelFlags.None);
+                                channelContainer = pool.GetModel(ChannelFlags.Consumer);
                                 IModel channel = channelContainer.Channel;
 
                                 //Declare call back queue

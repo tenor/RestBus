@@ -8,7 +8,6 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
     internal sealed class AmqpChannelPooler : IDisposable
     {
-        readonly object syncModelCreate = new object();
         readonly IConnection conn;
         volatile bool _disposed;
 
@@ -32,6 +31,12 @@ namespace RestBus.RabbitMQ.ChannelPooling
         internal AmqpModelContainer GetModel(ChannelFlags flags)
         {
 #if !DISABLE_CHANNELPOOLING
+
+            if(flags == ChannelFlags.Consumer)
+            {
+                //Do not pool consumer related channels
+                return CreateModel(flags);
+            }
 
             //Search pool for a model:
             AmqpModelContainer model = null;
@@ -64,20 +69,14 @@ namespace RestBus.RabbitMQ.ChannelPooling
             if (model == null)
             {
                 //Wasn't found, so create a new one
-                lock(syncModelCreate)
-                {
-                    model = new AmqpModelContainer(conn.CreateModel(), flags, this);
-                }
+                model = CreateModel(flags);
             }
 
             return model;
 
 
 #else
-            lock(syncModelCreate)
-            {
-                return new AmqpModelContainer( conn.CreateModel(), flags, this);
-            }
+            return CreateModel(flags);
 #endif
 
         }
@@ -89,7 +88,11 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
 #if !DISABLE_CHANNELPOOLING
 
-            if (_disposed || HasModelExpired(Environment.TickCount, modelContainer))
+            //Do not return channel to pool if either
+            //1. Client is disposed
+            //2. Channel is consumer related
+            //3. Channel has expired
+            if (_disposed || modelContainer.Flags == ChannelFlags.Consumer || HasModelExpired(Environment.TickCount, modelContainer))
             {
                 DisposeModel(modelContainer);
                 return;
@@ -177,6 +180,11 @@ namespace RestBus.RabbitMQ.ChannelPooling
                 }
                 catch { }
             }
+        }
+
+        private AmqpModelContainer CreateModel(ChannelFlags flags)
+        {
+            return new AmqpModelContainer(conn.CreateModel(), flags, this);
         }
     }
 }
