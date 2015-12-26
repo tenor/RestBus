@@ -85,8 +85,12 @@ namespace RestBus.RabbitMQ
 					channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType, false, true, null);
 				}
 
-				var workQueueArgs = new Dictionary<string, object>();
-				//workQueueArgs.Add("x-expires", (long)AmqpUtils.GetWorkQueueExpiry().TotalMilliseconds);
+                //The queue is set to be auto deleted once the last consumer stops using it.
+                //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
+                //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
+
+                var workQueueArgs = new Dictionary<string, object>();
+				workQueueArgs.Add("x-expires", (long)AmqpUtils.GetWorkQueueExpiry().TotalMilliseconds);
 
 				//TODO: the line below can throw some kind of socket exception, so what do you do in that situation
 				//Bear in mind that Restart may call this code.
@@ -99,9 +103,13 @@ namespace RestBus.RabbitMQ
 				if(subscriberId != null)
 				{
 					string subscriberQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
-	
-					var subscriberQueueArgs = new Dictionary<string, object>();
-					//subscriberQueueArgs.Add("x-expires", (long)AmqpUtils.GetSubscriberQueueExpiry().TotalMilliseconds);
+
+                    //The queue is set to be auto deleted once the last consumer stops using it.
+                    //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
+                    //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
+
+                    var subscriberQueueArgs = new Dictionary<string, object>();
+					subscriberQueueArgs.Add("x-expires", (long)AmqpUtils.GetSubscriberQueueExpiry().TotalMilliseconds);
 
 					//TODO: Look into making the subscriber queue exclusive
 					//and retry with a different id if the queue has alreasy been taken.

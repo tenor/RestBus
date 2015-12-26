@@ -513,10 +513,14 @@ namespace RestBus.RabbitMQ.Client
                                 channelContainer = pool.GetModel(ChannelFlags.Consumer);
                                 IModel channel = channelContainer.Channel;
 
-                                //Declare call back queue
-                                var callbackQueueArgs = new Dictionary<string, object>();
-                                //callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
+                                //The queue is set to be auto deleted once the last consumer stops using it.
+                                //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
+                                //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
 
+                                var callbackQueueArgs = new Dictionary<string, object>();
+                                callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
+
+                                //Declare call back queue
                                 channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 
                                 consumer = new ConcurrentQueueingConsumer(channel);
