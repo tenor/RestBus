@@ -96,11 +96,7 @@ namespace RestBus.Common.Http
 
             if (request.Content != null)
             {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    request.Content.CopyToAsync(ms).Wait();
-                    packet.Content = ms.ToArray();
-                }
+                packet.Content = request.Content.ReadAsByteArrayAsync().Result;
             }
 
             return packet;
@@ -130,11 +126,7 @@ namespace RestBus.Common.Http
 
             if (response.Content != null)
             {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    response.Content.CopyToAsync(ms).Wait();
-                    packet.Content = ms.ToArray();
-                }
+                packet.Content = response.Content.ReadAsByteArrayAsync().Result;
             }
 
             return packet;
