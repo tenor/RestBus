@@ -86,7 +86,7 @@ namespace RestBus.RabbitMQ
 				}
 
 				var workQueueArgs = new Dictionary<string, object>();
-				workQueueArgs.Add("x-expires", (long)AmqpUtils.GetWorkQueueExpiry().TotalMilliseconds);
+				//workQueueArgs.Add("x-expires", (long)AmqpUtils.GetWorkQueueExpiry().TotalMilliseconds);
 
 				//TODO: the line below can throw some kind of socket exception, so what do you do in that situation
 				//Bear in mind that Restart may call this code.
@@ -101,7 +101,7 @@ namespace RestBus.RabbitMQ
 					string subscriberQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
 	
 					var subscriberQueueArgs = new Dictionary<string, object>();
-					subscriberQueueArgs.Add("x-expires", (long)AmqpUtils.GetSubscriberQueueExpiry().TotalMilliseconds);
+					//subscriberQueueArgs.Add("x-expires", (long)AmqpUtils.GetSubscriberQueueExpiry().TotalMilliseconds);
 
 					//TODO: Look into making the subscriber queue exclusive
 					//and retry with a different id if the queue has alreasy been taken.

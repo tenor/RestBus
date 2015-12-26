@@ -515,7 +515,7 @@ namespace RestBus.RabbitMQ.Client
 
                                 //Declare call back queue
                                 var callbackQueueArgs = new Dictionary<string, object>();
-                                callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
+                                //callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
 
                                 channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
 
