@@ -161,7 +161,7 @@ namespace RestBus.RabbitMQ.Client
 
             //Get Request Options
             RequestOptions requestOptions = GetRequestOptions(request);
-            var requestMessagingProperties = GetRequestOptionsMessagingProperties(requestOptions);
+            var messageProperties = GetRequestOptionsMessagingProperties(requestOptions);
 
             //Declare messaging resources
             Action<BasicDeliverEventArgs> arrival = null;
@@ -226,7 +226,7 @@ namespace RestBus.RabbitMQ.Client
                 // 1. Properties.Persistent is true
                 // 2. MessageMapper.PersistentMessages is true and Properties.Persistent is null
                 // 3. MessageMapper.PersistentMessages is true and Properties.Persistent is true
-                if (requestMessagingProperties.Persistent == true || (messageMapper.PersistentMessages && requestMessagingProperties.Persistent != false))
+                if (messageProperties.Persistent == true || (messageMapper.PersistentMessages && messageProperties.Persistent != false))
                 {
                     basicProperties.Persistent = true;
                 }
@@ -361,6 +361,19 @@ namespace RestBus.RabbitMQ.Client
                     }
 
                     responseArrivalNotification += arrival;
+                }
+
+                //Set/Overwrite expiration if set in message properties
+                if(messageProperties.Expiration.HasValue)
+                {
+                    if(messageProperties.Expiration == System.Threading.Timeout.InfiniteTimeSpan)
+                    {
+                        basicProperties.Expiration = null; //Never expires
+                    }
+                    else
+                    {
+                        basicProperties.Expiration = messageProperties.Expiration.Value.TotalMilliseconds.ToString();
+                    }
                 }
 
                 //Send message
