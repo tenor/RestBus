@@ -96,7 +96,7 @@
     <Compile Include="MessageInvokerBase.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="project.json" />
+    <None Include="project.json.disabled" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

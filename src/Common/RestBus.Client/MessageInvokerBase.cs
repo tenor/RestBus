@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace RestBus.Client
 {
+    //TODO: Rename project.json.disabled to project.json once https://github.com/JamesNK/Newtonsoft.Json/issues/763 is resolved
+
     /// <summary>
     /// Base class for RestBus client implementations.
     /// </summary>
