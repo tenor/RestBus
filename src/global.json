@@ -1,6 +1,6 @@
 {
     "sdk": {
-      "version": "1.0.0-rc2-16343",
+      "version": "1.0.0-rc2-16351",
         "runtime": "clr",
         "architecture": "x64"
     }
