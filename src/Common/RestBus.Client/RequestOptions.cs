@@ -17,7 +17,7 @@ namespace RestBus.Client
 
         public RequestMessagingProperties Properties { get; set; }
 
-        //TODO: DIsallow illegal times
+        //TODO: DIsallow illegal times: allow TimeSpan.Zero, allow TimeSpam.Infinite but certainly not negative timespans.
         public TimeSpan? Timeout
         {
             get { return _timeout; }

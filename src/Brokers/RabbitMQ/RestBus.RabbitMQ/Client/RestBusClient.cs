@@ -124,7 +124,7 @@ namespace RestBus.RabbitMQ.Client
             }
             set
             {
-                if (value != System.Threading.Timeout.InfiniteTimeSpan  && value <= TimeSpan.Zero)
+                if (value != System.Threading.Timeout.InfiniteTimeSpan  && value < TimeSpan.Zero)
                 {
                     throw new ArgumentOutOfRangeException("value");
                 }

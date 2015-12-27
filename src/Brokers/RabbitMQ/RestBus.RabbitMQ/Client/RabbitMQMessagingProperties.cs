@@ -21,6 +21,8 @@ namespace RestBus.RabbitMQ.Client
         /// </summary>
         public bool? Persistent { get; set; } //aka DeliveryMode
 
+        //TODO: DIsallow illegal times: allow TimeSpan.Zero, allow TimeSpam.Infinite but certainly not negative timespans.
+
         /// <summary>
         /// Controls if the message expires in the queue and how long the message stays in the queue before expiring.
         /// This overrides the settings specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Timeout"/>, <see cref="RestBus.Common.Amqp.IMessageMapper.GetExpires(System.Net.Http.HttpRequestMessage)"/> and <see cref="RestBus.Client.RequestOptions.Timeout"/>.
