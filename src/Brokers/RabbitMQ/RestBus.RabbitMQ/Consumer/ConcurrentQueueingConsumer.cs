@@ -98,6 +98,14 @@ namespace RestBus.RabbitMQ.Consumer
             IsRunning = true;
         }
 
+        /// <summary>
+        /// Called each time a message arrives for this consumer.
+        /// </summary>
+        /// <remarks>
+        /// Does nothing with the passed in information.
+        /// Note that in particular, some delivered messages may require acknowledgement via <see cref="IModel.BasicAck"/>.
+        /// The implementation of this method in this class does NOT acknowledge such messages.
+        /// </remarks>
         public void HandleBasicDeliver(string consumerTag, ulong deliveryTag, bool redelivered, string exchange, string routingKey, IBasicProperties properties, byte[] body)
         {
             if (_isClosed) return;
@@ -115,14 +123,12 @@ namespace RestBus.RabbitMQ.Consumer
             _queue.Enqueue(eventArgs);
         }
 
+
         /// <summary>
-        /// Called each time a message arrives for this consumer.
-        /// </summary>
-        /// <remarks>
-        /// Does nothing with the passed in information.
-        /// Note that in particular, some delivered messages may require acknowledgement via <see cref="IModel.BasicAck"/>.
-        /// The implementation of this method in this class does NOT acknowledge such messages.
-        /// </remarks>
+        ///  Called when the model shuts down.
+        ///  </summary>
+        ///  <param name="model"> Common AMQP model.</param>
+        /// <param name="reason"> Information about the reason why a particular model, session, or connection was destroyed.</param>/// 
         public void HandleModelShutdown(object model, ShutdownEventArgs reason)
         {
             ShutdownReason = reason;
