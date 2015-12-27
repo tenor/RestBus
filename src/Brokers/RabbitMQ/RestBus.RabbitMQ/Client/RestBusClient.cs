@@ -235,8 +235,11 @@ namespace RestBus.RabbitMQ.Client
 
                 if (requestTimeout != TimeSpan.Zero)
                 {
+                    //Set Reply to queue
                     basicProperties.ReplyTo = callbackQueueName;
-                    if (!IsRequestTimeoutInfinite(requestOptions) && messageMapper.GetExpires(request))
+
+                    //Set Expiration if messageProperties doesn't override Client.Timeout, RequestOptions and MessageMapper.
+                    if (!messageProperties.Expiration.HasValue && requestTimeout != System.Threading.Timeout.InfiniteTimeSpan && messageMapper.GetExpires(request))
                     {
                         if (requestTimeout.TotalMilliseconds > Int32.MaxValue)
                         {
@@ -244,7 +247,7 @@ namespace RestBus.RabbitMQ.Client
                         }
                         else
                         {
-                            basicProperties.Expiration = requestTimeout.TotalMilliseconds.ToString();
+                            basicProperties.Expiration = ((int)requestTimeout.TotalMilliseconds).ToString();
                         }
                     }
 
@@ -355,7 +358,7 @@ namespace RestBus.RabbitMQ.Client
                                 }
                             },
                                 null,
-                                IsRequestTimeoutInfinite(requestOptions) ? -1 : (long)requestTimeout.TotalMilliseconds,
+                                requestTimeout == System.Threading.Timeout.InfiniteTimeSpan ? System.Threading.Timeout.Infinite : (long)requestTimeout.TotalMilliseconds,
                                 true);
 
                     }
@@ -363,16 +366,20 @@ namespace RestBus.RabbitMQ.Client
                     responseArrivalNotification += arrival;
                 }
 
-                //Set/Overwrite expiration if set in message properties
+                //Set expiration if set in message properties
                 if(messageProperties.Expiration.HasValue)
                 {
-                    if(messageProperties.Expiration == System.Threading.Timeout.InfiniteTimeSpan)
+                    if(messageProperties.Expiration != System.Threading.Timeout.InfiniteTimeSpan)
                     {
-                        basicProperties.Expiration = null; //Never expires
-                    }
-                    else
-                    {
-                        basicProperties.Expiration = messageProperties.Expiration.Value.TotalMilliseconds.ToString();
+                        var expiration = messageProperties.Expiration.Value.Duration();
+                        if (expiration.TotalMilliseconds > Int32.MaxValue)
+                        {
+                            basicProperties.Expiration = Int32.MaxValue.ToString();
+                        }
+                        else
+                        {
+                            basicProperties.Expiration = ((int)expiration.TotalMilliseconds).ToString();
+                        }
                     }
                 }
 
@@ -393,6 +400,7 @@ namespace RestBus.RabbitMQ.Client
                     //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before replying OK.
 
                     //Zero timespan means the client isn't interested in a response
+                    //TODO: Have new ByteArrayContent be a static object.
                     taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[0]) });
 
                     CleanupMessagingResources(arrival, receivedEvent);
@@ -471,11 +479,6 @@ namespace RestBus.RabbitMQ.Client
         private TimeSpan GetRequestTimeout(RequestOptions options)
         {
             return GetTimeoutValue(options).Duration();
-        }
-
-        private bool IsRequestTimeoutInfinite(RequestOptions options)
-        {
-            return GetTimeoutValue(options) == System.Threading.Timeout.InfiniteTimeSpan; //new TimeSpan(0, 0, 0, 0, -1)
         }
 
         private TimeSpan GetTimeoutValue(RequestOptions options)
