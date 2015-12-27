@@ -59,7 +59,8 @@ namespace RestBus.RabbitMQ.Client
             this.messageMapper = messageMapper;
             this.exchangeInfo = messageMapper.GetExchangeInfo();
             this.clientId = AmqpUtils.GetNewExclusiveQueueId();
-            this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo);
+            //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
+            this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo, ExchangeKind.Direct);
             this.callbackQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
 
             //Map request to RabbitMQ Host and exchange, 
@@ -222,9 +223,9 @@ namespace RestBus.RabbitMQ.Client
 
                 //Set message delivery mode -- Make message persistent if either:
                 // 1. Properties.Persistent is true
-                // 2. MessageMapper.PersistentMessages is true and Properties.Persistent is null
-                // 3. MessageMapper.PersistentMessages is true and Properties.Persistent is true
-                if (messageProperties.Persistent == true || (messageMapper.PersistentMessages && messageProperties.Persistent != false))
+                // 2. ExchangeInfo.PersistentMessages is true and Properties.Persistent is null
+                // 3. ExchangeInfo.PersistentMessages is true and Properties.Persistent is true
+                if (messageProperties.Persistent == true || (exchangeInfo.PersistentMessages && messageProperties.Persistent != false))
                 {
                     basicProperties.Persistent = true;
                 }
@@ -799,6 +800,7 @@ namespace RestBus.RabbitMQ.Client
 
         private static RabbitMQMessagingProperties GetRequestOptionsMessagingProperties(RequestOptions options)
         {
+            if (options == null) return _defaultMessagingProperties;
             return (options.Properties as RabbitMQMessagingProperties) ?? _defaultMessagingProperties;
         }
     }

@@ -7,31 +7,31 @@ namespace RestBus.RabbitMQ
 {
     internal static class AmqpUtils
 	{
-		const string exchangePrefix = "restbus:";
+		const string exchangePrefix = "restbus:/";
         const string queuePrefix = "restbus";
-        const string workQueuePath = "wq";
-        const string callbackQueuePath = "cq/";
-        const string subscriberQueuePath = "sq/";
+        const string workQueuePath = "/wq";
+        const string callbackQueuePath = "/cq";
+        const string subscriberQueuePath = "/sq";
 		const string workQueueRoutingKey = "";
 
 		public static string GetCallbackQueueName(ExchangeInfo exchangeInfo, string clientId)
 		{
-			return queuePrefix + exchangeInfo.Name + callbackQueuePath + clientId;
+			return queuePrefix + PrefixSlashIfNotEmpty(exchangeInfo.ServiceName) + callbackQueuePath + "/" + clientId;
 		}
 
 		public static string GetSubscriberQueueName(ExchangeInfo exchangeInfo, string subscriberId)
 		{
-			return queuePrefix + exchangeInfo.Name + subscriberQueuePath + subscriberId;
+			return queuePrefix + PrefixSlashIfNotEmpty(exchangeInfo.ServiceName) + subscriberQueuePath + "/" + subscriberId;
 		}
 
 		public static string GetWorkQueueName(ExchangeInfo exchangeInfo)
 		{
-			return queuePrefix + exchangeInfo.Name + workQueuePath;
-		}
+            return queuePrefix + PrefixSlashIfNotEmpty(exchangeInfo.ServiceName) + workQueuePath + (exchangeInfo.PersistentWorkQueuesAndExchanges ? "/persistent" : String.Empty);
+        }
 
-		public static string GetExchangeName(ExchangeInfo exchangeInfo)
+		public static string GetExchangeName(ExchangeInfo exchangeInfo, ExchangeKind kind)
 		{
-			return exchangePrefix + exchangeInfo.Name;
+			return exchangePrefix + exchangeInfo.ServiceName + "." + GetExchangeKindName(kind) + (exchangeInfo.PersistentWorkQueuesAndExchanges ? ".persistent" : String.Empty);
 		}
 
 		public static string GetWorkQueueRoutingKey()
@@ -68,16 +68,18 @@ namespace RestBus.RabbitMQ
         }
 
 
-		//NOTE This is the only method that cannot be moved into RestBus.Common so keep that in mind if intergrating other Amqp brokers
+		//NOTE This is the only method that cannot be moved into RestBus.Common so keep that in mind if integrating other Amqp brokers
 		public static void DeclareExchangeAndQueues(IModel channel, ExchangeInfo exchangeInfo, object syncObject, string subscriberId )
 		{
 			//TODO: IS the lock statement here necessary?
 			lock (syncObject)
 			{
-				string exchangeName = AmqpUtils.GetExchangeName(exchangeInfo);
+                //TODO: Other Exchange types.
+
+				string exchangeName = AmqpUtils.GetExchangeName(exchangeInfo, ExchangeKind.Direct);
 				string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
 
-				if (exchangeInfo.Name != "")
+				if (exchangeInfo.ServiceName != "")
 				{
                     //TODO: If Queues are durable then exchange ought to be too.
 
@@ -133,6 +135,27 @@ namespace RestBus.RabbitMQ
 			}
 		}
 
+        public static string GetExchangeKindName(ExchangeKind kind)
+        {
+            switch (kind)
+            {
+                case ExchangeKind.Direct:
+                    return "direct";
+                case ExchangeKind.Fanout:
+                    return "fanout";
+                case ExchangeKind.Headers:
+                    return "headers";
+                case ExchangeKind.Topic:
+                    return "topic";
+                default:
+                    return String.Empty;
+            }
+        }
 
+        private static string PrefixSlashIfNotEmpty(string name)
+        {
+            if (String.IsNullOrEmpty(name)) return String.Empty;
+            return "/" + name;
+        }
 	}
 }

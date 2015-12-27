@@ -11,11 +11,13 @@ namespace RestBus.RabbitMQ.Client
     /// </summary>
     public class RabbitMQMessagingProperties : RequestMessagingProperties
     {
+        //NOTE: All Properties/Fields in this class must be nullable, because Client.SendAsync() creates a default instance if Properties isn't set in RequestOptions
+
         /// <summary>
         /// Controls if the message is persisted or not.
         /// It has no effect in non-durable (non-persisted) queues.
-        /// This overrides the setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.PersistentMessages"/>.
-        /// Set to null to use the setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.PersistentMessages"/>.
+        /// This overrides the PersistentMessages setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.GetExchangeInfo"/>.
+        /// Set to null to use the PersistentMessages setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.GetExchangeInfo"/>.
         /// </summary>
         public bool? Persistent { get; set; } //aka DeliveryMode
 
@@ -31,11 +33,12 @@ namespace RestBus.RabbitMQ.Client
         public TimeSpan? Expiration { get; set; } //Difference between this and RequestOptions.Timeout is that client doesn't use this value to decide how long to wait for a response.
 
         //TODO: In SendAsync, Make sure ExchangeKind is in the supportedlist in ExchangeInfo.SupportedExchangeKinds
+        //TODO: Make sure the Client setting is actually called RestBus.RabbitMQ.Client.RestBusClient.Settings.ExchangeKind
 
         /// <summary>
         /// Controls what kind of exchange the message is sent to.
-        /// This overrides the kind setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.GetExchangeInfo"/>.
-        /// Set to null, to use the kind setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.GetExchangeInfo"/>.
+        /// This overrides the ExchangeKind setting specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Settings.ExchangeKind"/>.
+        /// Set to null, to use the ExchangeKind setting specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Settings.ExchangeKind"/>.
         /// </summary>
         public ExchangeKind? ExchangeKind { get; set; }
 
