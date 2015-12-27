@@ -262,10 +262,13 @@ namespace RestBus.RabbitMQ.Client
                     Exception deserializationException = null;
                     receivedEvent = new ManualResetEventSlim(false);
 
-                    //TODO: Get rid of arrival below after turning responseArrivalNotification into a hashtable.
+                    //TODO: Get rid of arrival below after turning responseArrivalNotification into a concurrent hashtable.
                     // The hashtable shouldn't store a delegate, it should an object that encapsulates
                     // responsePacket, deserializationException and receivedEvent.
                     // This will allow the callback consumer to process the arrival directly instead of calling a delegate.
+                    //
+                    // Once the arrival has been processed, remove the key from the hashtable so that subsequest responses are not processed.
+                    // In fact, use a TryRemove when searching for the item in the dictionary.
 
                     arrival = a =>
                     {
@@ -602,7 +605,7 @@ namespace RestBus.RabbitMQ.Client
 
                                         //NOTE: This means correlation id will be passed into CleanUpMessagingResources to find delegate.
 
-                                        //Work on Step 1 above, followed by Step 2 outlined in the TODO in line 230.
+                                        //Work on Step 1 above, followed by Step 2 outlined in the TODO in line 265.
 
                                         var copy = Interlocked.CompareExchange(ref responseArrivalNotification, null, null);
                                         if (copy != null)
@@ -615,7 +618,18 @@ namespace RestBus.RabbitMQ.Client
                                         //DO nothing
                                     }
 
-                                    //Acknowledge receipt
+                                    //Acknowledge receipt:
+                                    //Client acks all received messages, even if it wasn't the expected one or even if it wasn't expecting anything.
+                                    //This prevents a situation where crap messages are sent to the client but the good expected message is stuck behind the
+                                    //crap ones and isn't delivered because the crap ones in front of the queue aren't acked and crap messages exceed prefetchCount.
+
+                                    //TODO: Consider basic.reject unexpected messages after turning responseArrivalNotification into a hashtable
+                                    //and so can reliably tell if message wan't expected (correlationId).
+
+                                    //TODO: Have Client.AckSettings control this so that there is an option for messages that are acked when received
+                                    //Note that when that is turned on, You can no longer reject crap messages as described above.
+                                    //SO have the rejection feature only work when basicConsume.NoAck is true.
+
                                     channel.BasicAck(evt.DeliveryTag, false);
 
                                     //Exit loop if consumer is cancelled.

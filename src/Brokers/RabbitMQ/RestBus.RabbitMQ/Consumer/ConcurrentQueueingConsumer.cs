@@ -100,12 +100,8 @@ namespace RestBus.RabbitMQ.Consumer
 
         /// <summary>
         /// Called each time a message arrives for this consumer.
+        /// Queues received messages in the internal queue.
         /// </summary>
-        /// <remarks>
-        /// Does nothing with the passed in information.
-        /// Note that in particular, some delivered messages may require acknowledgement via <see cref="IModel.BasicAck"/>.
-        /// The implementation of this method in this class does NOT acknowledge such messages.
-        /// </remarks>
         public void HandleBasicDeliver(string consumerTag, ulong deliveryTag, bool redelivered, string exchange, string routingKey, IBasicProperties properties, byte[] body)
         {
             if (_isClosed) return;

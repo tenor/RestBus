@@ -271,41 +271,19 @@ namespace RestBus.RabbitMQ.Subscription
             }
             catch
             {
-
                 wasDeserialized = false;
             }
 
-
             //Ack or reject message
-            if (item.ConsumerTag == workConsumer.ConsumerTag)
+            if (wasDeserialized)
             {
-                if (wasDeserialized)
-                {
-                    workConsumer.Model.BasicAck(item.DeliveryTag, false);
-                    return true;
-                }
-                else
-                {
-                    workConsumer.Model.BasicReject(item.DeliveryTag, false);
-                    return false;
-                }
-            }
-            else if (item.ConsumerTag == subscriberConsumer.ConsumerTag)
-            {
-                if (wasDeserialized)
-                {
-                    subscriberConsumer.Model.BasicAck(item.DeliveryTag, false);
-                    return true;
-                }
-                else
-                {
-                    subscriberConsumer.Model.BasicReject(item.DeliveryTag, false);
-                    return false;
-                }
+                consumer.Model.BasicAck(item.DeliveryTag, false);
+                return true;
             }
             else
             {
-                throw new InvalidOperationException("Message was dequeued by an unexpected/unknown consumer");
+                consumer.Model.BasicReject(item.DeliveryTag, false);
+                return false;
             }
 
         }
