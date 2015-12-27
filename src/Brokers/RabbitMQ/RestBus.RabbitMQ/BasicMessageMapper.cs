@@ -29,8 +29,7 @@ namespace RestBus.RabbitMQ
 
         public virtual ExchangeInfo GetExchangeInfo()
         {
-            //TODO: Change "direct" to an enum.
-            return new ExchangeInfo(amqpHostUri, serviceName, "direct");
+            return new ExchangeInfo(amqpHostUri, serviceName, ExchangeKind.Topic);
         }
 
         public virtual string GetRoutingKey(HttpRequestMessage request)

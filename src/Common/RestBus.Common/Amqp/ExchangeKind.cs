@@ -7,7 +7,7 @@ namespace RestBus.Common.Amqp
     {
         Direct = 1,
         Fanout = 2,
-        Topic = 4,
-        Headers = 8
+        Headers = 4,
+        Topic = 8
     }
 }

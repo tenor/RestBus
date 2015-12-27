@@ -1,13 +1,11 @@
 using RabbitMQ.Client;
 using RestBus.Common.Amqp;
-using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace RestBus.RabbitMQ
 {
-	internal static class AmqpUtils
+    internal static class AmqpUtils
 	{
 		const string exchangePrefix = "restbus:";
         const string queuePrefix = "restbus";
@@ -81,8 +79,13 @@ namespace RestBus.RabbitMQ
 
 				if (exchangeInfo.Name != "")
 				{
-					//TODO: If Queues are durable then exchange ought to be too.
-					channel.ExchangeDeclare(exchangeName, exchangeInfo.Kind, false, true, null);
+                    //TODO: If Queues are durable then exchange ought to be too.
+
+                    //Declare direct exchange
+                    if (exchangeInfo.SupportedKinds.HasFlag(ExchangeKind.Direct))
+                    {
+                        channel.ExchangeDeclare(exchangeName, "direct", false, true, null);
+                    }
 				}
 
                 //The queue is set to be auto deleted once the last consumer stops using it.
