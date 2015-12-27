@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Amqp\ExchangeInfo.cs" />
+    <Compile Include="Amqp\ExchangeKind.cs" />
     <Compile Include="Amqp\IMessageMapper.cs" />
     <Compile Include="SequenceGenerator.cs" />
     <Compile Include="Shared.cs" />

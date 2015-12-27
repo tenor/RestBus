@@ -2,49 +2,35 @@ using RestBus.Client;
 using RestBus.Common.Amqp;
 using System;
 using System.Net.Http;
+using System.Collections.Generic;
 
 namespace RestBus.RabbitMQ
 {
     public class BasicMessageMapper : IMessageMapper
     {
-        string serviceName;
-        string amqpHostUri;
+        protected string amqpHostUri;
+        protected string serviceName;
 
         public BasicMessageMapper(string amqpHostUri, string serviceName)
         {
             if(String.IsNullOrWhiteSpace(amqpHostUri))
             {
-                throw new ArgumentException("rabbitMQHost");
+                throw new ArgumentException("amqpHostUri");
             }
 
             if (String.IsNullOrWhiteSpace(serviceName))
             {
-                throw new ArgumentException("applicationBaseUrl");
+                throw new ArgumentException("serviceName");
             }
 
-            this.serviceName = serviceName;
             this.amqpHostUri = amqpHostUri;
+            this.serviceName = serviceName;
         }
 
         public virtual ExchangeInfo GetExchangeInfo()
         {
-            string appPath = serviceName;
-            if (String.IsNullOrWhiteSpace(appPath))
-            {
-                appPath = "/";
-            }
-
-            appPath = appPath.Trim();
-            if (!appPath.StartsWith("/"))
-            {
-                appPath = "/" + appPath;
-            }
-            if (!appPath.EndsWith("/"))
-            {
-                appPath = appPath + "/";
-            }
-
-            return new ExchangeInfo(amqpHostUri, appPath, "direct");
+            //TODO: Change "direct" to an enum.
+            return new ExchangeInfo(amqpHostUri, serviceName, "direct");
         }
 
         public virtual string GetRoutingKey(HttpRequestMessage request)
@@ -52,12 +38,25 @@ namespace RestBus.RabbitMQ
             return null;
         }
 
+        /// <summary>
+        /// Gets the Headers for the message.
+        /// </summary>
+        /// <remarks>
+        /// This is only useful for the headers exchange type.
+        /// </remarks>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public IDictionary<string, object> GetHeaders(HttpRequestMessage request)
+        {
+            return null;
+        }
 
-        public bool GetExpires(HttpRequestMessage request)
+        public virtual bool GetExpires(HttpRequestMessage request)
         {
             return true;
         }
 
+        //TODO: Remove this, it isn't used anywhere
         protected static string GetPath(Uri uri)
         {
             if (uri == null) return string.Empty;
@@ -72,11 +71,18 @@ namespace RestBus.RabbitMQ
             return path.Trim();
         }
 
+        /// <summary>
+        /// Returns the RequestOptions associated with a specified request.
+        /// </summary>
+        /// <remarks>
+        /// This helper is useful for classes deriving from BasicMessageMapper.
+        /// </remarks>
+        /// <param name="request"></param>
+        /// <returns></returns>
         protected RequestOptions GetRequestOptions(HttpRequestMessage request)
         {
             return MessageInvokerBase.GetRequestOptions(request);
         }
-
     }
 
 }

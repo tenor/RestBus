@@ -87,6 +87,7 @@
     <Compile Include="Http\Internal\TypeExtensions.cs" />
     <Compile Include="Http\Formatting\XmlHttpRequestHeaderMapping.cs" />
     <Compile Include="Http\Formatting\XmlMediaTypeFormatter.cs" />
+    <Compile Include="MessagingProperties.cs" />
     <Compile Include="RequestCookieCollection.cs" />
     <Compile Include="RequestHeaders.cs" />
     <Compile Include="RequestOptions.cs" />

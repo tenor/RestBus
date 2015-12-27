@@ -5,43 +5,28 @@ namespace RestBus.Client
 {
     public class RequestOptions
     {
-        TimeSpan? timeout;
-        RequestHeaders headers;
-        readonly RequestCookieCollection cookies;
-        object tag;
+        protected TimeSpan? _timeout;
 
         public RequestOptions()
         {
-            headers = new RequestHeaders();
-            cookies = new RequestCookieCollection(headers);
+            Headers = new RequestHeaders();
+            Cookies = new RequestCookieCollection(Headers);
         }
 
-        public object Tag
-        {
-            get { return tag; }
-            set { tag = value; }
-        }
+        public object Tag { get; set; }
+
+        public RequestMessagingProperties Properties { get; set; }
 
         //TODO: DIsallow illegal times
         public TimeSpan? Timeout
         {
-            get { return timeout; }
-            set { timeout = value; }
+            get { return _timeout; }
+            set { _timeout = value; }
         }
 
-        public RequestHeaders Headers
-        {
-            get { return headers; }
-            set { headers = value; }
-        }
+        public RequestHeaders Headers { get; set; }
 
-        public RequestCookieCollection Cookies
-        {
-            get
-            {
-                return cookies;
-            }
-        }
+        public RequestCookieCollection Cookies { get; }
 
         //TODO: Is this code used anywhere ??
         bool TryParseServerCookie(string value, out Cookie cookie)

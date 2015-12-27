@@ -18,22 +18,22 @@ namespace RestBus.RabbitMQ
 
 		public static string GetCallbackQueueName(ExchangeInfo exchangeInfo, string clientId)
 		{
-			return queuePrefix + exchangeInfo.Exchange + callbackQueuePath + clientId;
+			return queuePrefix + exchangeInfo.Name + callbackQueuePath + clientId;
 		}
 
 		public static string GetSubscriberQueueName(ExchangeInfo exchangeInfo, string subscriberId)
 		{
-			return queuePrefix + exchangeInfo.Exchange + subscriberQueuePath + subscriberId;
+			return queuePrefix + exchangeInfo.Name + subscriberQueuePath + subscriberId;
 		}
 
 		public static string GetWorkQueueName(ExchangeInfo exchangeInfo)
 		{
-			return queuePrefix + exchangeInfo.Exchange + workQueuePath;
+			return queuePrefix + exchangeInfo.Name + workQueuePath;
 		}
 
 		public static string GetExchangeName(ExchangeInfo exchangeInfo)
 		{
-			return exchangePrefix + exchangeInfo.Exchange;
+			return exchangePrefix + exchangeInfo.Name;
 		}
 
 		public static string GetWorkQueueRoutingKey()
@@ -79,10 +79,10 @@ namespace RestBus.RabbitMQ
 				string exchangeName = AmqpUtils.GetExchangeName(exchangeInfo);
 				string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
 
-				if (exchangeInfo.Exchange != "")
+				if (exchangeInfo.Name != "")
 				{
 					//TODO: If Queues are durable then exchange ought to be too.
-					channel.ExchangeDeclare(exchangeName, exchangeInfo.ExchangeType, false, true, null);
+					channel.ExchangeDeclare(exchangeName, exchangeInfo.Kind, false, true, null);
 				}
 
                 //The queue is set to be auto deleted once the last consumer stops using it.
