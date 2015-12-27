@@ -17,7 +17,11 @@ namespace Examples
              */
 
             BasicMessageMapper msgMapper = new BasicMessageMapper("amqp://localhost:5672", "test");
+            //msgMapper = new QueueingMessageMapper("amqp://localhost:5672", "test"); //Uncomment this to only queue messages.
+
             RestBusClient client = new RestBusClient(msgMapper);
+
+            //client.Timeout = TimeSpan.Zero; //Uncomment this to prevent client from waiting for a response. -- Useful when simply queueing messages.
 
             var msg = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, "/test/my_api")
             {
@@ -26,9 +30,11 @@ namespace Examples
 
             msg.Headers.Add("Accept", "application/json, text/javascript, */*; q=0.01, */*; q=0.01");
 
+            Console.WriteLine("Sending Message");
+
             var res = client.SendAsync(msg, System.Threading.CancellationToken.None).Result;
 
-
+            Console.WriteLine("Message Successfully Sent. Press any key to quit.");
             Console.ReadKey();
             client.Dispose();
         }
