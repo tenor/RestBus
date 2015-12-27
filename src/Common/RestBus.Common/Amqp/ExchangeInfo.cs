@@ -18,7 +18,7 @@ namespace RestBus.Common.Amqp
 
         public string ServerAddress { get; protected set; }
         public string ServiceName { get; protected set; }
-        public ExchangeKind SupportedKinds { get; protected set; }
+        public ExchangeKind SupportedKinds { get; set; }
 
         /// <summary>
         /// Controls the message delivery mode.
@@ -26,13 +26,7 @@ namespace RestBus.Common.Amqp
         /// This property has no effect if the work queue is non durable.
         /// <seealso cref="PersistentWorkQueuesAndExchanges"/>
         /// </summary>
-        public bool PersistentMessages
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public bool PersistentMessages { get; set; }
 
         /// <summary>
         /// Controls the durability of work queues and exchanges.
@@ -42,12 +36,6 @@ namespace RestBus.Common.Amqp
         /// This property only controls the durabilty of work queues and exchanges. It doesn't control the durability of messages sent to the work queue.
         /// <seealso cref="PersistentMessages"/>
         /// </remarks>
-        public bool PersistentWorkQueuesAndExchanges
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public bool PersistentWorkQueuesAndExchanges { get; set; }
     }
 }
