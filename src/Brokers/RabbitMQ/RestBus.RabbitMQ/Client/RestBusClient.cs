@@ -45,6 +45,7 @@ namespace RestBus.RabbitMQ.Client
         private TimeSpan timeout;
 
         internal const int HEART_BEAT = 30;
+        static readonly RabbitMQMessagingProperties _defaultMessagingProperties = new RabbitMQMessagingProperties();
 
         /// <summary>Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.</summary>
         public RestBusClient(IMessageMapper messageMapper) : base(new HttpClientHandler(), true)
@@ -160,6 +161,7 @@ namespace RestBus.RabbitMQ.Client
 
             //Get Request Options
             RequestOptions requestOptions = GetRequestOptions(request);
+            var requestMessagingProperties = GetRequestOptionsMessagingProperties(requestOptions);
 
             //Declare messaging resources
             Action<BasicDeliverEventArgs> arrival = null;
@@ -217,6 +219,17 @@ namespace RestBus.RabbitMQ.Client
 
                 string correlationId = correlationIdGen.GetNextId();
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
+
+                //Set message delivery mode:
+
+                //Make message persistent if either:
+                // 1. Properties.Persistent is true
+                // 2. MessageMapper.PersistentMessages is true and Properties.Persistent is null
+                // 3. MessageMapper.PersistentMessages is true and Properties.Persistent is true
+                if (requestMessagingProperties.Persistent == true || (messageMapper.PersistentMessages && requestMessagingProperties.Persistent != false))
+                {
+                    basicProperties.Persistent = true;
+                }
 
                 TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
 
@@ -762,6 +775,10 @@ namespace RestBus.RabbitMQ.Client
             return true;
         }
 
+        private static RabbitMQMessagingProperties GetRequestOptionsMessagingProperties(RequestOptions options)
+        {
+            return (options.Properties as RabbitMQMessagingProperties) ?? _defaultMessagingProperties;
+        }
     }
 
 

@@ -1,7 +1,6 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Framing;
-using RabbitMQ.Util;
 using RestBus.Common;
 using RestBus.Common.Amqp;
 using RestBus.RabbitMQ.ChannelPooling;
