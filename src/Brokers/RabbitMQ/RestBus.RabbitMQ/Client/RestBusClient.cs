@@ -220,15 +220,20 @@ namespace RestBus.RabbitMQ.Client
                 string correlationId = correlationIdGen.GetNextId();
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
 
-                //Set message delivery mode:
-
-                //Make message persistent if either:
+                //Set message delivery mode -- Make message persistent if either:
                 // 1. Properties.Persistent is true
                 // 2. MessageMapper.PersistentMessages is true and Properties.Persistent is null
                 // 3. MessageMapper.PersistentMessages is true and Properties.Persistent is true
                 if (messageProperties.Persistent == true || (messageMapper.PersistentMessages && messageProperties.Persistent != false))
                 {
                     basicProperties.Persistent = true;
+                }
+
+                //Set Exchange Headers
+                var exchangeHeaders = messageProperties.Headers ?? messageMapper.GetHeaders(request);
+                if(exchangeHeaders != null)
+                {
+                    basicProperties.Headers = exchangeHeaders;
                 }
 
                 TimeSpan requestTimeout = GetRequestTimeout(requestOptions);

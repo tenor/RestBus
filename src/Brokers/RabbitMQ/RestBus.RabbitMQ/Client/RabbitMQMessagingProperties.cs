@@ -11,8 +11,6 @@ namespace RestBus.RabbitMQ.Client
     /// </summary>
     public class RabbitMQMessagingProperties : RequestMessagingProperties
     {
-        //TODO: Wire these settings into SendAsync()
-
         /// <summary>
         /// Controls if the message is persisted or not.
         /// It has no effect in non-durable (non-persisted) queues.
