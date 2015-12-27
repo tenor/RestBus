@@ -2,9 +2,6 @@
 using RestBus.Common.Amqp;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
 {
@@ -15,13 +12,12 @@ namespace RestBus.RabbitMQ.Client
     public class RabbitMQMessagingProperties : RequestMessagingProperties
     {
         //TODO: Wire these settings into SendAsync()
-        //TODO: Make sure IMessageMapper.PersistExchangesAndWorkQueues in summary below is actually called that.
 
         /// <summary>
         /// Controls if the message is persisted or not.
-        /// It has no effect in non-durable (persisted) queues.
-        /// This overrides the setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.PersistExchangesAndWorkQueues"/>.
-        /// Set to null to use the setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.PersistExchangesAndWorkQueues"/>.
+        /// It has no effect in non-durable (non-persisted) queues.
+        /// This overrides the setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.PersistentMessages"/>.
+        /// Set to null to use the setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.PersistentMessages"/>.
         /// </summary>
         public bool? Persistent { get; set; } //aka DeliveryMode
 
