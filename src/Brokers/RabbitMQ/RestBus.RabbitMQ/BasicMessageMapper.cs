@@ -45,7 +45,7 @@ namespace RestBus.RabbitMQ
         /// </remarks>
         /// <param name="request"></param>
         /// <returns></returns>
-        public IDictionary<string, object> GetHeaders(HttpRequestMessage request)
+        public virtual IDictionary<string, object> GetHeaders(HttpRequestMessage request)
         {
             return null;
         }
