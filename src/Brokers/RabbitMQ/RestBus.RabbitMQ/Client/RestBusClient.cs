@@ -379,7 +379,7 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: Implement routing to a different exchangeKind via substituting exchangeName
                 //Send message
                 model.Channel.BasicPublish(exchangeName,
-                                messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),
+                                messageProperties.RoutingKey ?? messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),
                                 basicProperties,
                                 request.ToHttpRequestPacket().Serialize());
 
