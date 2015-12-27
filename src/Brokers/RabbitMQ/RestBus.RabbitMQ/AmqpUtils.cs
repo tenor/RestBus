@@ -81,28 +81,26 @@ namespace RestBus.RabbitMQ
 
 				if (exchangeInfo.ServiceName != "")
 				{
-                    //TODO: If Queues are durable then exchange ought to be too.
-
                     //Declare direct exchange
                     if (exchangeInfo.SupportedKinds.HasFlag(ExchangeKind.Direct))
                     {
-                        channel.ExchangeDeclare(exchangeName, "direct", false, true, null);
+                        channel.ExchangeDeclare(exchangeName, AmqpUtils.GetExchangeKindName(ExchangeKind.Direct), exchangeInfo.PersistentWorkQueuesAndExchanges, !exchangeInfo.PersistentWorkQueuesAndExchanges, null);
                     }
 				}
 
-                //The queue is set to be auto deleted once the last consumer stops using it.
-                //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
-                //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
-
-                var workQueueArgs = new Dictionary<string, object>();
-				workQueueArgs.Add("x-expires", (long)AmqpUtils.GetWorkQueueExpiry().TotalMilliseconds);
+                Dictionary<string, object> workQueueArgs = null;
+                if (!exchangeInfo.PersistentWorkQueuesAndExchanges)
+                {
+                    workQueueArgs = new Dictionary<string, object>();
+                    workQueueArgs.Add("x-expires", (long)AmqpUtils.GetWorkQueueExpiry().TotalMilliseconds);
+                }
 
 				//TODO: the line below can throw some kind of socket exception, so what do you do in that situation
 				//Bear in mind that Restart may call this code.
 				//The exception name is the OperationInterruptedException
 
 				//Declare work queue
-				channel.QueueDeclare(workQueueName, false, false, false, workQueueArgs);
+				channel.QueueDeclare(workQueueName, exchangeInfo.PersistentWorkQueuesAndExchanges, false, false, workQueueArgs);
 				channel.QueueBind(workQueueName, exchangeName, AmqpUtils.GetWorkQueueRoutingKey());
 
 				if(subscriberId != null)
