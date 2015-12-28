@@ -172,7 +172,7 @@ namespace RestBus.RabbitMQ.Subscription
             //TODO: Test what happens if either of these consumers are cancelled by the server, should consumer.Cancelled be handled?
 
             HttpRequestPacket request;
-            IBasicProperties properties;
+            MessageDispatch dispatch;
 
             ConcurrentQueueingConsumer queue1 = null, queue2 = null;
 
@@ -192,13 +192,13 @@ namespace RestBus.RabbitMQ.Subscription
 
                 try
                 {
-                    if (TryGetRequest(queue1, out request, out properties))
+                    if (TryGetRequest(queue1, out request, out dispatch))
                     {
                         lastProcessedConsumerQueue = queue1;
                         break;
                     }
 
-                    if (TryGetRequest(queue2, out request, out properties))
+                    if (TryGetRequest(queue2, out request, out dispatch))
                     {
                         lastProcessedConsumerQueue = queue2;
                         break;
@@ -239,15 +239,21 @@ namespace RestBus.RabbitMQ.Subscription
 
             }
 
-            return new MessageContext { Request = request, ReplyToQueue = properties == null ? null : properties.ReplyTo, CorrelationId = properties.CorrelationId };
+            return new MessageContext
+            {
+                Request = request,
+                ReplyToQueue = dispatch.Delivery.BasicProperties == null ? null : dispatch.Delivery.BasicProperties.ReplyTo,
+                CorrelationId = dispatch.Delivery.BasicProperties.CorrelationId,
+                Dispatch = dispatch
+            };
 
 
         }
 
-        private bool TryGetRequest(ConcurrentQueueingConsumer consumer, out HttpRequestPacket request, out IBasicProperties properties)
+        private bool TryGetRequest(ConcurrentQueueingConsumer consumer, out HttpRequestPacket request, out MessageDispatch dispatch)
         {
             request = null;
-            properties = null;
+            dispatch = null;
 
             BasicDeliverEventArgs item;
             if (!consumer.TryInstantDequeue(out item))
@@ -255,8 +261,9 @@ namespace RestBus.RabbitMQ.Subscription
                 return false;
             }
 
-            //Get message properties
-            properties = item.BasicProperties;
+            //TODO: Pool MessageDispatch
+            //Get message 
+            dispatch = new MessageDispatch { Consumer = consumer, Delivery = item };
 
             //Deserialize message
             bool wasDeserialized = true;
@@ -274,17 +281,15 @@ namespace RestBus.RabbitMQ.Subscription
                 wasDeserialized = false;
             }
 
-            //Ack or reject message
-            if (wasDeserialized)
+            //Reject message if deserialization failed.
+            if (!wasDeserialized)
             {
-                consumer.Model.BasicAck(item.DeliveryTag, false);
-                return true;
-            }
-            else
-            {
+                //TODO: Do not Basic Reject if SubscriberSettings.NoAck is false.
                 consumer.Model.BasicReject(item.DeliveryTag, false);
                 return false;
             }
+
+            return true;
 
         }
 
@@ -325,6 +330,19 @@ namespace RestBus.RabbitMQ.Subscription
         public void SendResponse(MessageContext context, HttpResponsePacket response )
         {
             if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
+
+            var dispatch = context.Dispatch as MessageDispatch;
+            if (dispatch != null)
+            {
+                //Ack request
+                //TODO: Do not ack if SubscriberSettings.NoAck is false.
+                if(dispatch.Consumer.Model.IsOpen)
+                {
+                    dispatch.Consumer.Model.BasicAck(dispatch.Delivery.DeliveryTag, false);
+                }
+            }
+
+            //Exit method if no replyToQueue was specified.
             if (String.IsNullOrEmpty(context.ReplyToQueue)) return;
 
             if (conn == null)
@@ -342,16 +360,10 @@ namespace RestBus.RabbitMQ.Subscription
 
                 //TODO: Add Subscriber Id header to reponse before sending it
 
-                try
-                {
                     model.Channel.BasicPublish(String.Empty,
                                     context.ReplyToQueue,
                                     basicProperties,
                                     response.Serialize());
-                }
-                catch {
-                    //TODO: Log execption
-                }
             }
             finally
             {
@@ -359,7 +371,6 @@ namespace RestBus.RabbitMQ.Subscription
                 {
                     model.Close();
                 }
-
             }
 
         }

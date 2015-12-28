@@ -7,5 +7,10 @@ namespace RestBus.Common
         public string ReplyToQueue { get; set; }
         public string CorrelationId { get; set; }
 
+        /// <summary>
+        /// Broker specific message item.
+        /// </summary>
+        public object Dispatch { get; set; }
+
     }
 }

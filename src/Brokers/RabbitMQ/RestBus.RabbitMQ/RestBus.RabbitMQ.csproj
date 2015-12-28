@@ -54,6 +54,7 @@
     <Compile Include="Consumer\ConcurrentQueueingConsumer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Client\RabbitMQMessagingProperties.cs" />
+    <Compile Include="Subscription\MessageDispatch.cs" />
     <Compile Include="Subscription\RestBusSubscriber.cs" />
   </ItemGroup>
   <ItemGroup>
