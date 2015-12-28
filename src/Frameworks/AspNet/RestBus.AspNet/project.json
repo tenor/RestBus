@@ -12,7 +12,7 @@
     "Microsoft.AspNet.Hosting": "1.0.0-rc2-*",
     "Microsoft.AspNet.Hosting.Server.Abstractions": "1.0.0-rc2-*",
     "System.Net.Http": "4.0.1-beta-23516",
-    "RestBus.Common": "0.6.0-*"
+    "RestBus.Common": "0.6.1-*"
   },
 
   "frameworks": {
