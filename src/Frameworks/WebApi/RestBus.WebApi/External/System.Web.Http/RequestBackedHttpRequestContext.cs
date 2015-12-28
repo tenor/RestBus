@@ -8,6 +8,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Web.Http.Routing;
 
+//TODO: Look into updating this file with the one at https://aspnetwebstack.codeplex.com/SourceControl/latest#src/System.Web.Http/Controllers/RequestBackedHttpRequestContext.cs
+
 namespace System.Web.Http.Controllers
 {
     /// <summary>

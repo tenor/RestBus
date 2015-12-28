@@ -8,6 +8,8 @@ using System.Web.Http.Routing;
 
 namespace System.Web.Http.Controllers
 {
+    //TODO: Look into removing this class, it's conflicting with the HttpRequestContext in imported System.Web.Http
+
     /// <summary>Represents the context associated with a request.</summary>
     public class HttpRequestContext
     {
