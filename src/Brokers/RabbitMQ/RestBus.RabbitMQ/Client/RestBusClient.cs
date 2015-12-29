@@ -504,6 +504,30 @@ namespace RestBus.RabbitMQ.Client
         }
 
 
+
+        // TODO: Consider introducing RPC channels into the channel pool system.
+        // RPC Channels will have associated Consumers. If no consumer is used then a new one is created just before the channel is used.
+        // The RPC Channel will publish and consume messages on it's own queue.
+        // It elimnates the DiscoverDirectReplyToQueueName method here which is sort of a hack.
+        // It may also eliminate the StartCallbackQueueConsumer for the most part.
+        // There may be some speed improvements since each consuer can receive their callbacks at the same time unlike in the queued system.
+        //
+        // There are two ways this can be done:
+        // 1. Have a shared queue and have a dedicated thread that polls the queue and calls related events  in the dictionary (quite similar to the status quo)
+        // 2. Implement a new event based Consumer (or use the one already in the Rabbit code base), the event handler will check if a flag has been set in the channel that says
+        // owner is expecting a response. If that flag is set, then a ManualResetEventSlim is set. and the I/O completion port exits, if that flag was not set then the I/O completion port just exits.
+        // The ManualResetEventSlim wakes up a thread on the thread pool to handle the rest of the processing.
+        // The latter methods seems more beneficial since you'll no longer need a dedicated thread polling the worker pool, you'd have to find a way to handle disconnections and creating new pools
+        // since StartCallbackQueueConsumer handles that now.
+        //
+        // It may be prudent for the pool to check Model.IsOpen before handing over an RPC channel to a caller.
+        // 
+        // The current StartCallbackQueueConsumer will then be refactored into an ICallback/IResponse/IReplyStrategy interface
+        // Users who don't want the direct reply-to feature (or who use older version of RabbitMQ) will use the old StartCallbackQueueConsumer (which will be stripped off Direct Reply-To code paths)
+        // Users who opt into Direct Reply To (and have v3.4.0 or later) will use the new IStrategy.
+        // strategy interface.
+        //
+        // NOTE: There'll still be "Consumer" channels used by the Subscriber and the old strategy, maybe change the name to "Server/Servlet" channels or something.
         private void StartCallbackQueueConsumer()
         {
             //TODO: Double-checked locking -- make this better
