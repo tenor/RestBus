@@ -1,6 +1,7 @@
 ﻿using RabbitMQ.Client;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace RestBus.RabbitMQ.ChannelPooling
 {
@@ -21,9 +22,12 @@ namespace RestBus.RabbitMQ.ChannelPooling
             get { return _disposed; }
         }
 
+        public bool IsDirectReplyToCapable { get; }
+
         public AmqpChannelPooler(IConnection conn)
         {
             this.conn = conn;
+            IsDirectReplyToCapable = DetermineDirectReplyToCapability(conn);
         }
 
         internal AmqpModelContainer GetModel(ChannelFlags flags)
@@ -183,6 +187,55 @@ namespace RestBus.RabbitMQ.ChannelPooling
                 }
                 catch { }
             }
+        }
+
+        /// <summary>
+        /// Determines if a server has direct reply-to capability. 
+        /// </summary>
+        private static bool DetermineDirectReplyToCapability(IConnection conn)
+        {                        
+            if (conn == null) throw new ArgumentNullException("conn");
+
+            //Check for the 'direct_reply_to' capability as introduced by https://github.com/rabbitmq/rabbitmq-server/issues/520
+
+            if (conn.ServerProperties.ContainsKey("capabilities"))
+            {
+                var capabilities = conn.ServerProperties["capabilities"] as Dictionary<string, object>;
+                if(capabilities != null && capabilities.ContainsKey("direct_reply_to"))
+                {
+                    var directReplyTo = capabilities["direct_reply_to"];
+                    if (directReplyTo is bool && (bool)directReplyTo)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            //If the capability is not found then parse the version number and check if it's greater than 3.4.0.
+
+            //TODO: In the distant future, say 8 years from now (2023) when v3.4 to v.3.6 are really old versions, you can safely 
+            //take out the fallback method below.
+            try
+            {
+                if (conn.ServerProperties.ContainsKey("version"))
+                {
+                    var versionBytes = conn.ServerProperties["version"] as byte[];
+                    if (versionBytes != null && versionBytes.Length > 3)
+                    {
+                        var version = System.Text.Encoding.ASCII.GetString(versionBytes);
+                        var semver = version.Split('.');
+
+                        if (semver.Length > 2 && Int32.Parse(semver[0]) >= 3 && Int32.Parse(semver[1]) >= 4)
+                        {
+                            //Version is greater or equal to than 3.4.x
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return false;
         }
     }
 }
