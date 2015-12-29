@@ -6,7 +6,11 @@
         ClientAckBehavior _ackBehavior;
         bool _disableDirectReplies;
 
-        public ClientSettings(RestBusClient client)
+        public ClientSettings()
+        {
+        }
+
+        internal ClientSettings(RestBusClient client)
         {
             this._client = client;
         }
@@ -14,13 +18,37 @@
         public ClientAckBehavior AckBehavior
         {
             get { return _ackBehavior; }
-            set { _client.EnsureNotStartedOrDisposed(); _ackBehavior = value; }
+            set
+            {
+                EnsureNotStartedOrDisposed();
+                _ackBehavior = value;
+            }
         }
 
         public bool DisableDirectReplies
         {
             get { return _disableDirectReplies; }
-            set { _client.EnsureNotStartedOrDisposed(); _disableDirectReplies = value; }
+            set
+            {
+                EnsureNotStartedOrDisposed();
+                _disableDirectReplies = value;
+            }
+        }
+
+        internal RestBusClient Client
+        {
+            set
+            {
+                _client = value;
+            }
+        }
+
+        private void EnsureNotStartedOrDisposed()
+        {
+            if (_client != null)
+            {
+                _client.EnsureNotStartedOrDisposed();
+            }
         }
     }
 }

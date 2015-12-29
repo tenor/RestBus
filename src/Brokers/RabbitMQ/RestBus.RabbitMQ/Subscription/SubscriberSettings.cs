@@ -7,7 +7,11 @@ namespace RestBus.RabbitMQ.Subscription
         RestBusSubscriber _subscriber;
         SubscriberAckBehavior _ackBehavior;
 
-        public SubscriberSettings(RestBusSubscriber subscriber)
+        public SubscriberSettings()
+        {
+        }
+
+        internal SubscriberSettings(RestBusSubscriber subscriber)
         {
             this._subscriber = subscriber;
         }
@@ -22,6 +26,14 @@ namespace RestBus.RabbitMQ.Subscription
             {
                 EnsureNotStarted();
                 _ackBehavior = value;
+            }
+        }
+
+        internal RestBusSubscriber Subscriber
+        {
+            set
+            {
+                _subscriber = value;
             }
         }
 
