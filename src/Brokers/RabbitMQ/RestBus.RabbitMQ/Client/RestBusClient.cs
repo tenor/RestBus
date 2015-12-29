@@ -162,7 +162,7 @@ namespace RestBus.RabbitMQ.Client
 
             //Get Request Options
             RequestOptions requestOptions = GetRequestOptions(request);
-            var messageProperties = GetRequestOptionsMessagingProperties(requestOptions);
+            var messageProperties = GetMessagingProperties(requestOptions);
 
             //Declare messaging resources
             Action<BasicDeliverEventArgs> arrival = null;
@@ -812,7 +812,7 @@ namespace RestBus.RabbitMQ.Client
             return true;
         }
 
-        private static RabbitMQMessagingProperties GetRequestOptionsMessagingProperties(RequestOptions options)
+        private static RabbitMQMessagingProperties GetMessagingProperties(RequestOptions options)
         {
             if (options == null) return _defaultMessagingProperties;
             return (options.Properties as RabbitMQMessagingProperties) ?? _defaultMessagingProperties;
