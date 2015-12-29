@@ -58,6 +58,8 @@
     <Compile Include="Client\RabbitMQMessagingProperties.cs" />
     <Compile Include="Subscription\MessageDispatch.cs" />
     <Compile Include="Subscription\RestBusSubscriber.cs" />
+    <Compile Include="Subscription\SubscriberAckBehavior.cs" />
+    <Compile Include="Subscription\SubscriberSettings.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Common\RestBus.Client\RestBus.Client.csproj">
