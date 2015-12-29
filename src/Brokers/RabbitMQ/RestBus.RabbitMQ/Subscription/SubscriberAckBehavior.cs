@@ -5,6 +5,7 @@
         /// <summary>
         /// Requests are explicitly acknowledged after they have been fully processed.
         /// Requests in an unexpected format are rejected.
+        /// This is the default behavior.
         /// </summary>
         ProcessedRequests,
 
@@ -24,7 +25,7 @@
             ImmediateNonIdempotent -- Requests with non-idempotent verbs like POST are explicitly acked immediately before being processed, 
                                       whereas idempotent verbs like GET are acked after processing succeeds.
                                       The reasoning here is that is that GET requests can be safely requeued if the subscriber crashes, but
-                                      POST requests should be treated as at most once processing since they can modify data.
+                                      POST requests should be treated with at most once semantics since they can modify state.
 
             CustomBeforeProcessed -- You supply your own delegate that decides if a request should be acknowledged or rejected before processing
                                      Or decide if to defer acknowledgement to a CustomAfterProcessing delegate.

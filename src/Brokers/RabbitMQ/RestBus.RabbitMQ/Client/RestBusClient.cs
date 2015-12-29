@@ -676,7 +676,7 @@ namespace RestBus.RabbitMQ.Client
 
                                     //TODO: Make sure only properly deserialized messages are acked.
 
-                                    if ((Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable) && Settings.AckBehavior == ClientAckBehavior.ValidResponses)
+                                    if ((Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable) && Settings.AckBehavior != ClientAckBehavior.Automatic)
                                     {
                                         channel.BasicAck(evt.DeliveryTag, false);
                                     }

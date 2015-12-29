@@ -38,6 +38,7 @@ namespace RestBus.RabbitMQ.Subscription
             connectionFactory.Uri = exchangeInfo.ServerAddress;
             connectionFactory.RequestedHeartbeat = Client.RestBusClient.HEART_BEAT;
 
+            this.Settings = new SubscriberSettings(); //Make sure a default value is provided if not supplied by user.
         }
 
         public string Id
@@ -57,6 +58,8 @@ namespace RestBus.RabbitMQ.Subscription
 
 
         }
+
+        public SubscriberSettings Settings { get; }
 
         public void Restart()
         {
@@ -152,7 +155,7 @@ namespace RestBus.RabbitMQ.Subscription
             string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
 
             workChannel.Channel.BasicQos(0, 50, false);
-            workChannel.Channel.BasicConsume(workQueueName, false, workConsumer);
+            workChannel.Channel.BasicConsume(workQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, workConsumer);
 
             //Listen on subscriber queue
             Interlocked.Exchange(ref subscriberChannel, pool.GetModel(ChannelFlags.Consumer));
@@ -160,7 +163,7 @@ namespace RestBus.RabbitMQ.Subscription
             string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
 
             subscriberChannel.Channel.BasicQos(0, 50, false);
-            subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, false, subscriberConsumer);
+            subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, subscriberConsumer);
         }
 
         //Will block until a request is received from either queue
@@ -282,9 +285,8 @@ namespace RestBus.RabbitMQ.Subscription
             }
 
             //Reject message if deserialization failed.
-            if (!wasDeserialized)
+            if (!wasDeserialized && Settings.AckBehavior != SubscriberAckBehavior.Automatic )
             {
-                //TODO: Do not Basic Reject if SubscriberSettings.NoAck is false.
                 consumer.Model.BasicReject(item.DeliveryTag, false);
                 return false;
             }
@@ -335,8 +337,7 @@ namespace RestBus.RabbitMQ.Subscription
             if (dispatch != null)
             {
                 //Ack request
-                //TODO: Do not ack if SubscriberSettings.NoAck is false.
-                if(dispatch.Consumer.Model.IsOpen)
+                if(Settings.AckBehavior != SubscriberAckBehavior.Automatic && dispatch.Consumer.Model.IsOpen)
                 {
                     dispatch.Consumer.Model.BasicAck(dispatch.Delivery.DeliveryTag, false);
                 }

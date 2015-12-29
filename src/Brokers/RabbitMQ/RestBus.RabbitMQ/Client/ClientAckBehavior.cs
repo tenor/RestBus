@@ -4,6 +4,7 @@
     {
         /// <summary>
         /// All responses received by the client are automatically acknowledged by the broker.
+        /// This is the default behavior.
         /// </summary>
         Automatic,
 

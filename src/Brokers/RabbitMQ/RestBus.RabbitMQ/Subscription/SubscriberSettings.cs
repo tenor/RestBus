@@ -2,6 +2,6 @@
 {
     public class SubscriberSettings
     {
-        SubscriberAckBehavior AckBehavior { get; set; }
+        public SubscriberAckBehavior AckBehavior { get; set; }
     }
 }
