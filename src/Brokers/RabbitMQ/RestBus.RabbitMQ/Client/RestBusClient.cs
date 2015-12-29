@@ -25,7 +25,7 @@ namespace RestBus.RabbitMQ.Client
         readonly ExchangeInfo exchangeInfo;
         readonly string clientId;
         readonly string exchangeName;
-        readonly string callbackQueueName;
+        string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
         ConcurrentQueueingConsumer callbackConsumer;
         IConnection conn;
@@ -45,6 +45,7 @@ namespace RestBus.RabbitMQ.Client
         private TimeSpan timeout;
 
         internal const int HEART_BEAT = 30;
+        const string DIRECT_REPLY_TO_QUEUENAME_ARG = "amq.rabbitmq.reply-to";
         static readonly RabbitMQMessagingProperties _defaultMessagingProperties = new RabbitMQMessagingProperties();
 
         /// <summary>Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.</summary>
@@ -61,7 +62,6 @@ namespace RestBus.RabbitMQ.Client
             this.clientId = AmqpUtils.GetNewExclusiveQueueId();
             //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo, ExchangeKind.Direct);
-            this.callbackQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
 
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
@@ -559,8 +559,9 @@ namespace RestBus.RabbitMQ.Client
                                 var callbackQueueArgs = new Dictionary<string, object>();
                                 callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
 
+                                string consumerQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
                                 //Declare call back queue
-                                channel.QueueDeclare(callbackQueueName, false, false, true, callbackQueueArgs);
+                                channel.QueueDeclare(consumerQueueName, false, false, true, callbackQueueArgs);
 
                                 consumer = new ConcurrentQueueingConsumer(channel);
 
@@ -568,11 +569,22 @@ namespace RestBus.RabbitMQ.Client
                                 consumerCancelled = false;
                                 consumer.ConsumerCancelled += (s, e) => { consumerCancelled = true; };
 
-                                //Start consumer
                                 channel.BasicQos(0, 50, false);
-                                channel.BasicConsume(callbackQueueName, false, consumer);
+                                //Start consumer:
+                                //NOTE: IF noAck is changed here, remember you need to make a corresponding change to the BasicAck in DiscoverDirectReplyToQueueName
+                                channel.BasicConsume(consumerQueueName, false, consumer);
+
+                                //Discover direct reply to queue name
+                                var directReplyToQueueName = DiscoverDirectReplyToQueueName(channel, consumer, consumerQueueName);
+
+                                //Stop consuming the original queue/ Delete the original consumer queue
+                                //There is a bit of a quagmire here. Deleting the original consumer queue or using BasicCancel()
+                                //and specifying the tag name causes the consumerCancelled callback to be triggered.
+                                //It seems there is no way to safely stop consuming a queue without triggering a cancellation.
+                                //So we have no choice but the leave the original callback queue as is.
 
                                 //Set callbackConsumer to consumer
+                                Interlocked.Exchange(ref callbackQueueName, directReplyToQueueName);
                                 Interlocked.Exchange(ref callbackConsumer, consumer);
 
                                 //Notify outer thread that channel has started consumption
@@ -707,6 +719,63 @@ namespace RestBus.RabbitMQ.Client
             }
 
         }
+
+        /// <summary>
+        /// Discovers the Direct  reply-to queue name ( https://www.rabbitmq.com/direct-reply-to.html ) by messaging itself.
+        /// </summary>
+        private static string DiscoverDirectReplyToQueueName(IModel channel, ConcurrentQueueingConsumer consumer, string consumerQueueName)
+        {
+            channel.BasicConsume(DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
+            channel.BasicPublish(String.Empty, consumerQueueName, true, new BasicProperties { ReplyTo = DIRECT_REPLY_TO_QUEUENAME_ARG }, new byte[0]);
+
+            BasicDeliverEventArgs delivery;
+            using (ManualResetEventSlim messageReturned = new ManualResetEventSlim())
+            {
+                EventHandler<BasicReturnEventArgs> returnHandler = null;
+                Interlocked.Exchange(ref returnHandler, (a, e) => { messageReturned.Set(); try { consumer.Model.BasicReturn -= returnHandler; } catch {} } );
+                consumer.Model.BasicReturn += returnHandler;
+
+                System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
+                watch.Start();
+                while (!consumer.TryInstantDequeue(out delivery))
+                {
+                    Thread.Sleep(1);
+                    if (watch.Elapsed > TimeSpan.FromSeconds(10) || messageReturned.IsSet)
+                    {
+                        break;
+                    }
+                }
+                watch.Stop();
+
+                if(!messageReturned.IsSet)
+                {
+                    try
+                    {
+                        consumer.Model.BasicReturn -= returnHandler;
+                    }
+                    catch { }
+                }
+            }
+
+            if (delivery == null)
+            {
+                throw new InvalidOperationException("Unable to determine direct reply-to queue name.");
+            }
+            else
+            {
+                channel.BasicAck(delivery.DeliveryTag, false);
+            }
+
+            var result = delivery.BasicProperties.ReplyTo;
+            if(result == null || result == DIRECT_REPLY_TO_QUEUENAME_ARG || !result.StartsWith(DIRECT_REPLY_TO_QUEUENAME_ARG))
+            {
+                throw new InvalidOperationException("Discovered direct reply-to queue name (" + (result ?? "null") + ") was not in expected format.");
+            }
+
+            return result;
+
+        }
+
 
         private void EnsureNotStartedOrDisposed()
         {
