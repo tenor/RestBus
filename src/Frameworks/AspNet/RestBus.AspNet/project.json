@@ -1,8 +1,8 @@
 {
-  "version": "0.1.0-*",
-  "description": "RestBus.AspNet Class Library",
-  "authors": [ "sunny ahuwanya" ],
-  "tags": [ "" ],
+  "version": "0.6.0-beta-*",
+  "description": "ASP.NET 5 support for RestBus",
+  "authors": [ "Sunny Ahuwanya" ],
+  "tags": [ "asp.net amqp rabbitmq messaging queueing restbus rest http" ],
   "projectUrl": "",
   "licenseUrl": "",
 
