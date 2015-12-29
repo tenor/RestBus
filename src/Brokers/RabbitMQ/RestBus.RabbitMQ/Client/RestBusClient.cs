@@ -69,6 +69,9 @@ namespace RestBus.RabbitMQ.Client
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeInfo.ServerAddress;
             connectionFactory.RequestedHeartbeat = HEART_BEAT;
+
+            //Set ClientSettings
+            this.Settings = new ClientSettings(); // Always have a default version if it wasn't passed in.
         }
 
         /// <summary>Gets or sets the base address of Uniform Resource Identifier (URI) of the Internet resource used when sending requests.</summary>
@@ -134,6 +137,8 @@ namespace RestBus.RabbitMQ.Client
                 timeout = value;
             }
         }
+
+        public ClientSettings Settings { get; }
 
         /// <summary>Cancel all pending requests on this instance.</summary>
         public void CancelPendingRequests()
@@ -578,11 +583,11 @@ namespace RestBus.RabbitMQ.Client
                                 channelContainer = pool.GetModel(ChannelFlags.Consumer);
                                 IModel channel = channelContainer.Channel;
 
+                                if (Settings.DisableDirectReplies)
+                                {
+                                    DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
+                                }
 
- #if NO_DIRECT_REPLY_TO
-                                DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
- #endif
-                                
                                 consumer = new ConcurrentQueueingConsumer(channel);
 
                                 //Set consumerCancelled to true on consumer cancellation
@@ -593,16 +598,19 @@ namespace RestBus.RabbitMQ.Client
                                 //Start consumer:
 
                                 string replyToQueueName;
-#if NO_DIRECT_REPLY_TO
-                                channel.BasicConsume(indirectReplyToQueueName, false, consumer);
-                                replyToQueueName = indirectReplyToQueueName;
-#else
 
-                                channel.BasicConsume(DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
+                                if (Settings.DisableDirectReplies)
+                                {
+                                    channel.BasicConsume(indirectReplyToQueueName, Settings.AckBehavior == ClientAckBehavior.Automatic, consumer);
+                                    replyToQueueName = indirectReplyToQueueName;
+                                }
+                                else
+                                {
+                                    channel.BasicConsume(DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
 
-                                //Discover direct reply to queue name
-                                replyToQueueName = DiscoverDirectReplyToQueueName(channel, indirectReplyToQueueName);
-#endif
+                                    //Discover direct reply to queue name
+                                    replyToQueueName = DiscoverDirectReplyToQueueName(channel, indirectReplyToQueueName);
+                                }
 
                                 //Set callbackConsumer to consumer
                                 Interlocked.Exchange(ref callbackQueueName, replyToQueueName);
@@ -666,9 +674,12 @@ namespace RestBus.RabbitMQ.Client
                                     //There will be a ClientAckBehavior ((Immediate)  NoAcks = true is default, and only Ack expected messages (that were properly deserialized), which will only be valid when DisableDirectReplies is on)
                                     //The latter is only really useful for folks who want to be able to deadletter responses.
 
-#if NO_DIRECT_REPLY_TO
-                                    channel.BasicAck(evt.DeliveryTag, false);
-#endif
+                                    //TODO: Make sure only properly deserialized messages are acked.
+
+                                    if (Settings.DisableDirectReplies && Settings.AckBehavior == ClientAckBehavior.ValidMessages)
+                                    {
+                                        channel.BasicAck(evt.DeliveryTag, false);
+                                    }
 
                                     //Exit loop if consumer is cancelled.
                                     if (consumerCancelled)
