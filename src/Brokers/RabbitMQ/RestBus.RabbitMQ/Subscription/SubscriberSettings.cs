@@ -1,7 +1,36 @@
-﻿namespace RestBus.RabbitMQ.Subscription
+﻿using System;
+
+namespace RestBus.RabbitMQ.Subscription
 {
     public class SubscriberSettings
     {
-        public SubscriberAckBehavior AckBehavior { get; set; }
+        RestBusSubscriber _subscriber;
+        SubscriberAckBehavior _ackBehavior;
+
+        public SubscriberSettings(RestBusSubscriber subscriber)
+        {
+            this._subscriber = subscriber;
+        }
+
+        public SubscriberAckBehavior AckBehavior
+        {
+            get
+            {
+                return _ackBehavior;
+            }
+            set
+            {
+                EnsureNotStarted();
+                _ackBehavior = value;
+            }
+        }
+
+        private void EnsureNotStarted()
+        {
+            if (_subscriber != null && _subscriber.HasStarted)
+            {
+                throw new InvalidOperationException("This instance has already started. Properties can only be modified before starting the subscriber.");
+            }
+        }
     }
 }

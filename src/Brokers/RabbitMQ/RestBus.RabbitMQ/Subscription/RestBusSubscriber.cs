@@ -61,6 +61,14 @@ namespace RestBus.RabbitMQ.Subscription
 
         public SubscriberSettings Settings { get; }
 
+        internal bool HasStarted
+        {
+            get
+            {
+                return hasStarted;
+            }
+        }
+
         public void Restart()
         {
             hasStarted.Set(true);
