@@ -25,6 +25,7 @@ namespace RestBus.RabbitMQ.Client
         readonly ExchangeInfo exchangeInfo;
         readonly string clientId;
         readonly string exchangeName;
+        readonly string indirectReplyToQueueName;
         string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
         ConcurrentQueueingConsumer callbackConsumer;
@@ -62,6 +63,7 @@ namespace RestBus.RabbitMQ.Client
             this.clientId = AmqpUtils.GetNewExclusiveQueueId();
             //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo, ExchangeKind.Direct);
+            this.indirectReplyToQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
 
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
@@ -552,17 +554,11 @@ namespace RestBus.RabbitMQ.Client
                                 channelContainer = pool.GetModel(ChannelFlags.Consumer);
                                 IModel channel = channelContainer.Channel;
 
-                                //The queue is set to be auto deleted once the last consumer stops using it.
-                                //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
-                                //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
 
-                                var callbackQueueArgs = new Dictionary<string, object>();
-                                callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
-
-                                string consumerQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
-                                //Declare call back queue
-                                channel.QueueDeclare(consumerQueueName, false, false, true, callbackQueueArgs);
-
+ #if NO_DIRECT_REPLY_TO
+                                DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
+ #endif
+                                
                                 consumer = new ConcurrentQueueingConsumer(channel);
 
                                 //Set consumerCancelled to true on consumer cancellation
@@ -571,20 +567,21 @@ namespace RestBus.RabbitMQ.Client
 
                                 channel.BasicQos(0, 50, false);
                                 //Start consumer:
-                                //NOTE: IF noAck is changed here, remember you need to make a corresponding change to the BasicAck in DiscoverDirectReplyToQueueName
-                                channel.BasicConsume(consumerQueueName, false, consumer);
+
+                                string replyToQueueName;
+#if NO_DIRECT_REPLY_TO
+                                channel.BasicConsume(indirectReplyToQueueName, false, consumer);
+                                replyToQueueName = indirectReplyToQueueName;
+#else
+
+                                channel.BasicConsume(DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
 
                                 //Discover direct reply to queue name
-                                var directReplyToQueueName = DiscoverDirectReplyToQueueName(channel, consumer, consumerQueueName);
-
-                                //Stop consuming the original queue/ Delete the original consumer queue
-                                //There is a bit of a quagmire here. Deleting the original consumer queue or using BasicCancel()
-                                //and specifying the tag name causes the consumerCancelled callback to be triggered.
-                                //It seems there is no way to safely stop consuming a queue without triggering a cancellation.
-                                //So we have no choice but the leave the original callback queue as is.
+                                replyToQueueName = DiscoverDirectReplyToQueueName(channel, indirectReplyToQueueName);
+#endif
 
                                 //Set callbackConsumer to consumer
-                                Interlocked.Exchange(ref callbackQueueName, directReplyToQueueName);
+                                Interlocked.Exchange(ref callbackQueueName, replyToQueueName);
                                 Interlocked.Exchange(ref callbackConsumer, consumer);
 
                                 //Notify outer thread that channel has started consumption
@@ -642,7 +639,12 @@ namespace RestBus.RabbitMQ.Client
                                     //Note that when that is turned on, You can no longer reject crap messages as described above.
                                     //SO have the rejection feature only work when basicConsume.NoAck is true.
 
+                                    //There will be a ClientAckBehavior ((Immediate)  NoAcks = true is default, and only Ack expected messages (that were properly deserialized), which will only be valid when DisableDirectReplies is on)
+                                    //The latter is only really useful for folks who want to be able to deadletter responses.
+
+#if NO_DIRECT_REPLY_TO
                                     channel.BasicAck(evt.DeliveryTag, false);
+#endif
 
                                     //Exit loop if consumer is cancelled.
                                     if (consumerCancelled)
@@ -720,24 +722,43 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
+        private static void DeclareIndirectReplyToQueue(IModel channel, string queueName)
+        {
+            //The queue is set to be auto deleted once the last consumer stops using it.
+            //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
+            //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
+
+            var callbackQueueArgs = new Dictionary<string, object>();
+            callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
+
+            //TODO: AckBehavior is applied here.
+
+            //Declare call back queue
+            channel.QueueDeclare(queueName, false, false, true, callbackQueueArgs);
+        }
+
         /// <summary>
         /// Discovers the Direct  reply-to queue name ( https://www.rabbitmq.com/direct-reply-to.html ) by messaging itself.
         /// </summary>
-        private static string DiscoverDirectReplyToQueueName(IModel channel, ConcurrentQueueingConsumer consumer, string consumerQueueName)
+        private static string DiscoverDirectReplyToQueueName(IModel channel, string indirectReplyToQueueName)
         {
-            channel.BasicConsume(DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
-            channel.BasicPublish(String.Empty, consumerQueueName, true, new BasicProperties { ReplyTo = DIRECT_REPLY_TO_QUEUENAME_ARG }, new byte[0]);
+            DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
+
+            var receiver = new ConcurrentQueueingConsumer(channel);
+            var receiverTag = channel.BasicConsume(indirectReplyToQueueName, true, receiver);
+
+            channel.BasicPublish(String.Empty, indirectReplyToQueueName, true, new BasicProperties { ReplyTo = DIRECT_REPLY_TO_QUEUENAME_ARG }, new byte[0]);
 
             BasicDeliverEventArgs delivery;
             using (ManualResetEventSlim messageReturned = new ManualResetEventSlim())
             {
                 EventHandler<BasicReturnEventArgs> returnHandler = null;
-                Interlocked.Exchange(ref returnHandler, (a, e) => { messageReturned.Set(); try { consumer.Model.BasicReturn -= returnHandler; } catch {} } );
-                consumer.Model.BasicReturn += returnHandler;
+                Interlocked.Exchange(ref returnHandler, (a, e) => { messageReturned.Set(); try { receiver.Model.BasicReturn -= returnHandler; } catch {} } );
+                receiver.Model.BasicReturn += returnHandler;
 
                 System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
                 watch.Start();
-                while (!consumer.TryInstantDequeue(out delivery))
+                while (!receiver.TryInstantDequeue(out delivery))
                 {
                     Thread.Sleep(1);
                     if (watch.Elapsed > TimeSpan.FromSeconds(10) || messageReturned.IsSet)
@@ -751,19 +772,21 @@ namespace RestBus.RabbitMQ.Client
                 {
                     try
                     {
-                        consumer.Model.BasicReturn -= returnHandler;
+                        receiver.Model.BasicReturn -= returnHandler;
                     }
                     catch { }
                 }
+
+                try
+                {
+                    channel.BasicCancel(receiverTag);
+                }
+                catch { }
             }
 
             if (delivery == null)
             {
                 throw new InvalidOperationException("Unable to determine direct reply-to queue name.");
-            }
-            else
-            {
-                channel.BasicAck(delivery.DeliveryTag, false);
             }
 
             var result = delivery.BasicProperties.ReplyTo;
