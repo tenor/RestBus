@@ -834,8 +834,7 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
-
-        private void EnsureNotStartedOrDisposed()
+        internal void EnsureNotStartedOrDisposed()
         {
             if (disposed) throw new ObjectDisposedException(GetType().FullName);
             if (hasKickStarted) throw new InvalidOperationException("This instance has already started one or more requests. Properties can only be modified before sending the first request.");
