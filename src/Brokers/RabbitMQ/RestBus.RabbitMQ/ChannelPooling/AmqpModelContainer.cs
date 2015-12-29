@@ -27,6 +27,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
         internal IModel Channel { get; private set; }
         internal ChannelFlags Flags { get; private set; }
         internal int Created { get; private set; }
+        internal bool IsDirectReplyToCapable { get { return Source.IsDirectReplyToCapable; } }
         private AmqpChannelPooler Source { get; set; }
     }
 }

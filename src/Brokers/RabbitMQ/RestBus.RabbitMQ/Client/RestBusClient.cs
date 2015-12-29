@@ -583,7 +583,7 @@ namespace RestBus.RabbitMQ.Client
                                 channelContainer = pool.GetModel(ChannelFlags.Consumer);
                                 IModel channel = channelContainer.Channel;
 
-                                if (Settings.DisableDirectReplies)
+                                if (Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable)
                                 {
                                     DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
                                 }
@@ -599,7 +599,7 @@ namespace RestBus.RabbitMQ.Client
 
                                 string replyToQueueName;
 
-                                if (Settings.DisableDirectReplies)
+                                if (Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable)
                                 {
                                     channel.BasicConsume(indirectReplyToQueueName, Settings.AckBehavior == ClientAckBehavior.Automatic, consumer);
                                     replyToQueueName = indirectReplyToQueueName;
@@ -676,7 +676,7 @@ namespace RestBus.RabbitMQ.Client
 
                                     //TODO: Make sure only properly deserialized messages are acked.
 
-                                    if (Settings.DisableDirectReplies && Settings.AckBehavior == ClientAckBehavior.ValidMessages)
+                                    if ((Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable) && Settings.AckBehavior == ClientAckBehavior.ValidMessages)
                                     {
                                         channel.BasicAck(evt.DeliveryTag, false);
                                     }
