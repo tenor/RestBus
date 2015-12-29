@@ -286,6 +286,12 @@ namespace RestBus.RabbitMQ.Subscription
                 //Add/Update Subscriber-Id header
                 request.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { this.subscriberId };
 
+                //Add redelivered header if item was redelivered.
+                if(item.Redelivered)
+                {
+                    request.Headers[Common.Shared.REDELIVERED_HEADER] = new string[] { true.ToString() };
+                }
+
             }
             catch
             {

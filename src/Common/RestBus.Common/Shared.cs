@@ -6,6 +6,7 @@ namespace RestBus.Common
     public class Shared
     {
         public const string SUBSCRIBER_ID_HEADER = "X-RestBus-Subscriber-Id";
+        public const string REDELIVERED_HEADER = "X-Redelivered";
 
         static IFormatProvider dateTimeProvider = System.Globalization.CultureInfo.InvariantCulture;
 
