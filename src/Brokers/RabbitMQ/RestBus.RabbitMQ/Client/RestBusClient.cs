@@ -71,7 +71,7 @@ namespace RestBus.RabbitMQ.Client
             connectionFactory.RequestedHeartbeat = HEART_BEAT;
 
             //Set ClientSettings
-            this.Settings = new ClientSettings(); // Always have a default version if it wasn't passed in.
+            this.Settings = new ClientSettings(this); // Always have a default version if it wasn't passed in.
         }
 
         /// <summary>Gets or sets the base address of Uniform Resource Identifier (URI) of the Internet resource used when sending requests.</summary>
