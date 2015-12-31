@@ -16,7 +16,7 @@ namespace Examples
         public override ExchangeInfo GetExchangeInfo()
         {
             //Return an ExchangeInfo set up to have persistent queues and messages.
-            return new ExchangeInfo(base.amqpHostUri, base.serviceName)
+            return new ExchangeInfo(new string[] { base.amqpHostUri }, base.serviceName)
             {
                 PersistentMessages = true,
                 PersistentWorkQueuesAndExchanges = true,

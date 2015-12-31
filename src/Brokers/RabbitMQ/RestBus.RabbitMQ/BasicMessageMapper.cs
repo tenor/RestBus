@@ -29,7 +29,7 @@ namespace RestBus.RabbitMQ
 
         public virtual ExchangeInfo GetExchangeInfo()
         {
-            return new ExchangeInfo(amqpHostUri, serviceName);
+            return new ExchangeInfo(new string[] { amqpHostUri }, serviceName);
         }
 
         public virtual string GetRoutingKey(HttpRequestMessage request)

@@ -1,22 +1,31 @@
 using System;
+using System.Collections.Generic;
 
 namespace RestBus.Common.Amqp
 {
     //TODO: Describe what this class does.
     public class ExchangeInfo
     {
-        public ExchangeInfo(string serverAddress, string serviceName)
+        public ExchangeInfo(IList<string> serverUris, string serviceName)
         {
             //TODO: Check for invalid parameters
 
             //TODO: Have a static IsValidExchangeOrQueueName that this method checks, the BasicMessageMapper will check that too for servicenames.
 
-            this.ServerAddress = serverAddress;
+            //Check serverUris
+            if (serverUris == null) throw new ArgumentNullException("serverUris");
+            if (serverUris.Count == 0) throw new ArgumentException("serverUris must not be empty.");
+            for(int i = 0; i < serverUris.Count; i++)
+            {
+                if (serverUris[i] == null) throw new ArgumentException("Index " + i + " of serverUris argument is null.");
+            }
+
+            this.ServerUris = serverUris;
             this.ServiceName = (serviceName ?? String.Empty).Trim();
             this.SupportedKinds = ExchangeKind.Direct;
         }
 
-        public string ServerAddress { get; protected set; }
+        public IList<string> ServerUris { get; protected set; }
         public string ServiceName { get; protected set; }
         public ExchangeKind SupportedKinds { get; set; }
 
