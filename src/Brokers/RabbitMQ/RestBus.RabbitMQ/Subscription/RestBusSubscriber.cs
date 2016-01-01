@@ -246,7 +246,7 @@ namespace RestBus.RabbitMQ.Subscription
                     continue;
                 }
 
-                Thread.Sleep(1); //Nothing was found in both queues so take a 1ms nap
+                //Thread.Sleep(1); //Nothing was found in both queues so take a 1ms nap
 
             }
 
