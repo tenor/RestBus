@@ -381,9 +381,17 @@ namespace RestBus.RabbitMQ.Client
 
                     responseArrivalNotification += arrival;
                 }
+                else if (!messageProperties.Expiration.HasValue && messageMapper.GetExpires(request))
+                {
+                    //Request has a zero timeout and the message mapper indicates it should expire and messageproperties expiration is not set:
+                    //Set the expiration to zero which means RabbitMQ will only transmit if there is a consumer ready to receive it.
+                    //If there is no ready consumer, RabbitMQ drops the message. See https://www.rabbitmq.com/ttl.html
+
+                    basicProperties.Expiration = "0";
+                }
 
                 //Set expiration if set in message properties
-                if(messageProperties.Expiration.HasValue)
+                if (messageProperties.Expiration.HasValue)
                 {
                     if(messageProperties.Expiration != System.Threading.Timeout.InfiniteTimeSpan)
                     {
