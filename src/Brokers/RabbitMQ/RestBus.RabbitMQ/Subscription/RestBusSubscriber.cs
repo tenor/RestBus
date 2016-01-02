@@ -23,8 +23,8 @@ namespace RestBus.RabbitMQ.Subscription
         readonly ManualResetEventSlim requestQueued = new ManualResetEventSlim();
         readonly string subscriberId;
         readonly ExchangeConfiguration exchangeConfig;
-        object exchangeDeclareSync = new object();
-        InterlockedBoolean hasStarted;
+        readonly object exchangeDeclareSync = new object();
+        readonly InterlockedBoolean hasStarted;
         volatile bool disposed = false;
         readonly CancellationTokenSource disposedCancellationSource = new CancellationTokenSource();
         ConcurrentQueueingConsumer lastProcessedConsumerQueue = null;

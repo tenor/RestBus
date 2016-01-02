@@ -29,7 +29,7 @@ namespace RestBus.RabbitMQ.Client
         volatile string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
         volatile ConcurrentQueueingConsumer callbackConsumer;
-        ManualResetEventSlim responseQueued = new ManualResetEventSlim();
+        readonly ManualResetEventSlim responseQueued = new ManualResetEventSlim();
         IConnection conn;
         volatile AmqpChannelPooler _clientPool;
         volatile bool isInConsumerLoop;
