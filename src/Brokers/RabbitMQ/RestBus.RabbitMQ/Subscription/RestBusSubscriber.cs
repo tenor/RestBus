@@ -362,6 +362,13 @@ namespace RestBus.RabbitMQ.Subscription
                 if(Settings.AckBehavior != SubscriberAckBehavior.Automatic && dispatch.Consumer.Model.IsOpen)
                 {
                     dispatch.Consumer.Model.BasicAck(dispatch.Delivery.DeliveryTag, false);
+
+                    //NOTE: The call above takes place in different threads silmultaneously
+                    //In which case multiple threads will be using the same channel at the same time.
+                    //It's okay in this case, because transmissions within a channel are synchronized, as seen in:
+                    //https://github.com/rabbitmq/rabbitmq-dotnet-client/blob/f16c093f6409e11d9d77115038cb224eb39468ec/projects/client/RabbitMQ.Client/src/client/impl/ModelBase.cs#L459
+                    //and
+                    //https://github.com/rabbitmq/rabbitmq-dotnet-client/blob/f16c093f6409e11d9d77115038cb224eb39468ec/projects/client/RabbitMQ.Client/src/client/impl/SessionBase.cs#L177
                 }
             }
 
