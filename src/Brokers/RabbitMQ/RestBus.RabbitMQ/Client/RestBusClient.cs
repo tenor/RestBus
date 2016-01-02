@@ -64,6 +64,8 @@ namespace RestBus.RabbitMQ.Client
             //Configure RestBus fields/properties
             this.messageMapper = messageMapper;
             this.exchangeConfig = messageMapper.GetExchangeConfig();
+            if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
+
             this.clientId = AmqpUtils.GetNewExclusiveQueueId();
             //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, ExchangeKind.Direct);

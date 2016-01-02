@@ -33,6 +33,8 @@ namespace RestBus.RabbitMQ.Subscription
         public RestBusSubscriber(IMessageMapper messageMapper )
         {
             exchangeConfig = messageMapper.GetExchangeConfig();
+            if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
+
             subscriberId = AmqpUtils.GetNewExclusiveQueueId();
 
             this.connectionFactory = new ConnectionFactory();
