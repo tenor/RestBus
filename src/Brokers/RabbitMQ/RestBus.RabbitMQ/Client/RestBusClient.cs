@@ -447,9 +447,23 @@ namespace RestBus.RabbitMQ.Client
                 {
                     throw GetWrappedException("An error occurred while sending the request.", ex);
                 }
-
             }
+        }
 
+        protected override void Dispose(bool disposing)
+        {
+            //TODO: Confirm that this does in fact kill all background threads
+
+            disposed = true;
+            disposedCancellationSource.Cancel();
+
+            if (_clientPool != null) _clientPool.Dispose();
+
+            DisposeConnection(conn); // Dispose client connection
+
+            base.Dispose(disposing);
+            responseQueued.Dispose();
+            disposedCancellationSource.Dispose();
 
         }
 
@@ -478,23 +492,6 @@ namespace RestBus.RabbitMQ.Client
                     Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
                 }
             }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            //TODO: Confirm that this does in fact kill all background threads
-
-            disposed = true;
-            disposedCancellationSource.Cancel();
-
-            if (_clientPool != null) _clientPool.Dispose();
-
-            DisposeConnection(conn); // Dispose client connection
-
-            base.Dispose(disposing);
-            responseQueued.Dispose();
-            disposedCancellationSource.Dispose();
-
         }
 
         private void CloseAmqpModel(AmqpModelContainer model)
