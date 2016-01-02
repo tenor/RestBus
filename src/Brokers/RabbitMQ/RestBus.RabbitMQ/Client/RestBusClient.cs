@@ -787,7 +787,7 @@ namespace RestBus.RabbitMQ.Client
                 //NOTE: Same lock is used in StartCallbackConsumer
                 lock(reconnectionSync)
                 {
-                    if (!(conn == null || !conn.IsOpen))
+                    if (conn == null || !conn.IsOpen)
                     {
                         IConnection newConn;
                         AmqpChannelPooler pool;
