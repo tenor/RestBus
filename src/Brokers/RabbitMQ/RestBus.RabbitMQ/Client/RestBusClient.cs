@@ -219,28 +219,7 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
                 model = pooler.GetModel(ChannelFlags.None);
 
-                //Redeclare exchanges and queues every 30 seconds or the first time client is sending a message
-                TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
-                bool firstDeclare = lastExchangeDeclareTickCount == 0;
-                if (firstDeclare || elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 30)
-                {
-                    if (!firstDeclare)
-                    {
-                        //All threads must attempt to declare exchanges and queues if it hasn't been previously declared 
-                        //(for instance, all threads were started at once)
-                        //So do not swap out this value on first declare
-                        Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
-                    }
-                    AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
-                    if(firstDeclare)
-                    {
-                        //Swap out this value after declaring on firstdeclare
-                        Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
-                    }
-                }
-
-                //TODO: if exchangeInfo wants a Session/Server/Sticky Queue
-                //TODO: if exchangeInfo wants a Durable Queue
+                RedeclareExchangesAndQueues(model);
 
                 string correlationId = correlationIdGen.GetNextId();
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
@@ -256,7 +235,7 @@ namespace RestBus.RabbitMQ.Client
 
                 //Set Exchange Headers
                 var exchangeHeaders = messageProperties.Headers ?? messageMapper.GetHeaders(request);
-                if(exchangeHeaders != null)
+                if (exchangeHeaders != null)
                 {
                     basicProperties.Headers = exchangeHeaders;
                 }
@@ -408,7 +387,7 @@ namespace RestBus.RabbitMQ.Client
                 //Set expiration if set in message properties
                 if (messageProperties.Expiration.HasValue)
                 {
-                    if(messageProperties.Expiration != System.Threading.Timeout.InfiniteTimeSpan)
+                    if (messageProperties.Expiration != System.Threading.Timeout.InfiniteTimeSpan)
                     {
                         var expiration = messageProperties.Expiration.Value.Duration();
                         if (expiration.TotalMilliseconds > Int32.MaxValue)
@@ -474,6 +453,32 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
+        private void RedeclareExchangesAndQueues(AmqpModelContainer model)
+        {
+            //Redeclare exchanges and queues every minute if exchanges and queues are transient, or the first time client is sending a message
+            TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
+
+            //Discovering firstDeclare by comparing lastExchangeDeclareTickCount to zero is not perfect 
+            //because tickcount can wrap back to zero (through the negative number range), if client is running long enough.
+            //However, redeclaring exchanges and queues are a safe operation, so this is okay if it occurs more than once in persistent queues.
+            bool firstDeclare = lastExchangeDeclareTickCount == 0;
+            if (firstDeclare || (!exchangeInfo.PersistentWorkQueuesAndExchanges && (elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 60)))
+            {
+                if (!firstDeclare)
+                {
+                    //All threads must attempt to declare exchanges and queues if it hasn't been previously declared 
+                    //(for instance, all threads were started at once)
+                    //So do not swap out this value on first declare
+                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                }
+                AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
+                if (firstDeclare)
+                {
+                    //Swap out this value after declaring on firstdeclare
+                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                }
+            }
+        }
 
         protected override void Dispose(bool disposing)
         {

@@ -46,12 +46,12 @@ namespace RestBus.RabbitMQ
 
 		public static TimeSpan GetCallbackQueueExpiry()
 		{
-			return TimeSpan.FromMinutes(1);
+			return TimeSpan.FromMinutes(4);
 		}
 
 		public static TimeSpan GetSubscriberQueueExpiry()
 		{
-			return TimeSpan.FromMinutes(1);
+			return TimeSpan.FromMinutes(4);
 		}
 
         //This method is used to generate queue names for exclusive queues because there is a chance 
