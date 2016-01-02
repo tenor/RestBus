@@ -451,6 +451,12 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
+        internal void EnsureNotStartedOrDisposed()
+        {
+            if (disposed) throw new ObjectDisposedException(GetType().FullName);
+            if (hasKickStarted) throw new InvalidOperationException("This instance has already started one or more requests. Properties can only be modified before sending the first request.");
+        }
+
         protected override void Dispose(bool disposing)
         {
             //TODO: Confirm that this does in fact kill all background threads
@@ -811,88 +817,6 @@ namespace RestBus.RabbitMQ.Client
             DisposeConnection(oldconn);
         }
 
-        private static void DeclareIndirectReplyToQueue(IModel channel, string queueName)
-        {
-            //The queue is set to be auto deleted once the last consumer stops using it.
-            //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
-            //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
-
-            var callbackQueueArgs = new Dictionary<string, object>();
-            callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
-
-            //TODO: AckBehavior is applied here.
-
-            //Declare call back queue
-            channel.QueueDeclare(queueName, false, false, true, callbackQueueArgs);
-        }
-
-        /// <summary>
-        /// Discovers the Direct reply-to queue name ( https://www.rabbitmq.com/direct-reply-to.html ) by messaging itself.
-        /// </summary>
-        private static string DiscoverDirectReplyToQueueName(IModel channel, string indirectReplyToQueueName)
-        {
-            DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
-
-            var receiver = new ConcurrentQueueingConsumer(channel);
-            var receiverTag = channel.BasicConsume(indirectReplyToQueueName, true, receiver);
-
-            channel.BasicPublish(String.Empty, indirectReplyToQueueName, true, new BasicProperties { ReplyTo = DIRECT_REPLY_TO_QUEUENAME_ARG }, new byte[0]);
-
-            BasicDeliverEventArgs delivery;
-            using (ManualResetEventSlim messageReturned = new ManualResetEventSlim())
-            {
-                EventHandler<BasicReturnEventArgs> returnHandler = null;
-                Interlocked.Exchange(ref returnHandler, (a, e) => { messageReturned.Set(); try { receiver.Model.BasicReturn -= returnHandler; } catch {} } );
-                receiver.Model.BasicReturn += returnHandler;
-
-                System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
-                watch.Start();
-                while (!receiver.TryInstantDequeue(out delivery))
-                {
-                    Thread.Sleep(1);
-                    if (watch.Elapsed > TimeSpan.FromSeconds(10) || messageReturned.IsSet)
-                    {
-                        break;
-                    }
-                }
-                watch.Stop();
-
-                if(!messageReturned.IsSet)
-                {
-                    try
-                    {
-                        receiver.Model.BasicReturn -= returnHandler;
-                    }
-                    catch { }
-                }
-
-                try
-                {
-                    channel.BasicCancel(receiverTag);
-                }
-                catch { }
-            }
-
-            if (delivery == null)
-            {
-                throw new InvalidOperationException("Unable to determine direct reply-to queue name.");
-            }
-
-            var result = delivery.BasicProperties.ReplyTo;
-            if(result == null || result == DIRECT_REPLY_TO_QUEUENAME_ARG || !result.StartsWith(DIRECT_REPLY_TO_QUEUENAME_ARG))
-            {
-                throw new InvalidOperationException("Discovered direct reply-to queue name (" + (result ?? "null") + ") was not in expected format.");
-            }
-
-            return result;
-        }
-
-        internal void EnsureNotStartedOrDisposed()
-        {
-            if (disposed) throw new ObjectDisposedException(GetType().FullName);
-            if (hasKickStarted) throw new InvalidOperationException("This instance has already started one or more requests. Properties can only be modified before sending the first request.");
-        }
-
         private void PrepareMessage(HttpRequestMessage request)
         {
             //Combine RequestUri with BaseRequest
@@ -937,6 +861,82 @@ namespace RestBus.RabbitMQ.Client
                 responseQueued.Wait(disposedCancellationSource.Token);
                 responseQueued.Reset();
             }
+        }
+
+        private static void DeclareIndirectReplyToQueue(IModel channel, string queueName)
+        {
+            //The queue is set to be auto deleted once the last consumer stops using it.
+            //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
+            //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
+
+            var callbackQueueArgs = new Dictionary<string, object>();
+            callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
+
+            //TODO: AckBehavior is applied here.
+
+            //Declare call back queue
+            channel.QueueDeclare(queueName, false, false, true, callbackQueueArgs);
+        }
+
+        /// <summary>
+        /// Discovers the Direct reply-to queue name ( https://www.rabbitmq.com/direct-reply-to.html ) by messaging itself.
+        /// </summary>
+        private static string DiscoverDirectReplyToQueueName(IModel channel, string indirectReplyToQueueName)
+        {
+            DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
+
+            var receiver = new ConcurrentQueueingConsumer(channel);
+            var receiverTag = channel.BasicConsume(indirectReplyToQueueName, true, receiver);
+
+            channel.BasicPublish(String.Empty, indirectReplyToQueueName, true, new BasicProperties { ReplyTo = DIRECT_REPLY_TO_QUEUENAME_ARG }, new byte[0]);
+
+            BasicDeliverEventArgs delivery;
+            using (ManualResetEventSlim messageReturned = new ManualResetEventSlim())
+            {
+                EventHandler<BasicReturnEventArgs> returnHandler = null;
+                Interlocked.Exchange(ref returnHandler, (a, e) => { messageReturned.Set(); try { receiver.Model.BasicReturn -= returnHandler; } catch { } });
+                receiver.Model.BasicReturn += returnHandler;
+
+                System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
+                watch.Start();
+                while (!receiver.TryInstantDequeue(out delivery))
+                {
+                    Thread.Sleep(1);
+                    if (watch.Elapsed > TimeSpan.FromSeconds(10) || messageReturned.IsSet)
+                    {
+                        break;
+                    }
+                }
+                watch.Stop();
+
+                if (!messageReturned.IsSet)
+                {
+                    try
+                    {
+                        receiver.Model.BasicReturn -= returnHandler;
+                    }
+                    catch { }
+                }
+
+                try
+                {
+                    channel.BasicCancel(receiverTag);
+                }
+                catch { }
+            }
+
+            if (delivery == null)
+            {
+                throw new InvalidOperationException("Unable to determine direct reply-to queue name.");
+            }
+
+            var result = delivery.BasicProperties.ReplyTo;
+            if (result == null || result == DIRECT_REPLY_TO_QUEUENAME_ARG || !result.StartsWith(DIRECT_REPLY_TO_QUEUENAME_ARG))
+            {
+                throw new InvalidOperationException("Discovered direct reply-to queue name (" + (result ?? "null") + ") was not in expected format.");
+            }
+
+            return result;
         }
 
         private static HttpRequestException GetWrappedException(string message, Exception innerException)
