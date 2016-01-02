@@ -3,6 +3,7 @@ using RabbitMQ.Client.Events;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 
 namespace RestBus.RabbitMQ.Consumer
 {
@@ -12,6 +13,7 @@ namespace RestBus.RabbitMQ.Consumer
     internal sealed class ConcurrentQueueingConsumer : IBasicConsumer
     {
         readonly ConcurrentQueue<BasicDeliverEventArgs> _queue = new ConcurrentQueue<BasicDeliverEventArgs>();
+        readonly ManualResetEventSlim _itemQueuedEvent;
         volatile bool _isRunning = false;
         volatile bool _isClosed = false;
 
@@ -19,11 +21,15 @@ namespace RestBus.RabbitMQ.Consumer
         /// Initializes and instance of the <see cref="ConcurrentQueueingConsumer"/>
         /// </summary>
         /// <param name="model">The AMQP model.</param>
-        public ConcurrentQueueingConsumer(IModel model)
+        /// <param name="itemQueuedEvent">Signalled when a new item is added to the queue</param>
+        public ConcurrentQueueingConsumer(IModel model, ManualResetEventSlim itemQueuedEvent = null)
         {
+            if (model == null) throw new ArgumentNullException("model");
+
             Model = model;
             ConsumerTag = null;
             ShutdownReason = null;
+            this._itemQueuedEvent = itemQueuedEvent;
         }
 
         /// <summary>
@@ -117,6 +123,13 @@ namespace RestBus.RabbitMQ.Consumer
                 Body = body
             };
             _queue.Enqueue(eventArgs);
+
+            if (_itemQueuedEvent != null)
+            {
+                _itemQueuedEvent.Set();
+                //TODO: Remove the second one, it's just here for testing purposes.
+                _itemQueuedEvent.Set();
+            }
         }
 
 

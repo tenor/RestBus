@@ -20,17 +20,18 @@ namespace RestBus.RabbitMQ.Subscription
         AmqpModelContainer subscriberChannel;
         ConcurrentQueueingConsumer workConsumer;
         ConcurrentQueueingConsumer subscriberConsumer;
+        readonly ManualResetEventSlim requestQueued = new ManualResetEventSlim();
         readonly string subscriberId;
         readonly ExchangeInfo exchangeInfo;
         object exchangeDeclareSync = new object();
         InterlockedBoolean hasStarted;
         volatile bool disposed = false;
+        readonly CancellationTokenSource disposedCancellationSource = new CancellationTokenSource();
         ConcurrentQueueingConsumer lastProcessedConsumerQueue = null;
         readonly ConnectionFactory connectionFactory;
 
         public RestBusSubscriber(IMessageMapper messageMapper )
         {
-
             exchangeInfo = messageMapper.GetExchangeInfo();
             subscriberId = AmqpUtils.GetNewExclusiveQueueId();
 
@@ -159,7 +160,7 @@ namespace RestBus.RabbitMQ.Subscription
             AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeInfo, exchangeDeclareSync, subscriberId);
 
             //Listen on work queue
-            Interlocked.Exchange(ref workConsumer, new ConcurrentQueueingConsumer(workChannel.Channel));
+            Interlocked.Exchange(ref workConsumer, new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued));
             string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
 
             workChannel.Channel.BasicQos(0, 50, false);
@@ -167,7 +168,7 @@ namespace RestBus.RabbitMQ.Subscription
 
             //Listen on subscriber queue
             Interlocked.Exchange(ref subscriberChannel, pool.GetModel(ChannelFlags.Consumer));
-            Interlocked.Exchange(ref subscriberConsumer, new ConcurrentQueueingConsumer(subscriberChannel.Channel));
+            Interlocked.Exchange(ref subscriberConsumer, new ConcurrentQueueingConsumer(subscriberChannel.Channel, requestQueued));
             string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
 
             subscriberChannel.Channel.BasicQos(0, 50, false);
@@ -246,6 +247,10 @@ namespace RestBus.RabbitMQ.Subscription
                     continue;
                 }
 
+                //TODO: Combine CancellationToken passed in Dequeue() with token below 
+                requestQueued.Wait(disposedCancellationSource.Token);
+                requestQueued.Reset();
+
                 //Thread.Sleep(1); //Nothing was found in both queues so take a 1ms nap
 
             }
@@ -312,6 +317,8 @@ namespace RestBus.RabbitMQ.Subscription
         public void Dispose()
         {
             disposed = true;
+            disposedCancellationSource.Cancel();
+
             if (workChannel != null)
             {
                 workChannel.Close();
@@ -341,6 +348,10 @@ namespace RestBus.RabbitMQ.Subscription
                 }
                 catch { }
             }
+
+            requestQueued.Dispose();
+            disposedCancellationSource.Dispose();
+
         }
 
         public void SendResponse(MessageContext context, HttpResponsePacket response )

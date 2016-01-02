@@ -29,6 +29,7 @@ namespace RestBus.RabbitMQ.Client
         string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
         ConcurrentQueueingConsumer callbackConsumer;
+        ManualResetEventSlim responseQueued = new ManualResetEventSlim();
         IConnection conn;
         AmqpChannelPooler _clientPool;
         volatile bool isInConsumerLoop;
@@ -39,6 +40,7 @@ namespace RestBus.RabbitMQ.Client
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
         volatile bool disposed = false;
+        readonly CancellationTokenSource disposedCancellationSource = new CancellationTokenSource();
 
         volatile bool hasKickStarted = false;
         private Uri baseAddress;
@@ -465,12 +467,15 @@ namespace RestBus.RabbitMQ.Client
             //TODO: Confirm that this does in fact kill all background threads
 
             disposed = true;
+            disposedCancellationSource.Cancel();
 
             if (_clientPool != null) _clientPool.Dispose();
 
             DisposeConnection(conn); // Dispose client connection
 
             base.Dispose(disposing);
+            responseQueued.Dispose();
+            disposedCancellationSource.Dispose();
 
         }
 
@@ -596,7 +601,7 @@ namespace RestBus.RabbitMQ.Client
                                     DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
                                 }
 
-                                consumer = new ConcurrentQueueingConsumer(channel);
+                                consumer = new ConcurrentQueueingConsumer(channel, responseQueued);
 
                                 //Set consumerCancelled to true on consumer cancellation
                                 consumerCancelled = false;
@@ -781,7 +786,7 @@ namespace RestBus.RabbitMQ.Client
         }
 
         /// <summary>
-        /// Discovers the Direct  reply-to queue name ( https://www.rabbitmq.com/direct-reply-to.html ) by messaging itself.
+        /// Discovers the Direct reply-to queue name ( https://www.rabbitmq.com/direct-reply-to.html ) by messaging itself.
         /// </summary>
         private static string DiscoverDirectReplyToQueueName(IModel channel, string indirectReplyToQueueName)
         {
@@ -839,7 +844,6 @@ namespace RestBus.RabbitMQ.Client
             }
 
             return result;
-
         }
 
         internal void EnsureNotStartedOrDisposed()
@@ -888,6 +892,8 @@ namespace RestBus.RabbitMQ.Client
                 {
                     return item;
                 }
+
+                responseQueued.Wait(disposedCancellationSource.Token);
 
                 //Thread.Sleep(1);
             }
