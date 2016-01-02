@@ -127,8 +127,6 @@ namespace RestBus.RabbitMQ.Consumer
             if (_itemQueuedEvent != null)
             {
                 _itemQueuedEvent.Set();
-                //TODO: Remove the second one, it's just here for testing purposes.
-                _itemQueuedEvent.Set();
             }
         }
 
