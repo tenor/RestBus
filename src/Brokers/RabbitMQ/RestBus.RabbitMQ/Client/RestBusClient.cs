@@ -34,9 +34,11 @@ namespace RestBus.RabbitMQ.Client
         AmqpChannelPooler _clientPool;
         volatile bool isInConsumerLoop;
         volatile bool consumerCancelled;
+        volatile bool reconnectToServer;
+        volatile bool seenRequestExpectingResponse;
         event Action<BasicDeliverEventArgs> responseArrivalNotification;
 
-        readonly object callbackConsumerStartSync = new object();
+        readonly object reconnectionSync = new object();
         object exchangeDeclareSync = new object();
         int lastExchangeDeclareTickCount = 0;
         volatile bool disposed = false;
@@ -181,8 +183,21 @@ namespace RestBus.RabbitMQ.Client
 
             try
             {
-                //Start Callback consumer if it hasn't started
-                StartCallbackQueueConsumer();
+                TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
+                if (requestTimeout != TimeSpan.Zero) seenRequestExpectingResponse = true;
+
+                if (seenRequestExpectingResponse)
+                {
+                    //This client has seen a request expecting a response so
+                    //Start Callback consumer if it hasn't started
+                    StartCallbackQueueConsumer();
+                }
+                else
+                {
+                    //Client has never seen any request expecting a response
+                    //so just try to connect if not already connected
+                    ConnectToServer();
+                }
 
                 var pooler = _clientPool; //Henceforth, use pooler since _clientPool may change and we want to work with the original pooler
 
@@ -245,8 +260,6 @@ namespace RestBus.RabbitMQ.Client
                 {
                     basicProperties.Headers = exchangeHeaders;
                 }
-
-                TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
 
                 if (requestTimeout != TimeSpan.Zero)
                 {
@@ -507,21 +520,15 @@ namespace RestBus.RabbitMQ.Client
 
         private TimeSpan GetRequestTimeout(RequestOptions options)
         {
-            return GetTimeoutValue(options).Duration();
-        }
-
-        private TimeSpan GetTimeoutValue(RequestOptions options)
-        {
             TimeSpan timeoutVal = this.Timeout;
 
             if (options != null && options.Timeout.HasValue)
             {
                 timeoutVal = options.Timeout.Value;
             }
-            return timeoutVal;
+
+            return timeoutVal.Duration();
         }
-
-
 
         // TODO: Consider introducing RPC channels into the channel pool system.
         // RPC Channels will have associated Consumers. If no consumer is used then a new one is created just before the channel is used.
@@ -552,7 +559,8 @@ namespace RestBus.RabbitMQ.Client
             //TODO: Consider moving the conn related checks into a pooler method
             if (callbackConsumer == null || conn == null || !isInConsumerLoop || !conn.IsOpen)
             {
-                lock (callbackConsumerStartSync)
+                //NOTE: Same lock is used in StartCallbackConsumer
+                lock (reconnectionSync)
                 {
                     if (!(callbackConsumer == null || conn == null || !isInConsumerLoop || !conn.IsOpen)) return;
 
@@ -567,27 +575,12 @@ namespace RestBus.RabbitMQ.Client
                         ConcurrentQueueingConsumer consumer = null;
                         try
                         {
-                            //NOTE: This is the only place where connections are created in the client
-                            //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
-                            callbackConn = connectionFactory.CreateConnection();
-
-                            //Swap out client connection and pooler, so other threads can use the new objects:
-
-                            //First Swap out old pool with new pool
-                            pool = new AmqpChannelPooler(callbackConn);
-                            var oldpool = Interlocked.Exchange(ref _clientPool, pool);
-
-                            //then swap out old connection with new one
-                            var oldconn = Interlocked.Exchange(ref conn, callbackConn);
-
-                            //Dispose old pool
-                            if (oldpool != null)
+                            //Do not create a new connection or pool if there is a good one already existing (possibly created by ConnectToServer()
+                            //unless consumer explicitly signalled to reconnect to server
+                            if (conn == null || !conn.IsOpen || reconnectToServer)
                             {
-                                oldpool.Dispose();
+                                CreateNewConnectionAndChannelPool(out callbackConn, out pool);
                             }
-
-                            //Dispose old connection
-                            DisposeConnection(oldconn);
 
                             //Start consumer
                             AmqpModelContainer channelContainer = null;
@@ -705,6 +698,7 @@ namespace RestBus.RabbitMQ.Client
                             finally
                             {
                                 isInConsumerLoop = false;
+                                reconnectToServer = true;
 
                                 if (channelContainer != null)
                                 {
@@ -768,6 +762,50 @@ namespace RestBus.RabbitMQ.Client
                 }
             }
 
+        }
+
+        private void ConnectToServer()
+        {
+            if (conn == null || !conn.IsOpen)
+            {
+                //TODO: Can double-checked locking here be simplified?
+
+                //NOTE: Same lock is used in StartCallbackConsumer
+                lock(reconnectionSync)
+                {
+                    if (!(conn == null || !conn.IsOpen))
+                    {
+                        IConnection newConn;
+                        AmqpChannelPooler pool;
+                        CreateNewConnectionAndChannelPool(out newConn, out pool);
+                    }
+                }
+            }
+        }
+
+        private void CreateNewConnectionAndChannelPool(out IConnection newConn, out AmqpChannelPooler pool)
+        {
+            //NOTE: This is the only place where connections are created in the client
+            //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
+            newConn = connectionFactory.CreateConnection();
+
+            //Swap out client connection and pooler, so other threads can use the new objects:
+
+            //First Swap out old pool with new pool
+            pool = new AmqpChannelPooler(newConn);
+            var oldpool = Interlocked.Exchange(ref _clientPool, pool);
+
+            //then swap out old connection with new one
+            var oldconn = Interlocked.Exchange(ref conn, newConn);
+
+            //Dispose old pool
+            if (oldpool != null)
+            {
+                oldpool.Dispose();
+            }
+
+            //Dispose old connection
+            DisposeConnection(oldconn);
         }
 
         private static void DeclareIndirectReplyToQueue(IModel channel, string queueName)
