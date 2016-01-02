@@ -400,6 +400,11 @@ namespace RestBus.RabbitMQ.Client
                             basicProperties.Expiration = ((int)expiration.TotalMilliseconds).ToString();
                         }
                     }
+                    else
+                    {
+                        //Infinite Timespan indicates that message should never expire
+                        basicProperties.ClearExpiration();
+                    }
                 }
 
                 //TODO: Implement routing to a different exchangeKind via substituting exchangeName
