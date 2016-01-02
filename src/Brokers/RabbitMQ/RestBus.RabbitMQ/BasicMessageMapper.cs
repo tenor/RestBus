@@ -50,11 +50,6 @@ namespace RestBus.RabbitMQ
             return null;
         }
 
-        public virtual bool GetExpires(HttpRequestMessage request)
-        {
-            return true;
-        }
-
         //TODO: Remove this, it isn't used anywhere
         private static string GetPath(Uri uri)
         {

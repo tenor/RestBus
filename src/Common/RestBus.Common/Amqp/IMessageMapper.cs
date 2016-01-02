@@ -7,6 +7,5 @@ namespace RestBus.Common.Amqp
         ExchangeInfo GetExchangeInfo();
         string GetRoutingKey(HttpRequestMessage request);
         IDictionary<string, object> GetHeaders(HttpRequestMessage request);
-        bool GetExpires(HttpRequestMessage request);
     }
 }

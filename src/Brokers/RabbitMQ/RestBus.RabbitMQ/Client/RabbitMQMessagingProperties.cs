@@ -25,9 +25,9 @@ namespace RestBus.RabbitMQ.Client
 
         /// <summary>
         /// Controls if the message expires in the queue and how long the message stays in the queue before expiring.
-        /// This overrides the settings specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Timeout"/>, <see cref="RestBus.Common.Amqp.IMessageMapper.GetExpires(System.Net.Http.HttpRequestMessage)"/> and <see cref="RestBus.Client.RequestOptions.Timeout"/>.
+        /// This overrides the settings specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Timeout"/>, MessageExpires property of <see cref="RestBus.Common.Amqp.IMessageMapper.GetExchangeInfo"/> and <see cref="RestBus.Client.RequestOptions.Timeout"/>.
         /// Set to <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> to specify that the message never expires.
-        /// Set to null, to use the settings specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Timeout"/>, <see cref="RestBus.Common.Amqp.IMessageMapper.GetExpires(System.Net.Http.HttpRequestMessage)"/> and <see cref="RestBus.Client.RequestOptions.Timeout"/>
+        /// Set to null, to use the settings specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Timeout"/>, MessageExpires property of <see cref="RestBus.Common.Amqp.IMessageMapper.GetExchangeInfo"/> and <see cref="RestBus.Client.RequestOptions.Timeout"/>
         /// </summary>
         /// <remarks>
         /// The client will still wait for a response within the Timeout period if either <see cref="RestBus.RabbitMQ.Client.RestBusClient.Timeout"/> or <see cref="RestBus.Client.RequestOptions.Timeout"/> is set, even if this property is less than those.

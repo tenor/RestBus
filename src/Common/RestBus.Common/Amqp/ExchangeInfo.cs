@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 
 namespace RestBus.Common.Amqp
 {
@@ -46,5 +47,11 @@ namespace RestBus.Common.Amqp
         /// <seealso cref="PersistentMessages"/>
         /// </remarks>
         public bool PersistentWorkQueuesAndExchanges { get; set; }
+
+        /// <summary>
+        /// A function that returns an indicator that the message should expire.
+        /// If not set, messages expire by default.
+        /// </summary>
+        public Func<HttpRequestMessage, bool> MessageExpires { get; set; }
     }
 }

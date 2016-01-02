@@ -247,7 +247,8 @@ namespace RestBus.RabbitMQ.Client
                     basicProperties.ReplyTo = callbackQueueName;
 
                     //Set Expiration if messageProperties doesn't override Client.Timeout, RequestOptions and MessageMapper.
-                    if (!messageProperties.Expiration.HasValue && requestTimeout != System.Threading.Timeout.InfiniteTimeSpan && messageMapper.GetExpires(request))
+                    if (!messageProperties.Expiration.HasValue && requestTimeout != System.Threading.Timeout.InfiniteTimeSpan 
+                        && ( exchangeInfo.MessageExpires == null || exchangeInfo.MessageExpires(request)))
                     {
                         if (requestTimeout.TotalMilliseconds > Int32.MaxValue)
                         {
@@ -376,7 +377,7 @@ namespace RestBus.RabbitMQ.Client
 
                     responseArrivalNotification += arrival;
                 }
-                else if (!messageProperties.Expiration.HasValue && messageMapper.GetExpires(request))
+                else if (!messageProperties.Expiration.HasValue && (exchangeInfo.MessageExpires == null || exchangeInfo.MessageExpires(request)))
                 {
                     //Request has a zero timeout and the message mapper indicates it should expire and messageproperties expiration is not set:
                     //Set the expiration to zero which means RabbitMQ will only transmit if there is a consumer ready to receive it.

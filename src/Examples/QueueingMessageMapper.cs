@@ -20,13 +20,8 @@ namespace Examples
             {
                 PersistentMessages = true,
                 PersistentWorkQueuesAndExchanges = true,
+                MessageExpires = (m) => { return false; }
             };
-        }
-
-        public override bool GetExpires(HttpRequestMessage request)
-        {
-            //Messages never expire
-            return false;
         }
 
     }
