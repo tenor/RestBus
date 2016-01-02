@@ -250,9 +250,6 @@ namespace RestBus.RabbitMQ.Subscription
                 //TODO: Combine CancellationToken passed in Dequeue() with token below 
                 requestQueued.Wait(disposedCancellationSource.Token);
                 requestQueued.Reset();
-
-                //Thread.Sleep(1); //Nothing was found in both queues so take a 1ms nap
-
             }
 
             return new MessageContext

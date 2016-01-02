@@ -894,8 +894,7 @@ namespace RestBus.RabbitMQ.Client
                 }
 
                 responseQueued.Wait(disposedCancellationSource.Token);
-
-                //Thread.Sleep(1);
+                responseQueued.Reset();
             }
         }
 
