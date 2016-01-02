@@ -26,12 +26,12 @@ namespace RestBus.RabbitMQ.Client
         readonly string clientId;
         readonly string exchangeName;
         readonly string indirectReplyToQueueName;
-        string callbackQueueName;
+        volatile string callbackQueueName;
         readonly ConnectionFactory connectionFactory;
-        ConcurrentQueueingConsumer callbackConsumer;
+        volatile ConcurrentQueueingConsumer callbackConsumer;
         ManualResetEventSlim responseQueued = new ManualResetEventSlim();
         IConnection conn;
-        AmqpChannelPooler _clientPool;
+        volatile AmqpChannelPooler _clientPool;
         volatile bool isInConsumerLoop;
         volatile bool consumerCancelled;
         volatile bool reconnectToServer;
@@ -40,7 +40,7 @@ namespace RestBus.RabbitMQ.Client
 
         readonly object reconnectionSync = new object();
         object exchangeDeclareSync = new object();
-        int lastExchangeDeclareTickCount = 0;
+        volatile int lastExchangeDeclareTickCount = 0;
         volatile bool disposed = false;
         readonly CancellationTokenSource disposedCancellationSource = new CancellationTokenSource();
 
@@ -286,7 +286,7 @@ namespace RestBus.RabbitMQ.Client
                             }
                             catch (Exception ex)
                             {
-                                Interlocked.Exchange(ref deserializationException, ex);
+                                deserializationException = ex;
                             }
 
                             if (deserializationException == null)
@@ -298,8 +298,7 @@ namespace RestBus.RabbitMQ.Client
                                     res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
                                 }
 
-                                Interlocked.Exchange(ref responsePacket, res);
-                                responsePacket = res; //TODO: This looks like it's unnecessary due to line above
+                                responsePacket = res;
                             }
 
                             //NOTE: The ManualResetEventSlim.Set() method can be called after the object has been disposed
@@ -326,6 +325,9 @@ namespace RestBus.RabbitMQ.Client
                         callbackHandle = ThreadPool.RegisterWaitForSingleObject(receivedEvent.WaitHandle,
                             (state, timedOut) =>
                             {
+                                //TODO: Investigate, this memorybarrier might be unnecessary since the thread is released from the threadpool
+                                //after deserializationException and responsePacket is set.
+                                Thread.MemoryBarrier(); //Ensure non-cached versions of deserializationException and responsePacket are read
                                 try
                                 {
                                     //TODO: Check Cancelation Token when it's implemented
@@ -498,13 +500,13 @@ namespace RestBus.RabbitMQ.Client
                     //All threads must attempt to declare exchanges and queues if it hasn't been previously declared 
                     //(for instance, all threads were started at once)
                     //So do not swap out this value on first declare
-                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                    lastExchangeDeclareTickCount = Environment.TickCount;
                 }
                 AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeConfig, exchangeDeclareSync, null);
                 if (firstDeclare)
                 {
                     //Swap out this value after declaring on firstdeclare
-                    Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
+                    lastExchangeDeclareTickCount = Environment.TickCount;
                 }
             }
         }
@@ -636,8 +638,8 @@ namespace RestBus.RabbitMQ.Client
                                 }
 
                                 //Set callbackConsumer to consumer
-                                Interlocked.Exchange(ref callbackQueueName, replyToQueueName);
-                                Interlocked.Exchange(ref callbackConsumer, consumer);
+                                callbackQueueName = replyToQueueName;
+                                callbackConsumer = consumer;
 
                                 //Notify outer thread that channel has started consumption
                                 consumerSignal.Set();
@@ -737,7 +739,7 @@ namespace RestBus.RabbitMQ.Client
                             //TODO: Log error (Except it's object disposed exception)
 
                             //Set Exception object which will be throw by signal waiter
-                            Interlocked.Exchange(ref consumerSignalException, ex);
+                            consumerSignalException = ex;
 
                             //Notify outer thread to move on, in case it's still waiting
                             try
@@ -769,6 +771,7 @@ namespace RestBus.RabbitMQ.Client
                     consumerSignal.Dispose();
 
                     //Examine exception if it were set and rethrow it
+                    Thread.MemoryBarrier(); //Ensure we have the non-cached version of consumerSignalException
                     if (consumerSignalException != null)
                     {
                         throw consumerSignalException;

@@ -15,11 +15,11 @@ namespace RestBus.RabbitMQ.Subscription
         //TODO: Error handling on the subscriber when the queue(s) expires
 
         IConnection conn;
-        AmqpChannelPooler _subscriberPool;
-        AmqpModelContainer workChannel;
-        AmqpModelContainer subscriberChannel;
-        ConcurrentQueueingConsumer workConsumer;
-        ConcurrentQueueingConsumer subscriberConsumer;
+        volatile AmqpChannelPooler _subscriberPool;
+        volatile AmqpModelContainer workChannel;
+        volatile AmqpModelContainer subscriberChannel;
+        volatile ConcurrentQueueingConsumer workConsumer;
+        volatile ConcurrentQueueingConsumer subscriberConsumer;
         readonly ManualResetEventSlim requestQueued = new ManualResetEventSlim();
         readonly string subscriberId;
         readonly ExchangeConfiguration exchangeConfig;
@@ -129,12 +129,12 @@ namespace RestBus.RabbitMQ.Subscription
             conn = connectionFactory.CreateConnection();
 
             var pool = new AmqpChannelPooler(conn);
-            Interlocked.Exchange(ref _subscriberPool, pool);
+            _subscriberPool = pool;
 
             //Use pool reference henceforth.
 
             //Create work channel and declare exchanges and queues
-            Interlocked.Exchange(ref workChannel, pool.GetModel(ChannelFlags.Consumer));
+            workChannel = pool.GetModel(ChannelFlags.Consumer);
 
             //TODO: Work this into subscriber dispose and restart
             /* Work this into subscriber dispose and restart
@@ -162,15 +162,15 @@ namespace RestBus.RabbitMQ.Subscription
             AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeConfig, exchangeDeclareSync, subscriberId);
 
             //Listen on work queue
-            Interlocked.Exchange(ref workConsumer, new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued));
+            workConsumer = new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued);
             string workQueueName = AmqpUtils.GetWorkQueueName(exchangeConfig);
 
             workChannel.Channel.BasicQos(0, 50, false);
             workChannel.Channel.BasicConsume(workQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, workConsumer);
 
             //Listen on subscriber queue
-            Interlocked.Exchange(ref subscriberChannel, pool.GetModel(ChannelFlags.Consumer));
-            Interlocked.Exchange(ref subscriberConsumer, new ConcurrentQueueingConsumer(subscriberChannel.Channel, requestQueued));
+            subscriberChannel = pool.GetModel(ChannelFlags.Consumer);
+            subscriberConsumer = new ConcurrentQueueingConsumer(subscriberChannel.Channel, requestQueued);
             string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeConfig, subscriberId);
 
             subscriberChannel.Channel.BasicQos(0, 50, false);
