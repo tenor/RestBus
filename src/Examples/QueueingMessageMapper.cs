@@ -13,14 +13,14 @@ namespace Examples
         {
         }
 
-        public override ExchangeInfo GetExchangeInfo()
+        public override ExchangeConfiguration GetExchangeConfig()
         {
-            //Return an ExchangeInfo set up to have persistent queues and messages.
-            return new ExchangeInfo(new string[] { base.amqpHostUri }, base.serviceName)
+            //Return an ExchangeConfig set up to have persistent queues and messages.
+            return new ExchangeConfiguration(new string[] { base.amqpHostUri }, base.serviceName)
             {
                 PersistentMessages = true,
                 PersistentWorkQueuesAndExchanges = true,
-                MessageExpires = (m) => { return false; }
+                MessageExpires = (m) => { return false; } //Messages never expire
             };
         }
 

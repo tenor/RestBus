@@ -27,9 +27,9 @@ namespace RestBus.RabbitMQ
             this.serviceName = serviceName;
         }
 
-        public virtual ExchangeInfo GetExchangeInfo()
+        public virtual ExchangeConfiguration GetExchangeConfig()
         {
-            return new ExchangeInfo(new string[] { amqpHostUri }, serviceName);
+            return new ExchangeConfiguration(new string[] { amqpHostUri }, serviceName);
         }
 
         public virtual string GetRoutingKey(HttpRequestMessage request)

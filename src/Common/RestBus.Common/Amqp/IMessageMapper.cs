@@ -4,7 +4,7 @@ namespace RestBus.Common.Amqp
 {
     public interface IMessageMapper
     {
-        ExchangeInfo GetExchangeInfo();
+        ExchangeConfiguration GetExchangeConfig();
         string GetRoutingKey(HttpRequestMessage request);
         IDictionary<string, object> GetHeaders(HttpRequestMessage request);
     }

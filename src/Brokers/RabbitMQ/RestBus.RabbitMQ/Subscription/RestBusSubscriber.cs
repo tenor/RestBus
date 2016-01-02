@@ -22,7 +22,7 @@ namespace RestBus.RabbitMQ.Subscription
         ConcurrentQueueingConsumer subscriberConsumer;
         readonly ManualResetEventSlim requestQueued = new ManualResetEventSlim();
         readonly string subscriberId;
-        readonly ExchangeInfo exchangeInfo;
+        readonly ExchangeConfiguration exchangeConfig;
         object exchangeDeclareSync = new object();
         InterlockedBoolean hasStarted;
         volatile bool disposed = false;
@@ -32,11 +32,11 @@ namespace RestBus.RabbitMQ.Subscription
 
         public RestBusSubscriber(IMessageMapper messageMapper )
         {
-            exchangeInfo = messageMapper.GetExchangeInfo();
+            exchangeConfig = messageMapper.GetExchangeConfig();
             subscriberId = AmqpUtils.GetNewExclusiveQueueId();
 
             this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = exchangeInfo.ServerUris[0];
+            connectionFactory.Uri = exchangeConfig.ServerUris[0];
             connectionFactory.RequestedHeartbeat = Client.RestBusClient.HEART_BEAT;
 
             this.Settings = new SubscriberSettings(); //Make sure a default value is provided if not supplied by user.
@@ -157,11 +157,11 @@ namespace RestBus.RabbitMQ.Subscription
              */
 
             //Redeclare exchanges and queues
-            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeInfo, exchangeDeclareSync, subscriberId);
+            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeConfig, exchangeDeclareSync, subscriberId);
 
             //Listen on work queue
             Interlocked.Exchange(ref workConsumer, new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued));
-            string workQueueName = AmqpUtils.GetWorkQueueName(exchangeInfo);
+            string workQueueName = AmqpUtils.GetWorkQueueName(exchangeConfig);
 
             workChannel.Channel.BasicQos(0, 50, false);
             workChannel.Channel.BasicConsume(workQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, workConsumer);
@@ -169,7 +169,7 @@ namespace RestBus.RabbitMQ.Subscription
             //Listen on subscriber queue
             Interlocked.Exchange(ref subscriberChannel, pool.GetModel(ChannelFlags.Consumer));
             Interlocked.Exchange(ref subscriberConsumer, new ConcurrentQueueingConsumer(subscriberChannel.Channel, requestQueued));
-            string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeInfo, subscriberId);
+            string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeConfig, subscriberId);
 
             subscriberChannel.Channel.BasicQos(0, 50, false);
             subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, subscriberConsumer);

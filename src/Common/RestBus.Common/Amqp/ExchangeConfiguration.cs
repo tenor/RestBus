@@ -5,9 +5,9 @@ using System.Net.Http;
 namespace RestBus.Common.Amqp
 {
     //TODO: Describe what this class does.
-    public class ExchangeInfo
+    public class ExchangeConfiguration
     {
-        public ExchangeInfo(IList<string> serverUris, string serviceName)
+        public ExchangeConfiguration(IList<string> serverUris, string serviceName)
         {
             //TODO: Check for invalid parameters
 

@@ -22,7 +22,7 @@ namespace RestBus.RabbitMQ.Client
         static SequenceGenerator correlationIdGen = SequenceGenerator.FromUtcNow();
 
         readonly IMessageMapper messageMapper;
-        readonly ExchangeInfo exchangeInfo;
+        readonly ExchangeConfiguration exchangeConfig;
         readonly string clientId;
         readonly string exchangeName;
         readonly string indirectReplyToQueueName;
@@ -63,15 +63,15 @@ namespace RestBus.RabbitMQ.Client
 
             //Configure RestBus fields/properties
             this.messageMapper = messageMapper;
-            this.exchangeInfo = messageMapper.GetExchangeInfo();
+            this.exchangeConfig = messageMapper.GetExchangeConfig();
             this.clientId = AmqpUtils.GetNewExclusiveQueueId();
             //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
-            this.exchangeName = AmqpUtils.GetExchangeName(exchangeInfo, ExchangeKind.Direct);
-            this.indirectReplyToQueueName = AmqpUtils.GetCallbackQueueName(exchangeInfo, clientId);
+            this.exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, ExchangeKind.Direct);
+            this.indirectReplyToQueueName = AmqpUtils.GetCallbackQueueName(exchangeConfig, clientId);
 
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = exchangeInfo.ServerUris[0];
+            connectionFactory.Uri = exchangeConfig.ServerUris[0];
             connectionFactory.RequestedHeartbeat = HEART_BEAT;
 
             //Set ClientSettings
@@ -227,9 +227,9 @@ namespace RestBus.RabbitMQ.Client
 
                 //Set message delivery mode -- Make message persistent if either:
                 // 1. Properties.Persistent is true
-                // 2. ExchangeInfo.PersistentMessages is true and Properties.Persistent is null
-                // 3. ExchangeInfo.PersistentMessages is true and Properties.Persistent is true
-                if (messageProperties.Persistent == true || (exchangeInfo.PersistentMessages && messageProperties.Persistent != false))
+                // 2. exchangeConfig.PersistentMessages is true and Properties.Persistent is null
+                // 3. exchangeConfig.PersistentMessages is true and Properties.Persistent is true
+                if (messageProperties.Persistent == true || (exchangeConfig.PersistentMessages && messageProperties.Persistent != false))
                 {
                     basicProperties.Persistent = true;
                 }
@@ -248,7 +248,7 @@ namespace RestBus.RabbitMQ.Client
 
                     //Set Expiration if messageProperties doesn't override Client.Timeout, RequestOptions and MessageMapper.
                     if (!messageProperties.Expiration.HasValue && requestTimeout != System.Threading.Timeout.InfiniteTimeSpan 
-                        && ( exchangeInfo.MessageExpires == null || exchangeInfo.MessageExpires(request)))
+                        && ( exchangeConfig.MessageExpires == null || exchangeConfig.MessageExpires(request)))
                     {
                         if (requestTimeout.TotalMilliseconds > Int32.MaxValue)
                         {
@@ -377,7 +377,7 @@ namespace RestBus.RabbitMQ.Client
 
                     responseArrivalNotification += arrival;
                 }
-                else if (!messageProperties.Expiration.HasValue && (exchangeInfo.MessageExpires == null || exchangeInfo.MessageExpires(request)))
+                else if (!messageProperties.Expiration.HasValue && (exchangeConfig.MessageExpires == null || exchangeConfig.MessageExpires(request)))
                 {
                     //Request has a zero timeout and the message mapper indicates it should expire and messageproperties expiration is not set:
                     //Set the expiration to zero which means RabbitMQ will only transmit if there is a consumer ready to receive it.
@@ -489,7 +489,7 @@ namespace RestBus.RabbitMQ.Client
             //because tickcount can wrap back to zero (through the negative number range), if client is running long enough.
             //However, redeclaring exchanges and queues are a safe operation, so this is okay if it occurs more than once in persistent queues.
             bool firstDeclare = lastExchangeDeclareTickCount == 0;
-            if (firstDeclare || (!exchangeInfo.PersistentWorkQueuesAndExchanges && (elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 60)))
+            if (firstDeclare || (!exchangeConfig.PersistentWorkQueuesAndExchanges && (elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 60)))
             {
                 if (!firstDeclare)
                 {
@@ -498,7 +498,7 @@ namespace RestBus.RabbitMQ.Client
                     //So do not swap out this value on first declare
                     Interlocked.Exchange(ref lastExchangeDeclareTickCount, Environment.TickCount);
                 }
-                AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeInfo, exchangeDeclareSync, null);
+                AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeConfig, exchangeDeclareSync, null);
                 if (firstDeclare)
                 {
                     //Swap out this value after declaring on firstdeclare

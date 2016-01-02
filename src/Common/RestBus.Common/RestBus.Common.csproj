@@ -44,7 +44,7 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Amqp\ExchangeInfo.cs" />
+    <Compile Include="Amqp\ExchangeConfiguration.cs" />
     <Compile Include="Amqp\ExchangeKind.cs" />
     <Compile Include="Amqp\IMessageMapper.cs" />
     <Compile Include="SequenceGenerator.cs" />
