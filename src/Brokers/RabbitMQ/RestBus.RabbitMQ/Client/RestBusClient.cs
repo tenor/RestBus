@@ -147,6 +147,7 @@ namespace RestBus.RabbitMQ.Client
         /// <summary>Cancel all pending requests on this instance.</summary>
         public void CancelPendingRequests()
         {
+            throw new NotImplementedException();
             //TODO: Implement CancelPendingRequests() 
         }
 
