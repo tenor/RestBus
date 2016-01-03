@@ -3,16 +3,16 @@
   "description": "ASP.NET 5 support for RestBus",
   "authors": [ "Sunny Ahuwanya" ],
   "tags": [ "asp.net amqp rabbitmq messaging queueing restbus rest http" ],
-  "projectUrl": "",
+  "projectUrl": "http://www.restbus.org",
   "licenseUrl": "",
 
   "dependencies": {
-    "Microsoft.AspNet.Http.Abstractions": "1.0.0-rc2-*",
-    "Microsoft.AspNet.Http": "1.0.0-rc2-*",
     "Microsoft.AspNet.Hosting": "1.0.0-rc2-*",
     "Microsoft.AspNet.Hosting.Server.Abstractions": "1.0.0-rc2-*",
-    "System.Net.Http": "4.0.1-beta-23516",
-    "RestBus.Common": "0.6.1-*"
+    "Microsoft.AspNet.Http": "1.0.0-rc2-*",
+    "Microsoft.AspNet.Http.Abstractions": "1.0.0-rc2-*",
+    "RestBus.Common": "0.6.1-*",
+    "System.Net.Http": "4.0.1-beta-23516"
   },
 
   "frameworks": {
