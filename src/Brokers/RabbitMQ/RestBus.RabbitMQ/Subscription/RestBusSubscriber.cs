@@ -38,7 +38,7 @@ namespace RestBus.RabbitMQ.Subscription
             subscriberId = AmqpUtils.GetNewExclusiveQueueId();
 
             this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = exchangeConfig.ServerUris[0];
+            connectionFactory.Uri = exchangeConfig.ServerUris[0].Uri;
             connectionFactory.RequestedHeartbeat = Client.RestBusClient.HEART_BEAT;
 
             this.Settings = new SubscriberSettings(); //Make sure a default value is provided if not supplied by user.

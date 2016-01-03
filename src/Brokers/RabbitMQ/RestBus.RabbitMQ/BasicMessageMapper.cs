@@ -1,6 +1,7 @@
 using RestBus.Client;
 using RestBus.Common.Amqp;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Collections.Generic;
 
@@ -8,7 +9,7 @@ namespace RestBus.RabbitMQ
 {
     public class BasicMessageMapper : IMessageMapper
     {
-        protected string amqpHostUri;
+        protected string[] amqpHostUris;
         protected string serviceName;
 
         public BasicMessageMapper(string amqpHostUri, string serviceName)
@@ -23,13 +24,14 @@ namespace RestBus.RabbitMQ
                 throw new ArgumentException("serviceName");
             }
 
-            this.amqpHostUri = amqpHostUri;
+            this.amqpHostUris = new string[] { amqpHostUri };
             this.serviceName = serviceName;
         }
 
         public virtual ExchangeConfiguration GetExchangeConfig()
         {
-            return new ExchangeConfiguration(new string[] { amqpHostUri }, serviceName);
+            var connectionInfos = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfo(u) }).ToList();
+            return new ExchangeConfiguration(connectionInfos, serviceName);
         }
 
         public virtual string GetRoutingKey(HttpRequestMessage request)
@@ -76,6 +78,38 @@ namespace RestBus.RabbitMQ
         protected RequestOptions GetRequestOptions(HttpRequestMessage request)
         {
             return MessageInvokerBase.GetRequestOptions(request);
+        }
+
+        /// <summary>
+        ///  Removes the username and password components of an AMQP uri
+        /// </summary>
+        protected string StripUserInfo(string amqpUri)
+        {
+            if(amqpUri == null)
+            {
+                throw new ArgumentNullException("amqpUri");
+            }
+
+            amqpUri = amqpUri.Trim();
+
+            int startIndex;
+            if(amqpUri.Length > 8 && amqpUri.StartsWith("amqps://", StringComparison.InvariantCultureIgnoreCase))
+            {
+                startIndex = 8;
+            }
+            else if (amqpUri.Length > 7 && amqpUri.StartsWith("amqp://", StringComparison.InvariantCultureIgnoreCase))
+            {
+                startIndex = 7;
+            }
+            else
+            {
+                throw new ArgumentException("amqpUri is not in expected format.");
+            }
+
+            int endIndex = amqpUri.IndexOf('@');
+            if(endIndex == -1) throw new ArgumentException("amqpUri is not in expected format.");
+
+            return amqpUri.Remove(startIndex, (endIndex - startIndex) + 1);
         }
     }
 

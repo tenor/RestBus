@@ -73,7 +73,7 @@ namespace RestBus.RabbitMQ.Client
 
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = exchangeConfig.ServerUris[0];
+            connectionFactory.Uri = exchangeConfig.ServerUris[0].Uri;
             connectionFactory.RequestedHeartbeat = HEART_BEAT;
 
             //Set ClientSettings

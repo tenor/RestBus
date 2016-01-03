@@ -7,7 +7,7 @@ namespace RestBus.Common.Amqp
     //TODO: Describe what this class does.
     public class ExchangeConfiguration
     {
-        public ExchangeConfiguration(IList<string> serverUris, string serviceName)
+        public ExchangeConfiguration(IList<AmqpConnectionInfo> serverUris, string serviceName)
         {
             //TODO: Check for invalid parameters
 
@@ -19,6 +19,7 @@ namespace RestBus.Common.Amqp
             for(int i = 0; i < serverUris.Count; i++)
             {
                 if (serverUris[i] == null) throw new ArgumentException("Index " + i + " of serverUris argument is null.");
+                if (serverUris[i].Uri == null) throw new ArgumentException("Uri property of Index " + i + " of serverUris argument is null.");
             }
 
             this.ServerUris = serverUris;
@@ -26,7 +27,7 @@ namespace RestBus.Common.Amqp
             this.SupportedKinds = ExchangeKind.Direct;
         }
 
-        public IList<string> ServerUris { get; protected set; }
+        public IList<AmqpConnectionInfo> ServerUris { get; protected set; }
         public string ServiceName { get; protected set; }
         public ExchangeKind SupportedKinds { get; set; }
 

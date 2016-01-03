@@ -1,6 +1,6 @@
 ﻿using RestBus.Common.Amqp;
 using RestBus.RabbitMQ;
-using System.Net.Http;
+using System.Linq;
 
 namespace Examples
 {
@@ -15,8 +15,10 @@ namespace Examples
 
         public override ExchangeConfiguration GetExchangeConfig()
         {
-            //Return an ExchangeConfig set up to have persistent queues and messages.
-            return new ExchangeConfiguration(new string[] { base.amqpHostUri }, base.serviceName)
+            //Returns an ExchangeConfig set up to have persistent queues and messages.
+
+            var connectionInfos = base.amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = base.StripUserInfo(u) }).ToList();
+            return new ExchangeConfiguration(connectionInfos, base.serviceName)
             {
                 PersistentMessages = true,
                 PersistentWorkQueuesAndExchanges = true,
