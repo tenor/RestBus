@@ -79,7 +79,7 @@ namespace RestBus.Common
                         throw new InvalidOperationException("Unable to deserialize data into HttpPacket");
                     }
 
-                    if (!components[0].ToUpperInvariant().StartsWith("HTTP/") || components[0].Length <= 5 )
+                    if (!components[0].StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase) || components[0].Length <= 5 )
                     {
                         throw new InvalidOperationException("Unable to deserialize data into HttpPacket");
                     }

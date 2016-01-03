@@ -29,7 +29,7 @@ namespace RestBus.Common
                 WriteSpace(ms);
                 WriteText(ms, encoder, String.IsNullOrWhiteSpace(Resource) ? "/" : Resource.Trim());
                 WriteSpace(ms);
-                WriteText(ms, encoder, "http/");
+                WriteText(ms, encoder, "HTTP/");
                 WriteText(ms, encoder, String.IsNullOrWhiteSpace(Version) ? "1.1" : Version.Trim());
                 WriteNewLine(ms);
 
@@ -76,7 +76,7 @@ namespace RestBus.Common
                         throw new InvalidOperationException("Unable to deserialize data into HttpPacket");
                     }
 
-                    if (!components[components.Length - 1].ToUpperInvariant().StartsWith("HTTP/") || components[components.Length - 1].Length <= 5 )
+                    if (!components[components.Length - 1].StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase) || components[components.Length - 1].Length <= 5 )
                     {
                         throw new InvalidOperationException("Unable to deserialize data into HttpPacket");
                     }
