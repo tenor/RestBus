@@ -30,7 +30,7 @@ namespace RestBus.RabbitMQ
 
         public virtual ExchangeConfiguration GetExchangeConfig()
         {
-            var connectionInfos = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfo(u) }).ToList();
+            var connectionInfos = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfo(u) }).ToArray();
             return new ExchangeConfiguration(connectionInfos, serviceName);
         }
 
@@ -50,21 +50,6 @@ namespace RestBus.RabbitMQ
         public virtual IDictionary<string, object> GetHeaders(HttpRequestMessage request)
         {
             return null;
-        }
-
-        //TODO: Remove this, it isn't used anywhere
-        private static string GetPath(Uri uri)
-        {
-            if (uri == null) return string.Empty;
-
-            string path = uri.PathAndQuery ?? string.Empty;
-
-            if (path.Contains("?"))
-            {
-                path = path.Substring(0, path.Length - path.IndexOf('?'));
-            }
-
-            return path.Trim();
         }
 
         /// <summary>
@@ -107,7 +92,7 @@ namespace RestBus.RabbitMQ
             }
 
             int endIndex = amqpUri.IndexOf('@');
-            if(endIndex == -1) throw new ArgumentException("amqpUri is not in expected format.");
+            if (endIndex == -1) return amqpUri;
 
             return amqpUri.Remove(startIndex, (endIndex - startIndex) + 1);
         }
