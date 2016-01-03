@@ -56,7 +56,7 @@ namespace RestBus.AspNet.Server
 
                 if(information.Subscriber == null)
                 {
-                    throw new InvalidOperationException($"RestBus subscriber could not be found. To use the RestBus server, call app.{nameof(ServerExtensions.ConfigureRestBusServer)} in Startup.Configure method and specify a subscriber to use!");
+                    throw new InvalidOperationException($"RestBus subscriber could not be found. To use the RestBus server, call app.{nameof(ServerExtensions.ConfigureRestBusServer)} in Startup.Configure method and specify a subscriber to use.");
                 }
 
                 //TODO: Add _logger properly
@@ -67,6 +67,11 @@ namespace RestBus.AspNet.Server
                 //TODO: Make IApplicationLifeTime.Stopping to stop polling the queue.
 
                 host.Start();
+
+                foreach(var name in information.Subscriber.ConnectionNames)
+                {
+                    information.AddAddress(name);
+                }
             }
             catch
             {

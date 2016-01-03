@@ -7,6 +7,8 @@ namespace RestBus.AspNet.Server
 {
     internal class ServerInformation : IServerInformation
     {
+        List<string> _addresses = new List<string>();
+
         public ServerInformation(IConfiguration configuration)
         {
             if (configuration == null)
@@ -14,16 +16,24 @@ namespace RestBus.AspNet.Server
                 throw new ArgumentNullException("configuration");
             }
 
-            Addresses = GetAddresses(configuration);
+            //Addresses = GetAddresses(configuration);
         }
 
-        public ICollection<string> Addresses { get; }
+        public ICollection<string> Addresses { get { return _addresses.AsReadOnly(); }}
+
+        internal void AddAddress(string address)
+        {
+            _addresses.Add(address);
+        }
 
         public IRestBusSubscriber Subscriber { get; internal set; }
 
+        /*
         private static ICollection<string> GetAddresses(IConfiguration configuration)
         {
-            var addresses = new List<string>();
+            //TODO: Figure out how best to incorporate server.urls configuration into addresses
+            //Bear in mind that host doesn't have a clue what server/protocol the address is (rabbit, azure etc.)
+            //It's informational only -- So it might not be possible for host to tell subscriber what to listen on.
 
             var urls = configuration["server.urls"];
 
@@ -32,7 +42,8 @@ namespace RestBus.AspNet.Server
                 addresses.Add(urls);
             }
 
-            return addresses.AsReadOnly();
+            return _addresses.AsReadOnly();
         }
+        */
     }
 }

@@ -1,5 +1,5 @@
 {
-  "version": "0.6.0-beta-*",
+  "version": "0.6.0-beta-1*",
   "description": "ASP.NET 5 support for RestBus",
   "authors": [ "Sunny Ahuwanya" ],
   "tags": [ "asp.net amqp rabbitmq messaging queueing restbus rest http" ],

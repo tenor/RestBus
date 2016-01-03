@@ -57,7 +57,7 @@ namespace RestBus.AspNet
 
 
         /// <summary>
-        /// Main loop which dequeues requests and spawns a new task to process it.
+        /// Main loop which dequeues requests and spawns new tasks to process them.
         /// </summary>
         private void RunLoop()
         {
