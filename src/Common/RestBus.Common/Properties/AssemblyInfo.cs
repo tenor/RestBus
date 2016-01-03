@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Sunny Ahuwanya")]
 [assembly: AssemblyProduct("RestBus.Common")]
-[assembly: AssemblyCopyright("Copyright © Sunny Ahuwanya 2014")]
+[assembly: AssemblyCopyright("Copyright © Sunny Ahuwanya 2014 - 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -26,4 +26,4 @@ using System.Runtime.InteropServices;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("0.6.1.0")]
 [assembly: AssemblyFileVersion("0.6.1.0")]
-[assembly: AssemblyInformationalVersion("0.6.1-beta-3")]
+[assembly: AssemblyInformationalVersion("0.6.1-beta-4")]
