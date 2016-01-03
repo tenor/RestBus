@@ -63,8 +63,8 @@ namespace RestBus.RabbitMQ
             Common.SynchronizedRandom.Instance.NextBytes(buffer);
             var base64str = Convert.ToBase64String(buffer, Base64FormattingOptions.None);
 
-            //Return a url-safe variant of Base64 where + becomes ~ and / become -
-            return base64str.Replace('+', '~').Replace('/', '-');
+            //Return a url-safe variant of Base64 where + becomes ~, / becomes - and there is no padding (=)
+            return base64str.Replace('+', '~').Replace('/', '-').TrimEnd('=');
         }
 
 
