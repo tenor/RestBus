@@ -7,6 +7,8 @@ using RestBus.RabbitMQ.ChannelPooling;
 using RestBus.RabbitMQ.Consumer;
 using System;
 using System.Threading;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace RestBus.RabbitMQ.Subscription
 {
@@ -39,6 +41,7 @@ namespace RestBus.RabbitMQ.Subscription
 
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeConfig.ServerUris[0].Uri;
+            ConnectionNames = exchangeConfig.ServerUris.Select(u => u.FriendlyName ?? String.Empty).ToArray();
             connectionFactory.RequestedHeartbeat = Client.RestBusClient.HEART_BEAT;
 
             this.Settings = new SubscriberSettings(); //Make sure a default value is provided if not supplied by user.
@@ -71,6 +74,8 @@ namespace RestBus.RabbitMQ.Subscription
                 return hasStarted;
             }
         }
+
+        public IList<string> ConnectionNames { get; private set; }
 
         public void Restart()
         {
