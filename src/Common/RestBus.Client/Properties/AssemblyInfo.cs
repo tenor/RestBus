@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Sunny Ahuwanya")]
 [assembly: AssemblyProduct("RestBus.Client")]
-[assembly: AssemblyCopyright("Copyright © Sunny Ahuwanya 2015")]
+[assembly: AssemblyCopyright("Copyright © Sunny Ahuwanya 2015-2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: NeutralResourcesLanguage("en")]

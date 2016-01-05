@@ -6,6 +6,7 @@
   "projectUrl": "http://www.restbus.org",
   "iconUrl": "https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png",
   "licenseUrl": "",
+  "copyright": "Copyright © Sunny Ahuwanya 2016",
 
   "dependencies": {
     "Microsoft.AspNet.Hosting": "1.0.0-rc2-*",

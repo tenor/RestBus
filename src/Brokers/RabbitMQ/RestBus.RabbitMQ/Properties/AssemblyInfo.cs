@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Sunny Ahuwanya")]
 [assembly: AssemblyProduct("RestBus.RabbitMQ")]
-[assembly: AssemblyCopyright("Copyright © Sunny Ahuwanya 2014")]
+[assembly: AssemblyCopyright("Copyright © Sunny Ahuwanya 2014-2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
