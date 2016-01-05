@@ -17,7 +17,7 @@ namespace Examples
         {
             //Returns an ExchangeConfig set up to have persistent queues and messages.
 
-            var connectionInfos = base.amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = base.StripUserInfo(u) }).ToArray();
+            var connectionInfos = base.amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = base.StripUserInfoAndQuery(u) }).ToArray();
             return new ExchangeConfiguration(connectionInfos, base.serviceName)
             {
                 PersistentMessages = true,

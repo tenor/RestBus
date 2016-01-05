@@ -30,7 +30,7 @@ namespace RestBus.RabbitMQ
 
         public virtual ExchangeConfiguration GetExchangeConfig()
         {
-            var connectionInfos = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfo(u) }).ToArray();
+            var connectionInfos = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfoAndQuery(u) }).ToArray();
             return new ExchangeConfiguration(connectionInfos, serviceName);
         }
 
@@ -66,9 +66,9 @@ namespace RestBus.RabbitMQ
         }
 
         /// <summary>
-        ///  Removes the username and password components of an AMQP uri
+        ///  Removes the username, password and query components of an AMQP uri.
         /// </summary>
-        protected string StripUserInfo(string amqpUri)
+        protected string StripUserInfoAndQuery(string amqpUri)
         {
             if(amqpUri == null)
             {
@@ -92,9 +92,18 @@ namespace RestBus.RabbitMQ
             }
 
             int endIndex = amqpUri.IndexOf('@');
-            if (endIndex == -1) return amqpUri;
+            if (endIndex >= 0)
+            {
+                amqpUri = amqpUri.Remove(startIndex, (endIndex - startIndex) + 1);
+            }
 
-            return amqpUri.Remove(startIndex, (endIndex - startIndex) + 1);
+            int queryIndex = amqpUri.IndexOf('?');
+            if (queryIndex >= 0)
+            {
+                amqpUri = amqpUri.Substring(0, queryIndex);
+            }
+
+            return amqpUri;
         }
     }
 
