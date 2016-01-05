@@ -6,9 +6,10 @@
     <title>RestBus.WebAPI</title>
     <authors>$author$</authors>
     <owners>$author$</owners>
+    <projectUrl>http://www.restbus.org</projectUrl>
+    <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Web API 2 support for RestBus</description>
-    <copyright>Copyright 2015</copyright>
     <tags>webapi amqp rabbitmq messaging queueing restbus rest http</tags>
     <dependencies>
        <dependency id="RestBus.Common" version="0.6.0-beta" />

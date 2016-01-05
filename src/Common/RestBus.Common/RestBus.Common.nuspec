@@ -7,10 +7,10 @@
     <authors>$author$</authors>
     <owners>$author$</owners>
     <projectUrl>http://www.restbus.org</projectUrl>
+    <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Easy Asynchronous Messaging and Queueing for .NET</description>
     <releaseNotes></releaseNotes>
-    <copyright>Copyright 2015-2016</copyright>
     <tags>messaging amqp rabbitmq queue queueing servicestack webapi rest http</tags>
   </metadata>
 </package>

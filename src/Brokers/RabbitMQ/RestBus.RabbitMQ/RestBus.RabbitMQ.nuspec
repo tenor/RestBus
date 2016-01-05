@@ -6,9 +6,10 @@
     <title>RestBus.RabbitMQ</title>
     <authors>$author$</authors>
     <owners>$author$</owners>
+    <projectUrl>http://www.restbus.org</projectUrl>
+    <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>RabbitMQ broker for RestBus</description>
-    <copyright>Copyright 2015</copyright>
     <tags>restbus rabbitmq amqp messaging queue queueing rest http</tags>
     <dependencies>
        <dependency id="Newtonsoft.Json" version="5.0.8" />

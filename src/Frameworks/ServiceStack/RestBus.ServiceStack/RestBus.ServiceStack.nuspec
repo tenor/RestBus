@@ -6,9 +6,10 @@
     <title>RestBus.ServiceStack</title>
     <authors>$author$</authors>
     <owners>$author$</owners>
+    <projectUrl>http://www.restbus.org</projectUrl>
+    <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>ServiceStack support for RestBus</description>
-    <copyright>Copyright 2015</copyright>
     <tags>servicestack amqp rabbitmq messaging queueing restbus rest http</tags>
     <dependencies>
        <dependency id="ServiceStack" version="[3.9.71,4)" />

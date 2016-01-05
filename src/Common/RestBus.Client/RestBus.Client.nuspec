@@ -7,10 +7,10 @@
     <authors>$author$</authors>
     <owners>$author$</owners>
     <projectUrl>http://www.restbus.org</projectUrl>
+    <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Common library for RestBus clients.</description>
     <releaseNotes></releaseNotes>
-    <copyright>Copyright 2015</copyright>
     <tags>messaging amqp rabbitmq queue queueing servicestack webapi rest http</tags>
     <dependencies>
       <dependency id="Newtonsoft.Json" version="5.0.8" />
