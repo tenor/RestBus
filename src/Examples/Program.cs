@@ -18,8 +18,8 @@ namespace Examples
 
         static void Main(string[] args)
         {
-            Basic.Run();
-            //SpeedTest.Run(10000);
+            Basic.Run(); //Run basic example
+            //SpeedTest.Run(10000); // Run speed test.
 
         }
 
