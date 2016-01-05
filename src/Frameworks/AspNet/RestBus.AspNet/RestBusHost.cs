@@ -185,13 +185,8 @@ namespace RestBus.AspNet
                     responsePkt = CreateResponseFromException(ex).ToHttpResponsePacket();
                 }
 
-                //TODO: The Subscriber should do this from within SendResponse.
-                //Add/Update Subscriber-Id header
-                responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
-
                 try
                 {
-                    //TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
                     subscriber.SendResponse(restbusContext, responsePkt);
                 }
                 catch

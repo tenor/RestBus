@@ -10,7 +10,8 @@ namespace RestBus.AspNet
     internal static class MessageHelpers
     {
         const string HTTP_RESPONSE_VERSION = "1.1";
-        const string HTTP_RESPONSE_SERVER = "RestBus.AspNet";
+        readonly static string[] HTTP_RESPONSE_SERVER_HEADER = new string[] { "RestBus.AspNet" };
+
 
         internal static bool TryGetServiceMessage (this HttpRequestPacket request, out ServiceMessage message)
         {
@@ -71,8 +72,7 @@ namespace RestBus.AspNet
             {
                 var headers = new HeaderDictionary();
 
-                //TODO: Server should also be set when Response is being returned, so that it isn't overwritten.
-                headers.Add("Server", HTTP_RESPONSE_SERVER);
+                headers.Add("Server", HTTP_RESPONSE_SERVER_HEADER[0]);
                 resp.Headers = headers;
             }
 
@@ -112,6 +112,9 @@ namespace RestBus.AspNet
 
                 response.Content = message.OriginalResponseBody.ToArray();
             }
+
+            //Add/Update Server header
+            response.Headers["Server"] = HTTP_RESPONSE_SERVER_HEADER;
 
             return response;
         }

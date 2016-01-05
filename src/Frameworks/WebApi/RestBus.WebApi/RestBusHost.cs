@@ -15,6 +15,7 @@ namespace RestBus.WebApi
     {
         private static readonly Lazy<IPrincipal> anonymousPrincipal = new Lazy<IPrincipal>(() => new GenericPrincipal(new GenericIdentity(String.Empty), new string[0]), isThreadSafe: true);
         private static string machineHostName;
+        readonly static string[] HTTP_RESPONSE_SERVER_HEADER = new string[] { "RestBus.WebApi" };
         private readonly IRestBusSubscriber subscriber;
         private readonly HttpConfiguration config;
         private readonly RequestHandler requestHandler;
@@ -218,7 +219,6 @@ namespace RestBus.WebApi
             //Send Response
             try
             {
-                //TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
                 subscriber.SendResponse(restbusContext, CreateResponsePacketFromMessage(responseMsg, subscriber));
             }
             catch
@@ -252,13 +252,10 @@ namespace RestBus.WebApi
 
         private static HttpResponsePacket CreateResponsePacketFromMessage(HttpResponseMessage responseMsg, IRestBusSubscriber subscriber)
         {
-            const string HTTP_RESPONSE_SERVER = "RestBus.WebApi";
-
             var responsePkt = responseMsg.ToHttpResponsePacket();
 
-            //Add/Update Subscriber-Id header
-            responsePkt.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
-            responsePkt.Headers["Server"] = new string[] { HTTP_RESPONSE_SERVER };
+            //Add/Update Server header
+            responsePkt.Headers["Server"] = HTTP_RESPONSE_SERVER_HEADER;
 
             return responsePkt;
         }

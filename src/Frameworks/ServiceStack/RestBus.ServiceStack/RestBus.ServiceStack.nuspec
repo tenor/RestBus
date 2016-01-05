@@ -14,7 +14,7 @@
     <dependencies>
        <dependency id="ServiceStack" version="[3.9.71,4)" />
        <dependency id="ServiceStack.Common" version="[3.9.71,4)" />
-       <dependency id="RestBus.Common" version="0.6.0-beta" />
+       <dependency id="RestBus.Common" version="0.6.1-beta-4" />
     </dependencies>
   </metadata>
 </package>

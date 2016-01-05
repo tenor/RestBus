@@ -23,7 +23,7 @@ namespace RestBus.RabbitMQ.Subscription
         volatile ConcurrentQueueingConsumer workConsumer;
         volatile ConcurrentQueueingConsumer subscriberConsumer;
         readonly ManualResetEventSlim requestQueued = new ManualResetEventSlim();
-        readonly string subscriberId;
+        readonly string[] subscriberIdHeader;
         readonly ExchangeConfiguration exchangeConfig;
         readonly object exchangeDeclareSync = new object();
         readonly InterlockedBoolean hasStarted;
@@ -37,7 +37,7 @@ namespace RestBus.RabbitMQ.Subscription
             exchangeConfig = messageMapper.GetExchangeConfig();
             if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
 
-            subscriberId = AmqpUtils.GetNewExclusiveQueueId();
+            subscriberIdHeader = new string[] { AmqpUtils.GetNewExclusiveQueueId() };
 
             this.connectionFactory = new ConnectionFactory();
             connectionFactory.Uri = exchangeConfig.ServerUris[0].Uri;
@@ -49,7 +49,7 @@ namespace RestBus.RabbitMQ.Subscription
 
         public string Id
         {
-            get { return subscriberId; }
+            get { return subscriberIdHeader[0]; }
         }
 
         public void Start()
@@ -59,10 +59,7 @@ namespace RestBus.RabbitMQ.Subscription
                 throw new InvalidOperationException("RestBus Subscriber has already started!");
             }
 
-
             Restart();
-
-
         }
 
         public SubscriberSettings Settings { get; }
@@ -164,7 +161,7 @@ namespace RestBus.RabbitMQ.Subscription
              */
 
             //Redeclare exchanges and queues
-            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeConfig, exchangeDeclareSync, subscriberId);
+            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeConfig, exchangeDeclareSync, Id);
 
             //Listen on work queue
             workConsumer = new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued);
@@ -176,7 +173,7 @@ namespace RestBus.RabbitMQ.Subscription
             //Listen on subscriber queue
             subscriberChannel = pool.GetModel(ChannelFlags.Consumer);
             subscriberConsumer = new ConcurrentQueueingConsumer(subscriberChannel.Channel, requestQueued);
-            string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeConfig, subscriberId);
+            string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeConfig, Id);
 
             subscriberChannel.Channel.BasicQos(0, 50, false);
             subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, subscriberConsumer);
@@ -291,24 +288,25 @@ namespace RestBus.RabbitMQ.Subscription
             try
             {
                 request = HttpRequestPacket.Deserialize(item.Body);
-
-                //Add/Update Subscriber-Id header
-                request.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { this.subscriberId };
-
-                //Add redelivered header if item was redelivered.
-                if(item.Redelivered)
-                {
-                    request.Headers[Common.Shared.REDELIVERED_HEADER] = new string[] { true.ToString() };
-                }
-
             }
             catch
             {
                 wasDeserialized = false;
             }
 
+            if (wasDeserialized)
+            {
+                //Add/Update Subscriber-Id header
+                request.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = this.subscriberIdHeader;
+
+                //Add redelivered header if item was redelivered.
+                if (item.Redelivered)
+                {
+                    request.Headers[Common.Shared.REDELIVERED_HEADER] = new string[] { true.ToString() };
+                }
+            }
             //Reject message if deserialization failed.
-            if (!wasDeserialized && Settings.AckBehavior != SubscriberAckBehavior.Automatic )
+            else if (!wasDeserialized && Settings.AckBehavior != SubscriberAckBehavior.Automatic )
             {
                 consumer.Model.BasicReject(item.DeliveryTag, false);
                 return false;
@@ -388,6 +386,10 @@ namespace RestBus.RabbitMQ.Subscription
                 throw new ApplicationException("This is Bad");
             }
 
+            //Add/Update Subscriber-Id header
+            response.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = subscriberIdHeader;
+
+            //Send response
             var pooler = _subscriberPool;
             AmqpModelContainer model = null;
             try
@@ -395,12 +397,10 @@ namespace RestBus.RabbitMQ.Subscription
                 model = pooler.GetModel(ChannelFlags.None);
                 BasicProperties basicProperties = new BasicProperties { CorrelationId = context.CorrelationId };
 
-                //TODO: Add Subscriber Id header to reponse before sending it
-
-                    model.Channel.BasicPublish(String.Empty,
-                                    context.ReplyToQueue,
-                                    basicProperties,
-                                    response.Serialize());
+                model.Channel.BasicPublish(String.Empty,
+                                context.ReplyToQueue,
+                                basicProperties,
+                                response.Serialize());
             }
             finally
             {
@@ -409,8 +409,6 @@ namespace RestBus.RabbitMQ.Subscription
                     model.Close();
                 }
             }
-
         }
-
     }
 }

@@ -214,7 +214,6 @@ namespace RestBus.ServiceStack
 
             try
             {
-                //TODO: Why can't the subscriber append the subscriber id itself from within sendresponse
                 subscriber.SendResponse(context, resPacket);
             }
             catch
@@ -248,9 +247,7 @@ namespace RestBus.ServiceStack
 				}
 			}
 
-			//Add/Update Subscriber-Id header
-			response.Headers[Common.Shared.SUBSCRIBER_ID_HEADER] = new string[] { subscriber == null ? String.Empty : subscriber.Id ?? String.Empty };
-            //TODO: Investigate if servicestack V3 produces a Server header, if so add it here
+            //TODO: Investigate if servicestack V3 produces a Server header, if so add it here and in CreateResponseFromException
 
 			response.Content = (wrapper.OutputStream as System.IO.MemoryStream).ToArray();
 			response.StatusCode = wrapper.StatusCode;
