@@ -280,13 +280,52 @@ namespace RestBus.RabbitMQ.Client
                     //Initialize response arrival object
                     arrival = new ExpectedResponse();
 
+
+                    //Spawning a new task to wait on the MRESlim is slower than using ThreadPool.RegisterWaitForSingleObject
+                    //
+                    //TODO: Test task vs RegisterWaitForSingleObject modes in a super fast network environment with 40, 100, 200 all the way to 1000 threads to see what method has fastest throughput.
+
+#if WAIT_FOR_RESPONSE_IN_TASK_MODE
+
+                    //Wait for response arrival event on a new task
+
+                    Task.Factory.StartNew(() =>
+                    {
+                        bool succeeded = arrival.ReceivedEvent.Wait(
+                            requestTimeout.TotalMilliseconds > Int32.MaxValue ? TimeSpan.FromMilliseconds(Int32.MaxValue) : requestTimeout /* Covers InfiniteTimeSpan */,
+                            cancellationToken);
+
+                        Thread.MemoryBarrier(); //Ensure non-cached versions of arrival are read
+
+                        //It failed either because it timed out or was cancelled
+                        //HttpClient treats both scenarios the same way.
+
+                        try
+                        {
+                            SetResponseResult(request, !succeeded, arrival, taskSource);
+                        }
+                        catch
+                        {
+                            //TODO: Log this: 
+                            // the code in the try block should be safe so this catch block should never be called, 
+                            // hoewever, this delegate is called on a separate thread and should be protected.
+                        }
+                        finally
+                        {
+                            CleanupMessagingResources(correlationId, arrival);
+                        }
+
+                    }, cancellationToken);
+
+#else
+
                     //Wait for response arrival event on the ThreadPool:
 
                     var localVariableInitLock = new object();
 
                     lock (localVariableInitLock)
                     {
-                        //TODO: Have cancellationToken signal WaitHandle so that threadpool can wait.
+                        //TODO: Have cancellationToken signal WaitHandle so that threadpool stops waiting.
 
                         RegisteredWaitHandle callbackHandle = null;
                         callbackHandle = ThreadPool.RegisterWaitForSingleObject(arrival.ReceivedEvent.WaitHandle,
@@ -294,7 +333,7 @@ namespace RestBus.RabbitMQ.Client
                             {
                                 //TODO: Investigate, this memorybarrier might be unnecessary since the thread is released from the threadpool
                                 //after deserializationException and responsePacket is set.
-                                Thread.MemoryBarrier(); //Ensure non-cached versions of deserializationException and responsePacket are read
+                                Thread.MemoryBarrier(); //Ensure non-cached versions of arrival are read
                                 try
                                 {
                                     //TODO: Check Cancelation Token when it's implemented
@@ -322,6 +361,7 @@ namespace RestBus.RabbitMQ.Client
                                 true);
 
                     }
+#endif
 
                     expectedResponses[correlationId] = arrival;
                 }
