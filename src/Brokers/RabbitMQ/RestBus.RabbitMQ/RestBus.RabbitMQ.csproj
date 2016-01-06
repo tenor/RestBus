@@ -52,6 +52,7 @@
     <Compile Include="ChannelPooling\ChannelFlags.cs" />
     <Compile Include="Client\ClientAckBehavior.cs" />
     <Compile Include="Client\ClientSettings.cs" />
+    <Compile Include="Client\ExpectedResponse.cs" />
     <Compile Include="Client\RestBusClient.cs" />
     <Compile Include="Consumer\ConcurrentQueueingConsumer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

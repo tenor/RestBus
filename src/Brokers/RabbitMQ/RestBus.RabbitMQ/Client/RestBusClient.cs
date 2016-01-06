@@ -8,6 +8,7 @@ using RestBus.Common.Http;
 using RestBus.RabbitMQ.ChannelPooling;
 using RestBus.RabbitMQ.Consumer;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -36,7 +37,7 @@ namespace RestBus.RabbitMQ.Client
         volatile bool consumerCancelled;
         volatile bool reconnectToServer;
         volatile bool seenRequestExpectingResponse;
-        event Action<BasicDeliverEventArgs> responseArrivalNotification;
+        readonly ConcurrentDictionary<string, ExpectedResponse> expectedResponses;
 
         readonly object reconnectionSync = new object();
         object exchangeDeclareSync = new object();
@@ -78,6 +79,9 @@ namespace RestBus.RabbitMQ.Client
 
             //Set ClientSettings
             this.Settings = new ClientSettings(this); // Always have a default version if it wasn't passed in.
+
+            //Initialize expectedResponses
+            expectedResponses = new ConcurrentDictionary<string, ExpectedResponse>();
         }
 
         /// <summary>Gets or sets the base address of Uniform Resource Identifier (URI) of the Internet resource used when sending requests.</summary>
@@ -179,10 +183,10 @@ namespace RestBus.RabbitMQ.Client
             var messageProperties = GetMessagingProperties(requestOptions);
 
             //Declare messaging resources
-            Action<BasicDeliverEventArgs> arrival = null;
-            ManualResetEventSlim receivedEvent = null;
+            ExpectedResponse arrival = null;
             AmqpModelContainer model = null;
             bool modelClosed = false;
+            string correlationId = null;
 
             try
             {
@@ -224,8 +228,7 @@ namespace RestBus.RabbitMQ.Client
 
                 RedeclareExchangesAndQueues(model);
 
-                string correlationId = correlationIdGen.GetNextId();
-                BasicProperties basicProperties = new BasicProperties { CorrelationId = correlationId };
+                BasicProperties basicProperties = new BasicProperties();
 
                 //Set message delivery mode -- Make message persistent if either:
                 // 1. Properties.Persistent is true
@@ -248,6 +251,10 @@ namespace RestBus.RabbitMQ.Client
                     //Set Reply to queue
                     basicProperties.ReplyTo = callbackQueueName;
 
+                    //Set CorrelationId
+                    correlationId = correlationIdGen.GetNextId();
+                    basicProperties.CorrelationId = correlationId;
+
                     //Set Expiration if messageProperties doesn't override Client.Timeout, RequestOptions and MessageMapper.
                     if (!messageProperties.Expiration.HasValue && requestTimeout != System.Threading.Timeout.InfiniteTimeSpan 
                         && ( exchangeConfig.MessageExpires == null || exchangeConfig.MessageExpires(request)))
@@ -262,51 +269,8 @@ namespace RestBus.RabbitMQ.Client
                         }
                     }
 
-                    //Message arrival event
-                    HttpResponsePacket responsePacket = null;
-                    Exception deserializationException = null;
-                    receivedEvent = new ManualResetEventSlim(false);
-
-                    //TODO: Get rid of arrival below after turning responseArrivalNotification into a concurrent hashtable.
-                    // The hashtable shouldn't store a delegate, it should an object that encapsulates
-                    // responsePacket, deserializationException and receivedEvent.
-                    // This will allow the callback consumer to process the arrival directly instead of calling a delegate.
-                    //
-                    // Once the arrival has been processed, remove the key from the hashtable so that subsequest responses are not processed.
-                    // In fact, use a TryRemove when searching for the item in the dictionary.
-
-                    arrival = a =>
-                    {
-                        if (a.BasicProperties.CorrelationId == correlationId)
-                        {
-                            HttpResponsePacket res = null;
-                            try
-                            {
-                                res = HttpResponsePacket.Deserialize(a.Body);
-                            }
-                            catch (Exception ex)
-                            {
-                                deserializationException = ex;
-                            }
-
-                            if (deserializationException == null)
-                            {
-                                if (res != null)
-                                {
-                                    //Add/Update Content-Length Header
-                                    //TODO: Is there any need to add this here if it's subsequently removed/updated by TryGetHttpResponseMessage/HttpPacket.PopulateHeaders? (Is this useful in the exception/other path scenario?
-                                    res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
-                                }
-
-                                responsePacket = res;
-                            }
-
-                            //NOTE: The ManualResetEventSlim.Set() method can be called after the object has been disposed
-                            //So no worries about the Timeout disposing the object before the response comes in.
-                            receivedEvent.Set();
-                            responseArrivalNotification -= arrival;
-                        }
-                    };
+                    //Initialize response arrival object
+                    arrival = new ExpectedResponse();
 
                     if (!cancellationToken.Equals(System.Threading.CancellationToken.None))
                     {
@@ -315,14 +279,14 @@ namespace RestBus.RabbitMQ.Client
                     }
 
 
-                    //Wait for received event on the ThreadPool:
+                    //Wait for response arrival event on the ThreadPool:
 
                     var localVariableInitLock = new object();
 
                     lock (localVariableInitLock)
                     {
                         RegisteredWaitHandle callbackHandle = null;
-                        callbackHandle = ThreadPool.RegisterWaitForSingleObject(receivedEvent.WaitHandle,
+                        callbackHandle = ThreadPool.RegisterWaitForSingleObject(arrival.ReceivedEvent.WaitHandle,
                             (state, timedOut) =>
                             {
                                 //TODO: Investigate, this memorybarrier might be unnecessary since the thread is released from the threadpool
@@ -345,15 +309,30 @@ namespace RestBus.RabbitMQ.Client
                                     }
                                     else
                                     {
+                                        if (arrival.DeserializationException == null)
+                                        {
+                                            var res = arrival.Response;
+                                            if (res != null)
+                                            {
+                                                //Add/Update Content-Length Header
+                                                //TODO: Is there any need to add this here if it's subsequently removed/updated by TryGetHttpResponseMessage/HttpPacket.PopulateHeaders? (Is this useful in the exception/other path scenario?
+                                                res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
+                                            }
+                                            else
+                                            {
+                                                //TODO: Log this -- Critical issue (or just assert)
+                                            }
+                                        }
+
                                         HttpResponseMessage msg;
-                                        if (deserializationException == null && TryGetHttpResponseMessage(responsePacket, out msg))
+                                        if (arrival.DeserializationException == null && TryGetHttpResponseMessage(arrival.Response, out msg))
                                         {
                                             msg.RequestMessage = request;
                                             taskSource.SetResult(msg);
                                         }
                                         else
                                         {
-                                            taskSource.SetException(GetWrappedException("An error occurred while reading the response.", deserializationException));
+                                            taskSource.SetException(GetWrappedException("An error occurred while reading the response.", arrival.DeserializationException));
                                         }
                                     }
 
@@ -370,7 +349,7 @@ namespace RestBus.RabbitMQ.Client
                                 }
                                 finally
                                 {
-                                    CleanupMessagingResources(arrival, receivedEvent);
+                                    CleanupMessagingResources(correlationId, arrival);
                                 }
                             },
                                 null,
@@ -379,7 +358,7 @@ namespace RestBus.RabbitMQ.Client
 
                     }
 
-                    responseArrivalNotification += arrival;
+                    expectedResponses[correlationId] = arrival;
                 }
                 else if (!messageProperties.Expiration.HasValue && (exchangeConfig.MessageExpires == null || exchangeConfig.MessageExpires(request)))
                 {
@@ -432,7 +411,7 @@ namespace RestBus.RabbitMQ.Client
                     //TODO: Have new ByteArrayContent be a static object.
                     taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[0]) });
 
-                    CleanupMessagingResources(arrival, receivedEvent);
+                    CleanupMessagingResources(correlationId, arrival);
                 }
 
                 //TODO: Verify that calls to Wait() on the task do not loop for change and instead rely on Kernel for notification
@@ -448,7 +427,7 @@ namespace RestBus.RabbitMQ.Client
                 {
                     CloseAmqpModel(model);
                 }
-                CleanupMessagingResources(arrival, receivedEvent);
+                CleanupMessagingResources(correlationId, arrival);
 
                 if (ex is HttpRequestException)
                 {
@@ -519,21 +498,17 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        private void CleanupMessagingResources(Action<BasicDeliverEventArgs> arrival, ManualResetEventSlim receivedEvent)
+        private void CleanupMessagingResources(string correlationId, ExpectedResponse expectedResponse)
         {
-            if (arrival != null)
+            if (!String.IsNullOrEmpty(correlationId))
             {
-                try
-                {
-                    //TODO: Investigate if removing/adding delegates is threadsafe.
-                    responseArrivalNotification -= arrival;
-                }
-                catch { }
+                ExpectedResponse unused;
+                expectedResponses.TryRemove(correlationId, out unused);
             }
 
-            if (receivedEvent != null)
+            if (expectedResponse != null && expectedResponse.ReceivedEvent != null)
             {
-                receivedEvent.Dispose();
+                expectedResponse.ReceivedEvent.Dispose();
             }
         }
 
@@ -645,7 +620,7 @@ namespace RestBus.RabbitMQ.Client
                                 consumerSignal.Set();
 
                                 BasicDeliverEventArgs evt;
-
+                                ExpectedResponse expected;
                                 isInConsumerLoop = true;
 
                                 while (true)
@@ -660,50 +635,43 @@ namespace RestBus.RabbitMQ.Client
                                         throw;
                                     }
 
-                                    try
+                                    expected = null;
+                                    if (!String.IsNullOrEmpty(evt.BasicProperties.CorrelationId) && expectedResponses.TryRemove(evt.BasicProperties.CorrelationId, out expected))
                                     {
-
-                                        // TODO: Consider using a concurrent hashtable here, and use the correlation Id as the key to find the  
-                                        // delegate value, and then execute the delegate.
-                                        // The current use of an event works okay when a small number of requests are waiting for responses silmultaneously
-                                        // If the number of requests waiting for responses are in the thousands then things will get slow
-                                        // because all delegates are triggered for each incoming response event.
-
-                                        //NOTE: This means correlation id will be passed into CleanUpMessagingResources to find delegate.
-
-                                        //Work on Step 1 above, followed by Step 2 outlined in the TODO in line 265.
-
-                                        var copy = Interlocked.CompareExchange(ref responseArrivalNotification, null, null);
-                                        if (copy != null)
+                                        try
                                         {
-                                            copy(evt);
+                                            expected.Response = HttpResponsePacket.Deserialize(evt.Body);
                                         }
-                                    }
-                                    catch
-                                    {
-                                        //DO nothing
+                                        catch (Exception ex)
+                                        {
+                                            expected.DeserializationException = ex;
+                                        }
+
+                                        //NOTE: The ManualResetEventSlim.Set() method can be called after the object has been disposed
+                                        //So no worries about the Timeout disposing the object before the response comes in.
+                                        expected.ReceivedEvent.Set();
                                     }
 
                                     //Acknowledge receipt:
+                                    //In ClientBehavior.Automatic mode
                                     //Client acks all received messages, even if it wasn't the expected one or even if it wasn't expecting anything.
                                     //This prevents a situation where crap messages are sent to the client but the good expected message is stuck behind the
                                     //crap ones and isn't delivered because the crap ones in front of the queue aren't acked and crap messages exceed prefetchCount.
 
-                                    //TODO: Consider basic.reject unexpected messages after turning responseArrivalNotification into a hashtable
-                                    //and so can reliably tell if message wan't expected (correlationId).
+                                    //In ClientAckBehavior.ValidResponses mode (and Direct Reply to is not in effect):
+                                    //Client only acks expected messages if they could be deserialized
+                                    //If not, they are rejected.
 
-                                    //TODO: Have Client.AckSettings control this so that there is an option for messages that are acked when received
-                                    //Note that when that is turned on, You can no longer reject crap messages as described above.
-                                    //SO have the rejection feature only work when basicConsume.NoAck is true.
-
-                                    //There will be a ClientAckBehavior ((Immediate)  NoAcks = true is default, and only Ack expected messages (that were properly deserialized), which will only be valid when DisableDirectReplies is on)
-                                    //The latter is only really useful for folks who want to be able to deadletter responses.
-
-                                    //TODO: Make sure only properly deserialized messages are acked.
-
-                                    if ((Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable) && Settings.AckBehavior != ClientAckBehavior.Automatic)
+                                    if ((Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable) && Settings.AckBehavior == ClientAckBehavior.ValidResponses)
                                     {
-                                        channel.BasicAck(evt.DeliveryTag, false);
+                                        if (expected != null && expected.DeserializationException != null)
+                                        {
+                                            channel.BasicAck(evt.DeliveryTag, false);
+                                        }
+                                        else
+                                        {
+                                            channel.BasicReject(evt.DeliveryTag, false);
+                                        }
                                     }
 
                                     //Exit loop if consumer is cancelled.
