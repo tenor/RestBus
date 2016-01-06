@@ -269,15 +269,16 @@ namespace RestBus.RabbitMQ.Client
                         }
                     }
 
-                    //Initialize response arrival object
-                    arrival = new ExpectedResponse();
 
+                    //TODO: Better to just check if cancellationHasbeen requested instead of checking if it's None
                     if (!cancellationToken.Equals(System.Threading.CancellationToken.None))
                     {
                         //TODO: Have cancellationtokens cancel event trigger callbackHandle
                         //In fact turn this whole thing into an extension
                     }
 
+                    //Initialize response arrival object
+                    arrival = new ExpectedResponse();
 
                     //Wait for response arrival event on the ThreadPool:
 
@@ -285,6 +286,8 @@ namespace RestBus.RabbitMQ.Client
 
                     lock (localVariableInitLock)
                     {
+                        //TODO: Have cancellationToken signal WaitHandle so that threadpool can wait.
+
                         RegisteredWaitHandle callbackHandle = null;
                         callbackHandle = ThreadPool.RegisterWaitForSingleObject(arrival.ReceivedEvent.WaitHandle,
                             (state, timedOut) =>
