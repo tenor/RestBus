@@ -298,46 +298,8 @@ namespace RestBus.RabbitMQ.Client
                                 try
                                 {
                                     //TODO: Check Cancelation Token when it's implemented
-                                    if (timedOut)
-                                    {
-                                        //NOTE: This really ought to return an "Operation Timed Out" WebException and not a Cancellation as noted in the following posts
-                                        // http://social.msdn.microsoft.com/Forums/en-US/d8d87789-0ac9-4294-84a0-91c9fa27e353/bug-in-httpclientgetasync-should-throw-webexception-not-taskcanceledexception?forum=netfxnetcom&prof=required
-                                        // http://stackoverflow.com/questions/10547895/how-can-i-tell-when-httpclient-has-timed-out
-                                        // and http://stackoverflow.com/questions/12666922/distinguish-timeout-from-user-cancellation
-                                        //
-                                        // However, for compatibility with the HttpClient, it returns a cancellation
-                                        //
 
-                                        taskSource.SetCanceled();
-                                    }
-                                    else
-                                    {
-                                        if (arrival.DeserializationException == null)
-                                        {
-                                            var res = arrival.Response;
-                                            if (res != null)
-                                            {
-                                                //Add/Update Content-Length Header
-                                                //TODO: Is there any need to add this here if it's subsequently removed/updated by TryGetHttpResponseMessage/HttpPacket.PopulateHeaders? (Is this useful in the exception/other path scenario?
-                                                res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
-                                            }
-                                            else
-                                            {
-                                                //TODO: Log this -- Critical issue (or just assert)
-                                            }
-                                        }
-
-                                        HttpResponseMessage msg;
-                                        if (arrival.DeserializationException == null && TryGetHttpResponseMessage(arrival.Response, out msg))
-                                        {
-                                            msg.RequestMessage = request;
-                                            taskSource.SetResult(msg);
-                                        }
-                                        else
-                                        {
-                                            taskSource.SetException(GetWrappedException("An error occurred while reading the response.", arrival.DeserializationException));
-                                        }
-                                    }
+                                    SetResponseResult(request, timedOut, arrival, taskSource);
 
                                     lock (localVariableInitLock)
                                     {
@@ -947,6 +909,50 @@ namespace RestBus.RabbitMQ.Client
                 catch
                 {
                     //TODO: Log Error
+                }
+            }
+        }
+
+        private static void SetResponseResult(HttpRequestMessage request, bool timedOut, ExpectedResponse arrival, TaskCompletionSource<HttpResponseMessage> taskSource)
+        {
+            if (timedOut)
+            {
+                //NOTE: This really ought to return an "Operation Timed Out" WebException and not a Cancellation as noted in the following posts
+                // http://social.msdn.microsoft.com/Forums/en-US/d8d87789-0ac9-4294-84a0-91c9fa27e353/bug-in-httpclientgetasync-should-throw-webexception-not-taskcanceledexception?forum=netfxnetcom&prof=required
+                // http://stackoverflow.com/questions/10547895/how-can-i-tell-when-httpclient-has-timed-out
+                // and http://stackoverflow.com/questions/12666922/distinguish-timeout-from-user-cancellation
+                //
+                // However, for compatibility with the HttpClient, it returns a cancellation
+                //
+
+                taskSource.SetCanceled();
+            }
+            else
+            {
+                if (arrival.DeserializationException == null)
+                {
+                    var res = arrival.Response;
+                    if (res != null)
+                    {
+                        //Add/Update Content-Length Header
+                        //TODO: Is there any need to add this here if it's subsequently removed/updated by TryGetHttpResponseMessage/HttpPacket.PopulateHeaders? (Is this useful in the exception/other path scenario?
+                        res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
+                    }
+                    else
+                    {
+                        //TODO: Log this -- Critical issue (or just assert)
+                    }
+                }
+
+                HttpResponseMessage msg;
+                if (arrival.DeserializationException == null && TryGetHttpResponseMessage(arrival.Response, out msg))
+                {
+                    msg.RequestMessage = request;
+                    taskSource.SetResult(msg);
+                }
+                else
+                {
+                    taskSource.SetException(GetWrappedException("An error occurred while reading the response.", arrival.DeserializationException));
                 }
             }
         }
