@@ -218,15 +218,7 @@ namespace RestBus.RabbitMQ.Client
                     throw GetWrappedException("Unable to establish a connection.", new ApplicationException("Unable to establish a connection."));
                 }
 
-                //TODO: Check if cancellation token was set before operation even began
-                var taskSource = new TaskCompletionSource<HttpResponseMessage>();
-
-                //NOTE: You're not supposed to share channels across threads but Iin this situation where only one thread can have access to a channel at a time, all's good.
-
-                //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
-                model = pooler.GetModel(ChannelFlags.None);
-
-                RedeclareExchangesAndQueues(model);
+                //Fill BasicProperties
 
                 BasicProperties basicProperties = new BasicProperties();
 
@@ -268,8 +260,51 @@ namespace RestBus.RabbitMQ.Client
                             basicProperties.Expiration = ((int)requestTimeout.TotalMilliseconds).ToString();
                         }
                     }
+                }
+                else if (!messageProperties.Expiration.HasValue && (exchangeConfig.MessageExpires == null || exchangeConfig.MessageExpires(request)))
+                {
+                    //Request has a zero timeout and the message mapper indicates it should expire and messageproperties expiration is not set:
+                    //Set the expiration to zero which means RabbitMQ will only transmit if there is a consumer ready to receive it.
+                    //If there is no ready consumer, RabbitMQ drops the message. See https://www.rabbitmq.com/ttl.html
 
+                    basicProperties.Expiration = "0";
+                }
 
+                //Set expiration if set in message properties
+                if (messageProperties.Expiration.HasValue)
+                {
+                    if (messageProperties.Expiration != System.Threading.Timeout.InfiniteTimeSpan)
+                    {
+                        var expiration = messageProperties.Expiration.Value.Duration();
+                        if (expiration.TotalMilliseconds > Int32.MaxValue)
+                        {
+                            basicProperties.Expiration = Int32.MaxValue.ToString();
+                        }
+                        else
+                        {
+                            basicProperties.Expiration = ((int)expiration.TotalMilliseconds).ToString();
+                        }
+                    }
+                    else
+                    {
+                        //Infinite Timespan indicates that message should never expire
+                        basicProperties.ClearExpiration();
+                    }
+                }
+
+                //TODO: Check if cancellation token was set before operation even began
+                var taskSource = new TaskCompletionSource<HttpResponseMessage>();
+
+                //NOTE: You're not supposed to share channels across threads but Iin this situation where only one thread can have access to a channel at a time, all's good.
+
+                //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
+                model = pooler.GetModel(ChannelFlags.None);
+
+                RedeclareExchangesAndQueues(model);
+
+                //Start waiting for response if a request timeout is set.
+                if (requestTimeout != TimeSpan.Zero)
+                {
                     //TODO: Better to just check if cancellationHasbeen requested instead of checking if it's None
                     if (!cancellationToken.Equals(System.Threading.CancellationToken.None))
                     {
@@ -277,9 +312,9 @@ namespace RestBus.RabbitMQ.Client
                         //In fact turn this whole thing into an extension
                     }
 
-                    //Initialize response arrival object
+                    //Initialize response arrival object and add to expected responses dictionary
                     arrival = new ExpectedResponse();
-
+                    expectedResponses[correlationId] = arrival;
 
                     //Spawning a new task to wait on the MRESlim is slower than using ThreadPool.RegisterWaitForSingleObject
                     //
@@ -363,38 +398,8 @@ namespace RestBus.RabbitMQ.Client
                     }
 #endif
 
-                    expectedResponses[correlationId] = arrival;
-                }
-                else if (!messageProperties.Expiration.HasValue && (exchangeConfig.MessageExpires == null || exchangeConfig.MessageExpires(request)))
-                {
-                    //Request has a zero timeout and the message mapper indicates it should expire and messageproperties expiration is not set:
-                    //Set the expiration to zero which means RabbitMQ will only transmit if there is a consumer ready to receive it.
-                    //If there is no ready consumer, RabbitMQ drops the message. See https://www.rabbitmq.com/ttl.html
-
-                    basicProperties.Expiration = "0";
                 }
 
-                //Set expiration if set in message properties
-                if (messageProperties.Expiration.HasValue)
-                {
-                    if (messageProperties.Expiration != System.Threading.Timeout.InfiniteTimeSpan)
-                    {
-                        var expiration = messageProperties.Expiration.Value.Duration();
-                        if (expiration.TotalMilliseconds > Int32.MaxValue)
-                        {
-                            basicProperties.Expiration = Int32.MaxValue.ToString();
-                        }
-                        else
-                        {
-                            basicProperties.Expiration = ((int)expiration.TotalMilliseconds).ToString();
-                        }
-                    }
-                    else
-                    {
-                        //Infinite Timespan indicates that message should never expire
-                        basicProperties.ClearExpiration();
-                    }
-                }
 
                 //TODO: Implement routing to a different exchangeKind via substituting exchangeName
                 //Send message
@@ -407,7 +412,7 @@ namespace RestBus.RabbitMQ.Client
                 CloseAmqpModel(model);
                 modelClosed = true;
 
-
+                //Exit with OK result if no request timeout was set.
                 if (requestTimeout == TimeSpan.Zero)
                 {
                     //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before replying OK.
