@@ -190,6 +190,8 @@ namespace RestBus.RabbitMQ.Client
 
             try
             {
+                #region Ensure CallbackQueue is started / Connected to server
+
                 TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
                 if (requestTimeout != TimeSpan.Zero) seenRequestExpectingResponse = true;
 
@@ -218,6 +220,9 @@ namespace RestBus.RabbitMQ.Client
                     throw GetWrappedException("Unable to establish a connection.", new ApplicationException("Unable to establish a connection."));
                 }
 
+                #endregion
+
+                #region Populate BasicProperties
                 //Fill BasicProperties
 
                 BasicProperties basicProperties = new BasicProperties();
@@ -292,9 +297,9 @@ namespace RestBus.RabbitMQ.Client
                     }
                 }
 
-                //TODO: Check if cancellation token was set before operation even began
-                var taskSource = new TaskCompletionSource<HttpResponseMessage>();
+                #endregion
 
+                #region Get Ready to Send Message
                 //NOTE: You're not supposed to share channels across threads but Iin this situation where only one thread can have access to a channel at a time, all's good.
 
                 //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
@@ -302,6 +307,12 @@ namespace RestBus.RabbitMQ.Client
 
                 RedeclareExchangesAndQueues(model);
 
+                //TODO: Check if cancellation token was set before operation even began
+                var taskSource = new TaskCompletionSource<HttpResponseMessage>();
+
+                #endregion
+
+                #region Start waiting for response
                 //Start waiting for response if a request timeout is set.
                 if (requestTimeout != TimeSpan.Zero)
                 {
@@ -400,7 +411,9 @@ namespace RestBus.RabbitMQ.Client
 
                 }
 
+                #endregion
 
+                #region Send Message
                 //TODO: Implement routing to a different exchangeKind via substituting exchangeName
                 //Send message
                 model.Channel.BasicPublish(exchangeName,
@@ -412,6 +425,9 @@ namespace RestBus.RabbitMQ.Client
                 CloseAmqpModel(model);
                 modelClosed = true;
 
+                #endregion
+
+                #region Cleanup if not expecting response
                 //Exit with OK result if no request timeout was set.
                 if (requestTimeout == TimeSpan.Zero)
                 {
@@ -423,6 +439,8 @@ namespace RestBus.RabbitMQ.Client
 
                     CleanupMessagingResources(correlationId, arrival);
                 }
+
+                #endregion
 
                 //TODO: Verify that calls to Wait() on the task do not loop for change and instead rely on Kernel for notification
 
