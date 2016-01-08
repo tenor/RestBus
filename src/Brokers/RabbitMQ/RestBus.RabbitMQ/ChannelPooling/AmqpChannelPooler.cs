@@ -60,7 +60,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
                         if (HasModelExpired(tick, model))
                         {
 
-                            DisposeModel(model); // dispose model
+                            DestroyModel(model); // dispose model for good
                             retry = true;
                         }
                     }
@@ -94,9 +94,9 @@ namespace RestBus.RabbitMQ.ChannelPooling
             //1. Pooler is disposed
             //2. Channel is consumer related
             //3. Channel has expired
-            if (_disposed || modelContainer.Flags == ChannelFlags.Consumer || HasModelExpired(Environment.TickCount, modelContainer))
+            if (_disposed || modelContainer.Discard || HasModelExpired(Environment.TickCount, modelContainer))
             {
-                DisposeModel(modelContainer);
+                DestroyModel(modelContainer);
                 return;
             }
 
@@ -158,7 +158,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
                 queue = kv.Value;
                 while (queue.TryDequeue(out model))
                 {
-                    DisposeModel(model);
+                    DestroyModel(model);
                 }
             }
         }
@@ -174,13 +174,19 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
         private AmqpModelContainer CreateModel(ChannelFlags flags)
         {
-            return new AmqpModelContainer(conn.CreateModel(), flags, this);
+            return new AmqpModelContainer(conn.CreateModel(), flags, this) { Discard = flags == ChannelFlags.Consumer };
         }
 
-        private static void DisposeModel(AmqpModelContainer modelContainer)
+        private static void DestroyModel(AmqpModelContainer modelContainer)
         {
             if (modelContainer != null && modelContainer.Channel != null)
             {
+                try
+                {
+                    modelContainer.Destroy();
+                }
+                catch { }
+
                 try
                 {
                     modelContainer.Channel.Dispose();

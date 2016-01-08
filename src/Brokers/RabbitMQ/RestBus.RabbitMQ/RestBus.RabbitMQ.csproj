@@ -50,8 +50,11 @@
     <Compile Include="BasicMessageMapper.cs" />
     <Compile Include="ChannelPooling\AmqpModelContainer.cs" />
     <Compile Include="ChannelPooling\ChannelFlags.cs" />
+    <Compile Include="ChannelPooling\RPCModelContainer.cs" />
     <Compile Include="Client\ClientAckBehavior.cs" />
     <Compile Include="Client\ClientSettings.cs" />
+    <Compile Include="Client\RPCStrategyHelpers.cs" />
+    <Compile Include="Client\DirectReplyToRPCStrategy.cs" />
     <Compile Include="Client\ExpectedResponse.cs" />
     <Compile Include="Client\RestBusClient.cs" />
     <Compile Include="Consumer\ConcurrentQueueingConsumer.cs" />

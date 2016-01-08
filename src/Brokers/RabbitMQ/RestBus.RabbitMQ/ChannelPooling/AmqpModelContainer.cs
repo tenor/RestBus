@@ -1,9 +1,5 @@
 ﻿using RabbitMQ.Client;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.ChannelPooling
 {
@@ -29,5 +25,14 @@ namespace RestBus.RabbitMQ.ChannelPooling
         internal int Created { get; private set; }
         internal bool IsDirectReplyToCapable { get { return Source.IsDirectReplyToCapable; } }
         private AmqpChannelPooler Source { get; set; }
+
+        /// <summary>
+        /// Set to true if channel should NOT be returned to the pool.
+        /// </summary>
+        internal bool Discard { get; set; }
+        internal virtual void Destroy()
+        {
+
+        }
     }
 }
