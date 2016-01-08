@@ -1,6 +1,8 @@
-﻿using RabbitMQ.Client.Events;
+﻿using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using RestBus.Common;
 using RestBus.Common.Http;
+using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.Net.Http;
 using System.Threading;
@@ -11,6 +13,7 @@ namespace RestBus.RabbitMQ.Client
     internal class RPCStrategyHelpers
     {
         internal const string DIRECT_REPLY_TO_QUEUENAME_ARG = "amq.rabbitmq.reply-to";
+        internal const int HEART_BEAT = 30;
 
         internal static void WaitForResponse (HttpRequestMessage request, ExpectedResponse arrival, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage> taskSource, Action cleanup)
         {
@@ -111,6 +114,75 @@ namespace RestBus.RabbitMQ.Client
             //NOTE: The ManualResetEventSlim.Set() method can be called after the object has been disposed
             //So no worries about the Timeout disposing the object before the response comes in.
             expected.ReceivedEvent.Set();
+        }
+
+        internal static void CreateNewConnectionAndChannelPool(ConnectionFactory connectionFactory, ref IConnection clientConn, ref AmqpChannelPooler clientPool, out IConnection newConn, out AmqpChannelPooler newPool)
+        {
+            //NOTE: This is the only place where connections are created in the client
+            //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
+            newConn = connectionFactory.CreateConnection();
+
+            //Swap out client connection and pooler, so other threads can use the new objects:
+
+            //First Swap out old pool with new pool
+            newPool = new AmqpChannelPooler(newConn);
+            var oldpool = Interlocked.Exchange(ref clientPool, newPool);
+
+            //then swap out old connection with new one
+            var oldconn = Interlocked.Exchange(ref clientConn, newConn);
+
+            //Dispose old pool
+            if (oldpool != null)
+            {
+                oldpool.Dispose();
+            }
+
+            //Dispose old connection
+            DisposeConnection(oldconn);
+        }
+
+        internal static void ConnectToServer(object syncObj, ConnectionFactory connectionFactory, ref IConnection clientConn, ref AmqpChannelPooler clientPool)
+        {
+            if (clientConn == null || !clientConn.IsOpen)
+            {
+                //TODO: Can double-checked locking here be simplified?
+
+                lock (syncObj)
+                {
+                    if (clientConn == null || !clientConn.IsOpen)
+                    {
+                        IConnection newConn;
+                        AmqpChannelPooler newPool;
+                        CreateNewConnectionAndChannelPool(connectionFactory, ref clientConn, ref clientPool, out newConn, out newPool);
+                    }
+                }
+            }
+        }
+
+
+        internal static void DisposeConnection(IConnection connection)
+        {
+            if (connection != null)
+            {
+
+                try
+                {
+                    connection.Close();
+                }
+                catch
+                {
+                    //TODO: Log Error
+                }
+
+                try
+                {
+                    connection.Dispose();
+                }
+                catch
+                {
+                    //TODO: Log Error
+                }
+            }
         }
 
         private static void SetResponseResult(HttpRequestMessage request, bool timedOut, ExpectedResponse arrival, TaskCompletionSource<HttpResponseMessage> taskSource)

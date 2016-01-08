@@ -1,56 +1,34 @@
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Framing;
 using RestBus.Client;
 using RestBus.Common;
 using RestBus.Common.Amqp;
 using RestBus.Common.Http;
 using RestBus.RabbitMQ.ChannelPooling;
-using RestBus.RabbitMQ.Consumer;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
 {
-
     public class RestBusClient : MessageInvokerBase
     {
         static SequenceGenerator correlationIdGen = SequenceGenerator.FromUtcNow();
 
         readonly IMessageMapper messageMapper;
         readonly ExchangeConfiguration exchangeConfig;
-        readonly string clientId;
         readonly string exchangeName;
-        readonly string indirectReplyToQueueName;
-        volatile string callbackQueueName;
-        readonly ConnectionFactory connectionFactory;
-        volatile ConcurrentQueueingConsumer callbackConsumer;
-        readonly ManualResetEventSlim responseQueued = new ManualResetEventSlim();
-        IConnection conn;
-        volatile AmqpChannelPooler _clientPool;
-        volatile bool isInConsumerLoop;
-        volatile bool consumerCancelled;
-        volatile bool reconnectToServer;
-        volatile bool seenRequestExpectingResponse;
-        readonly ConcurrentDictionary<string, ExpectedResponse> expectedResponses;
+        readonly IRPCStrategy rpcStrategy;
 
-        readonly object reconnectionSync = new object();
-        object exchangeDeclareSync = new object();
+        readonly object exchangeDeclareSync = new object();
         volatile int lastExchangeDeclareTickCount = 0;
         volatile bool disposed = false;
-        readonly CancellationTokenSource disposedCancellationSource = new CancellationTokenSource();
 
         volatile bool hasKickStarted = false;
         private Uri baseAddress;
         private HttpRequestHeaders defaultRequestHeaders;
         private TimeSpan timeout;
 
-        internal const int HEART_BEAT = 30;
         static readonly RabbitMQMessagingProperties _defaultMessagingProperties = new RabbitMQMessagingProperties();
 
         /// <summary>Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.</summary>
@@ -66,21 +44,14 @@ namespace RestBus.RabbitMQ.Client
             this.exchangeConfig = messageMapper.GetExchangeConfig();
             if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
 
-            this.clientId = AmqpUtils.GetNewExclusiveQueueId();
             //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, ExchangeKind.Direct);
-            this.indirectReplyToQueueName = AmqpUtils.GetCallbackQueueName(exchangeConfig, clientId);
-
-            //Map request to RabbitMQ Host and exchange, 
-            this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = exchangeConfig.ServerUris[0].Uri;
-            connectionFactory.RequestedHeartbeat = HEART_BEAT;
 
             //Set ClientSettings
             this.Settings = new ClientSettings(this); // Always have a default version if it wasn't passed in.
 
-            //Initialize expectedResponses
-            expectedResponses = new ConcurrentDictionary<string, ExpectedResponse>();
+            rpcStrategy = new CallbackQueueRPCStrategy(this.Settings, exchangeConfig);
+
         }
 
         /// <summary>Gets or sets the base address of Uniform Resource Identifier (URI) of the Internet resource used when sending requests.</summary>
@@ -192,32 +163,8 @@ namespace RestBus.RabbitMQ.Client
                 #region Ensure CallbackQueue is started / Connected to server
 
                 TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
-                if (requestTimeout != TimeSpan.Zero) seenRequestExpectingResponse = true;
 
-                if (seenRequestExpectingResponse)
-                {
-                    //This client has seen a request expecting a response so
-                    //Start Callback consumer if it hasn't started
-                    StartCallbackQueueConsumer();
-                }
-                else
-                {
-                    //Client has never seen any request expecting a response
-                    //so just try to connect if not already connected
-                    ConnectToServer();
-                }
-
-                var pooler = _clientPool; //Henceforth, use pooler since _clientPool may change and we want to work with the original pooler
-
-                //Test if conn or pooler is null, then leave
-                if (conn == null || pooler == null)
-                {
-                    // This means a connection could not be created most likely because the server was Unreachable.
-                    // This shouldn't happen because StartCallbackQueueConsumer should have thrown the exception
-
-                    //TODO: The inner exception here is a good candidate for a RestBusException
-                    throw GetWrappedException("Unable to establish a connection.", new ApplicationException("Unable to establish a connection."));
-                }
+                rpcStrategy.EnsureConnected(requestTimeout != TimeSpan.Zero);
 
                 #endregion
 
@@ -244,9 +191,6 @@ namespace RestBus.RabbitMQ.Client
 
                 if (requestTimeout != TimeSpan.Zero)
                 {
-                    //Set Reply to queue
-                    basicProperties.ReplyTo = callbackQueueName;
-
                     //Set CorrelationId
                     correlationId = correlationIdGen.GetNextId();
                     basicProperties.CorrelationId = correlationId;
@@ -302,7 +246,7 @@ namespace RestBus.RabbitMQ.Client
                 //NOTE: You're not supposed to share channels across threads but Iin this situation where only one thread can have access to a channel at a time, all's good.
 
                 //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
-                model = pooler.GetModel(ChannelFlags.None);
+                model = rpcStrategy.GetModel();
 
                 RedeclareExchangesAndQueues(model);
 
@@ -322,11 +266,7 @@ namespace RestBus.RabbitMQ.Client
                         //In fact turn this whole thing into an extension
                     }
 
-                    //Initialize response arrival object and add to expected responses dictionary
-                    arrival = new ExpectedResponse();
-                    expectedResponses[correlationId] = arrival;
-
-                    RPCStrategyHelpers.WaitForResponse(request, arrival, requestTimeout, taskSource, () => CleanupMessagingResources(correlationId, arrival));
+                    rpcStrategy.PrepareForResponse(correlationId, arrival, basicProperties, request, requestTimeout, taskSource);
 
                 }
 
@@ -356,12 +296,10 @@ namespace RestBus.RabbitMQ.Client
                     //TODO: Have new ByteArrayContent be a static object.
                     taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[0]) });
 
-                    CleanupMessagingResources(correlationId, arrival);
+                    rpcStrategy.CleanupMessagingResources(correlationId, arrival);
                 }
 
                 #endregion
-
-                //TODO: Verify that calls to Wait() on the task do not loop for change and instead rely on Kernel for notification
 
                 return taskSource.Task;
 
@@ -374,7 +312,7 @@ namespace RestBus.RabbitMQ.Client
                 {
                     CloseAmqpModel(model);
                 }
-                CleanupMessagingResources(correlationId, arrival);
+                rpcStrategy.CleanupMessagingResources(correlationId, arrival);
 
                 if (ex is HttpRequestException)
                 {
@@ -395,19 +333,10 @@ namespace RestBus.RabbitMQ.Client
 
         protected override void Dispose(bool disposing)
         {
-            //TODO: Confirm that this does in fact kill all background threads
-
             disposed = true;
-            disposedCancellationSource.Cancel();
-
-            if (_clientPool != null) _clientPool.Dispose();
-
-            DisposeConnection(conn); // Dispose client connection
+            rpcStrategy.Dispose();
 
             base.Dispose(disposing);
-            responseQueued.Dispose();
-            disposedCancellationSource.Dispose();
-
         }
 
         private void RedeclareExchangesAndQueues(AmqpModelContainer model)
@@ -445,20 +374,6 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        private void CleanupMessagingResources(string correlationId, ExpectedResponse expectedResponse)
-        {
-            if (!String.IsNullOrEmpty(correlationId))
-            {
-                ExpectedResponse unused;
-                expectedResponses.TryRemove(correlationId, out unused);
-            }
-
-            if (expectedResponse != null && expectedResponse.ReceivedEvent != null)
-            {
-                expectedResponse.ReceivedEvent.Dispose();
-            }
-        }
-
         private TimeSpan GetRequestTimeout(RequestOptions options)
         {
             TimeSpan timeoutVal = this.Timeout;
@@ -471,266 +386,7 @@ namespace RestBus.RabbitMQ.Client
             return timeoutVal.Duration();
         }
 
-        // TODO: Consider introducing RPC channels into the channel pool system.
-        // RPC Channels will have associated Consumers. If no consumer is used then a new one is created just before the channel is used.
-        // The RPC Channel will publish and consume messages on it's own queue.
-        // It elimnates the DiscoverDirectReplyToQueueName method here which is sort of a hack.
-        // It may also eliminate the StartCallbackQueueConsumer for the most part.
-        // There may be some speed improvements since each consuer can receive their callbacks at the same time unlike in the queued system.
-        //
-        // There are two ways this can be done:
-        // 1. Have a shared queue and have a dedicated thread that polls the queue and calls related events  in the dictionary (quite similar to the status quo)
-        // 2. Implement a new event based Consumer (or use the one already in the Rabbit code base), the event handler will check if a flag has been set in the channel that says
-        // owner is expecting a response. If that flag is set, then a ManualResetEventSlim is set. and the I/O completion port exits, if that flag was not set then the I/O completion port just exits.
-        // The ManualResetEventSlim wakes up a thread on the thread pool to handle the rest of the processing.
-        // The latter methods seems more beneficial since you'll no longer need a dedicated thread polling the worker pool, you'd have to find a way to handle disconnections and creating new pools
-        // since StartCallbackQueueConsumer handles that now.
-        //
-        // It may be prudent for the pool to check Model.IsOpen before handing over an RPC channel to a caller.
-        // 
-        // The current StartCallbackQueueConsumer will then be refactored into an ICallback/IResponse/IReplyStrategy interface
-        // Users who don't want the direct reply-to feature (or who use older version of RabbitMQ) will use the old StartCallbackQueueConsumer (which will be stripped off Direct Reply-To code paths)
-        // Users who opt into Direct Reply To (and have v3.4.0 or later) will use the new IStrategy.
-        // strategy interface.
-        //
-        // NOTE: There'll still be "Consumer" channels used by the Subscriber and the old strategy, maybe change the name to "Server/Servlet" channels or something.
-        private void StartCallbackQueueConsumer()
-        {
-            //TODO: Double-checked locking -- make this better
-            //TODO: Consider moving the conn related checks into a pooler method
-            if (callbackConsumer == null || conn == null || !isInConsumerLoop || !conn.IsOpen)
-            {
-                //NOTE: Same lock is used in StartCallbackConsumer
-                lock (reconnectionSync)
-                {
-                    if (!(callbackConsumer == null || conn == null || !isInConsumerLoop || !conn.IsOpen)) return;
 
-                    //This method waits on this signal to make sure the callbackprocessor thread either started successfully or failed.
-                    ManualResetEventSlim consumerSignal = new ManualResetEventSlim(false);
-                    Exception consumerSignalException = null;
-
-                    Thread callBackProcessor = new Thread(p =>
-                    {
-                        IConnection callbackConn = null;
-                        AmqpChannelPooler pool = null;
-                        ConcurrentQueueingConsumer consumer = null;
-                        try
-                        {
-                            //Do not create a new connection or pool if there is a good one already existing (possibly created by ConnectToServer()
-                            //unless consumer explicitly signalled to reconnect to server
-                            if (conn == null || !conn.IsOpen || reconnectToServer)
-                            {
-                                CreateNewConnectionAndChannelPool(out callbackConn, out pool);
-                            }
-
-                            //Start consumer
-                            AmqpModelContainer channelContainer = null;
-                            try
-                            {
-                                channelContainer = pool.GetModel(ChannelFlags.Consumer);
-                                IModel channel = channelContainer.Channel;
-
-                                if (Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable)
-                                {
-                                    DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
-                                }
-
-                                consumer = new ConcurrentQueueingConsumer(channel, responseQueued);
-
-                                //Set consumerCancelled to true on consumer cancellation
-                                consumerCancelled = false;
-                                consumer.ConsumerCancelled += (s, e) => { consumerCancelled = true; };
-
-                                channel.BasicQos(0, 50, false);
-                                //Start consumer:
-
-                                string replyToQueueName;
-
-                                if (Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable)
-                                {
-                                    channel.BasicConsume(indirectReplyToQueueName, Settings.AckBehavior == ClientAckBehavior.Automatic, consumer);
-                                    replyToQueueName = indirectReplyToQueueName;
-                                }
-                                else
-                                {
-                                    channel.BasicConsume(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
-
-                                    //Discover direct reply to queue name
-                                    replyToQueueName = DiscoverDirectReplyToQueueName(channel, indirectReplyToQueueName);
-                                }
-
-                                //Set callbackConsumer to consumer
-                                callbackQueueName = replyToQueueName;
-                                callbackConsumer = consumer;
-
-                                //Notify outer thread that channel has started consumption
-                                consumerSignal.Set();
-
-                                BasicDeliverEventArgs evt;
-                                ExpectedResponse expected;
-                                isInConsumerLoop = true;
-
-                                while (true)
-                                {
-                                    try
-                                    {
-                                        evt = DequeueCallbackQueue();
-                                    }
-                                    catch
-                                    {
-                                        //TODO: Log this exception except it's ObjectDisposedException
-                                        throw;
-                                    }
-
-                                    expected = null;
-                                    if (!String.IsNullOrEmpty(evt.BasicProperties.CorrelationId) && expectedResponses.TryRemove(evt.BasicProperties.CorrelationId, out expected))
-                                    {
-                                        RPCStrategyHelpers.ReadAndSignalDelivery(expected, evt);
-                                    }
-
-                                    //Acknowledge receipt:
-                                    //In ClientBehavior.Automatic mode
-                                    //Client acks all received messages, even if it wasn't the expected one or even if it wasn't expecting anything.
-                                    //This prevents a situation where crap messages are sent to the client but the good expected message is stuck behind the
-                                    //crap ones and isn't delivered because the crap ones in front of the queue aren't acked and crap messages exceed prefetchCount.
-
-                                    //In ClientAckBehavior.ValidResponses mode (and Direct Reply to is not in effect):
-                                    //Client only acks expected messages if they could be deserialized
-                                    //If not, they are rejected.
-
-                                    if ((Settings.DisableDirectReplies || !channelContainer.IsDirectReplyToCapable) && Settings.AckBehavior == ClientAckBehavior.ValidResponses)
-                                    {
-                                        if (expected != null && expected.DeserializationException != null)
-                                        {
-                                            channel.BasicAck(evt.DeliveryTag, false);
-                                        }
-                                        else
-                                        {
-                                            channel.BasicReject(evt.DeliveryTag, false);
-                                        }
-                                    }
-
-                                    //Exit loop if consumer is cancelled.
-                                    if (consumerCancelled)
-                                    {
-                                        break;
-                                    }
-                                }
-
-                            }
-                            finally
-                            {
-                                isInConsumerLoop = false;
-                                reconnectToServer = true;
-
-                                if (channelContainer != null)
-                                {
-                                    if (consumer != null && !consumerCancelled)
-                                    {
-                                        try
-                                        {
-                                            channelContainer.Channel.BasicCancel(consumer.ConsumerTag);
-                                        }
-                                        catch { }
-                                    }
-
-                                    channelContainer.Close();
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            //TODO: Log error (Except it's object disposed exception)
-
-                            //Set Exception object which will be throw by signal waiter
-                            consumerSignalException = ex;
-
-                            //Notify outer thread to move on, in case it's still waiting
-                            try
-                            {
-                                consumerSignal.Set();
-                            }
-                            catch { }
-
-
-                        }
-                        finally
-                        {
-                            if (pool != null)
-                            {
-                                pool.Dispose();
-                            }
-                            DisposeConnection(callbackConn);
-                        }
-
-                    });
-
-                    //Start Thread
-                    callBackProcessor.Name = "RestBus RabbitMQ Client Callback Queue Consumer";
-                    callBackProcessor.IsBackground = true;
-                    callBackProcessor.Start();
-
-                    //Wait for Thread to start consuming messages
-                    consumerSignal.Wait();
-                    consumerSignal.Dispose();
-
-                    //Examine exception if it were set and rethrow it
-                    Thread.MemoryBarrier(); //Ensure we have the non-cached version of consumerSignalException
-                    if (consumerSignalException != null)
-                    {
-                        throw consumerSignalException;
-                    }
-
-                    //No more code from this point in this method
-
-                }
-            }
-
-        }
-
-        private void ConnectToServer()
-        {
-            if (conn == null || !conn.IsOpen)
-            {
-                //TODO: Can double-checked locking here be simplified?
-
-                //NOTE: Same lock is used in StartCallbackConsumer
-                lock(reconnectionSync)
-                {
-                    if (conn == null || !conn.IsOpen)
-                    {
-                        IConnection newConn;
-                        AmqpChannelPooler pool;
-                        CreateNewConnectionAndChannelPool(out newConn, out pool);
-                    }
-                }
-            }
-        }
-
-        private void CreateNewConnectionAndChannelPool(out IConnection newConn, out AmqpChannelPooler pool)
-        {
-            //NOTE: This is the only place where connections are created in the client
-            //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
-            newConn = connectionFactory.CreateConnection();
-
-            //Swap out client connection and pooler, so other threads can use the new objects:
-
-            //First Swap out old pool with new pool
-            pool = new AmqpChannelPooler(newConn);
-            var oldpool = Interlocked.Exchange(ref _clientPool, pool);
-
-            //then swap out old connection with new one
-            var oldconn = Interlocked.Exchange(ref conn, newConn);
-
-            //Dispose old pool
-            if (oldpool != null)
-            {
-                oldpool.Dispose();
-            }
-
-            //Dispose old connection
-            DisposeConnection(oldconn);
-        }
 
         private void PrepareMessage(HttpRequestMessage request)
         {
@@ -761,128 +417,11 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
-        private BasicDeliverEventArgs DequeueCallbackQueue()
-        {
-            while (true)
-            {
-                if (disposed) throw new ObjectDisposedException("Client has been disposed");
-
-                BasicDeliverEventArgs item;
-                if (callbackConsumer.TryInstantDequeue(out item))
-                {
-                    return item;
-                }
-
-                responseQueued.Wait(disposedCancellationSource.Token);
-                responseQueued.Reset();
-            }
-        }
-
         internal static HttpRequestException GetWrappedException(string message, Exception innerException)
         {
             return new HttpRequestException(message, innerException);
         }
 
-        private static void DeclareIndirectReplyToQueue(IModel channel, string queueName)
-        {
-            //The queue is set to be auto deleted once the last consumer stops using it.
-            //However, RabbitMQ will not delete the queue if no consumer ever got to use it.
-            //Passing x-expires in solves that: It tells RabbitMQ to delete the queue, if no one uses it within the specified time.
-
-            var callbackQueueArgs = new Dictionary<string, object>();
-            callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
-
-            //TODO: AckBehavior is applied here.
-
-            //Declare call back queue
-            channel.QueueDeclare(queueName, false, false, true, callbackQueueArgs);
-        }
-
-        /// <summary>
-        /// Discovers the Direct reply-to queue name ( https://www.rabbitmq.com/direct-reply-to.html ) by messaging itself.
-        /// </summary>
-        private static string DiscoverDirectReplyToQueueName(IModel channel, string indirectReplyToQueueName)
-        {
-            DeclareIndirectReplyToQueue(channel, indirectReplyToQueueName);
-
-            var receiver = new ConcurrentQueueingConsumer(channel);
-            var receiverTag = channel.BasicConsume(indirectReplyToQueueName, true, receiver);
-
-            channel.BasicPublish(String.Empty, indirectReplyToQueueName, true, new BasicProperties { ReplyTo =  RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG }, new byte[0]);
-
-            BasicDeliverEventArgs delivery;
-            using (ManualResetEventSlim messageReturned = new ManualResetEventSlim())
-            {
-                EventHandler<BasicReturnEventArgs> returnHandler = null;
-                Interlocked.Exchange(ref returnHandler, (a, e) => { messageReturned.Set(); try { receiver.Model.BasicReturn -= returnHandler; } catch { } });
-                receiver.Model.BasicReturn += returnHandler;
-
-                System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
-                watch.Start();
-                while (!receiver.TryInstantDequeue(out delivery))
-                {
-                    Thread.Sleep(1);
-                    if (watch.Elapsed > TimeSpan.FromSeconds(10) || messageReturned.IsSet)
-                    {
-                        break;
-                    }
-                }
-                watch.Stop();
-
-                if (!messageReturned.IsSet)
-                {
-                    try
-                    {
-                        receiver.Model.BasicReturn -= returnHandler;
-                    }
-                    catch { }
-                }
-
-                try
-                {
-                    channel.BasicCancel(receiverTag);
-                }
-                catch { }
-            }
-
-            if (delivery == null)
-            {
-                throw new InvalidOperationException("Unable to determine direct reply-to queue name.");
-            }
-
-            var result = delivery.BasicProperties.ReplyTo;
-            if (result == null || result == RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG || !result.StartsWith(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG))
-            {
-                throw new InvalidOperationException("Discovered direct reply-to queue name (" + (result ?? "null") + ") was not in expected format.");
-            }
-
-            return result;
-        }
-
-        private static void DisposeConnection(IConnection connection)
-        {
-            if (connection != null)
-            {
-
-                try
-                {
-                    connection.Close();
-                }
-                catch
-                {
-                    //TODO: Log Error
-                }
-
-                try
-                {
-                    connection.Dispose();
-                }
-                catch
-                {
-                    //TODO: Log Error
-                }
-            }
-        }
 
         private static void SetResponseResult(HttpRequestMessage request, bool timedOut, ExpectedResponse arrival, TaskCompletionSource<HttpResponseMessage> taskSource)
         {
