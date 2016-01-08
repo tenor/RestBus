@@ -51,7 +51,6 @@ namespace RestBus.RabbitMQ.Client
         private TimeSpan timeout;
 
         internal const int HEART_BEAT = 30;
-        const string DIRECT_REPLY_TO_QUEUENAME_ARG = "amq.rabbitmq.reply-to";
         static readonly RabbitMQMessagingProperties _defaultMessagingProperties = new RabbitMQMessagingProperties();
 
         /// <summary>Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.</summary>
@@ -554,7 +553,7 @@ namespace RestBus.RabbitMQ.Client
                                 }
                                 else
                                 {
-                                    channel.BasicConsume(DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
+                                    channel.BasicConsume(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
 
                                     //Discover direct reply to queue name
                                     replyToQueueName = DiscoverDirectReplyToQueueName(channel, indirectReplyToQueueName);
@@ -586,18 +585,7 @@ namespace RestBus.RabbitMQ.Client
                                     expected = null;
                                     if (!String.IsNullOrEmpty(evt.BasicProperties.CorrelationId) && expectedResponses.TryRemove(evt.BasicProperties.CorrelationId, out expected))
                                     {
-                                        try
-                                        {
-                                            expected.Response = HttpResponsePacket.Deserialize(evt.Body);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            expected.DeserializationException = ex;
-                                        }
-
-                                        //NOTE: The ManualResetEventSlim.Set() method can be called after the object has been disposed
-                                        //So no worries about the Timeout disposing the object before the response comes in.
-                                        expected.ReceivedEvent.Set();
+                                        RPCStrategyHelpers.ReadAndSignalDelivery(expected, evt);
                                     }
 
                                     //Acknowledge receipt:
@@ -820,7 +808,7 @@ namespace RestBus.RabbitMQ.Client
             var receiver = new ConcurrentQueueingConsumer(channel);
             var receiverTag = channel.BasicConsume(indirectReplyToQueueName, true, receiver);
 
-            channel.BasicPublish(String.Empty, indirectReplyToQueueName, true, new BasicProperties { ReplyTo = DIRECT_REPLY_TO_QUEUENAME_ARG }, new byte[0]);
+            channel.BasicPublish(String.Empty, indirectReplyToQueueName, true, new BasicProperties { ReplyTo =  RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG }, new byte[0]);
 
             BasicDeliverEventArgs delivery;
             using (ManualResetEventSlim messageReturned = new ManualResetEventSlim())
@@ -863,7 +851,7 @@ namespace RestBus.RabbitMQ.Client
             }
 
             var result = delivery.BasicProperties.ReplyTo;
-            if (result == null || result == DIRECT_REPLY_TO_QUEUENAME_ARG || !result.StartsWith(DIRECT_REPLY_TO_QUEUENAME_ARG))
+            if (result == null || result == RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG || !result.StartsWith(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG))
             {
                 throw new InvalidOperationException("Discovered direct reply-to queue name (" + (result ?? "null") + ") was not in expected format.");
             }

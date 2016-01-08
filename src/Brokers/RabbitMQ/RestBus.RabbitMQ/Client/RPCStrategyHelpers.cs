@@ -1,10 +1,8 @@
-﻿using RestBus.Common;
+﻿using RabbitMQ.Client.Events;
+using RestBus.Common;
 using RestBus.Common.Http;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,7 +10,9 @@ namespace RestBus.RabbitMQ.Client
 {
     internal class RPCStrategyHelpers
     {
-        internal static void WaitForResponse(HttpRequestMessage request, ExpectedResponse arrival, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage> taskSource, Action cleanup)
+        internal const string DIRECT_REPLY_TO_QUEUENAME_ARG = "amq.rabbitmq.reply-to";
+
+        internal static void WaitForResponse (HttpRequestMessage request, ExpectedResponse arrival, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage> taskSource, Action cleanup)
         {
             //Spawning a new task to wait on the MRESlim is slower than using ThreadPool.RegisterWaitForSingleObject
             //
@@ -95,6 +95,22 @@ namespace RestBus.RabbitMQ.Client
 
             }
 #endif
+        }
+
+        internal static void ReadAndSignalDelivery (ExpectedResponse expected, BasicDeliverEventArgs evt)
+        {
+            try
+            {
+                expected.Response = HttpResponsePacket.Deserialize(evt.Body);
+            }
+            catch (Exception ex)
+            {
+                expected.DeserializationException = ex;
+            }
+
+            //NOTE: The ManualResetEventSlim.Set() method can be called after the object has been disposed
+            //So no worries about the Timeout disposing the object before the response comes in.
+            expected.ReceivedEvent.Set();
         }
 
         private static void SetResponseResult(HttpRequestMessage request, bool timedOut, ExpectedResponse arrival, TaskCompletionSource<HttpResponseMessage> taskSource)

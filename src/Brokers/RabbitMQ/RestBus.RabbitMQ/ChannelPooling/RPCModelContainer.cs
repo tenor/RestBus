@@ -1,4 +1,6 @@
 ﻿using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using RestBus.RabbitMQ.Client;
 using RestBus.RabbitMQ.Consumer;
 using System;
 using System.Collections.Generic;
@@ -11,40 +13,76 @@ namespace RestBus.RabbitMQ.ChannelPooling
 {
     internal class RPCModelContainer : AmqpModelContainer
     {
-        ConcurrentQueueingConsumer queue;
-        ManualResetEventSlim receivedResponse;
-        string expectedCorrelationId;
+        readonly EventingBasicConsumer _consumer;
+        readonly ManualResetEventSlim _receivedResponse;
+        readonly object startConsumingSync = new object();
+        volatile ExpectedResponse _expected;
+        volatile string _correlationId;
+        volatile bool _isConsuming;
 
         internal RPCModelContainer(IModel channel, 
             ManualResetEventSlim receivedResponse, 
             bool streamsPublisherConfirms, 
             AmqpChannelPooler source ) : base(channel, ChannelFlags.RPC, source )
         {
-            this.receivedResponse = receivedResponse;
-            queue = new ConcurrentQueueingConsumer(channel, receivedResponse);
+            this._receivedResponse = receivedResponse;
+            _consumer = new EventingBasicConsumer(channel);
+            _consumer.ConsumerCancelled += (s, e) => SetModelToBeDiscarded();
+            _consumer.Received += ResponseReceived;
+        }
+
+        private void ResponseReceived(object sender, BasicDeliverEventArgs evt)
+        {
+            var correlationId = _correlationId;
+            var expected = _expected;
+
+            if (expected != null && !String.IsNullOrEmpty(evt.BasicProperties.CorrelationId) && evt.BasicProperties.CorrelationId == correlationId)
+            {
+                RPCStrategyHelpers.ReadAndSignalDelivery(expected, evt);
+            }
+        }
+
+        private void SetModelToBeDiscarded()
+        {
+            this.Discard = true; // Consumer was cancelled so destroy this channel when done.
+        }
+
+        internal void StartConsuming()
+        {
+            if(!_isConsuming)
+            {
+                lock(startConsumingSync)
+                {
+                    if (_isConsuming) return;
+                    this.Channel.BasicConsume(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG, true, _consumer);
+                }
+            }
         }
 
         internal bool IsExpectingResponse
         {
             get
             {
-                return expectedCorrelationId != null;
+                return _expected != null;
             }
         }
 
-        internal void ExpectResponse(string correlationId)
+        internal void ExpectResponse(string correlationId,  ExpectedResponse expected)
         {
-            expectedCorrelationId = correlationId;
+            _correlationId = correlationId;
+            _expected = expected;
         }
 
         internal void Reset()
         {
-            expectedCorrelationId = null;
+            _correlationId = null;
+            _expected = null;
+            _receivedResponse.Reset();
         }
 
         internal override void Destroy()
         {
-            receivedResponse.Dispose();
+            _receivedResponse.Dispose();
             base.Destroy();
         }
     }
