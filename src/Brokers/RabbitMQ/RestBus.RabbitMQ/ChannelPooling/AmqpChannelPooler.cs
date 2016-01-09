@@ -24,6 +24,14 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
         public bool IsDirectReplyToCapable { get; }
 
+        public IConnection Connection
+        {
+            get
+            {
+                return conn;
+            }
+        }
+
         public AmqpChannelPooler(IConnection conn)
         {
             this.conn = conn;
@@ -142,8 +150,8 @@ namespace RestBus.RabbitMQ.ChannelPooling
 #if !DISABLE_CHANNELPOOLING
             Flush();
 #endif
-            
 
+            DisposeConnection(conn);
         }
 
 #if !DISABLE_CHANNELPOOLING
@@ -243,5 +251,31 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
             return false;
         }
+
+        private static void DisposeConnection(IConnection connection)
+        {
+            if (connection != null)
+            {
+
+                try
+                {
+                    connection.Close();
+                }
+                catch
+                {
+                    //TODO: Log Error
+                }
+
+                try
+                {
+                    connection.Dispose();
+                }
+                catch
+                {
+                    //TODO: Log Error
+                }
+            }
+        }
+
     }
 }
