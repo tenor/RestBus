@@ -37,8 +37,8 @@ namespace RestBus.RabbitMQ.Client
 
                         try
                         {
-                            SetResponseResult(request, !succeeded, arrival, taskSource);
                             if (closeModel) model.Close();
+                            SetResponseResult(request, !succeeded, arrival, taskSource);
 
                         }
                         catch
@@ -75,8 +75,8 @@ namespace RestBus.RabbitMQ.Client
                         {
                             //TODO: Check Cancelation Token when it's implemented
 
-                            SetResponseResult(request, timedOut, arrival, taskSource);
                             if (closeModel) model.Close();
+                            SetResponseResult(request, timedOut, arrival, taskSource);
 
                             lock (localVariableInitLock)
                             {
