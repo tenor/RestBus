@@ -38,6 +38,8 @@ namespace RestBus.RabbitMQ.Client
 
             //Initialize expectedResponses
             expectedResponses = new ConcurrentDictionary<string, ExpectedResponse>();
+
+            //Initialize connection manager
             connectionMgr = new ConnectionManager(exchangeConfig);
         }
 
@@ -63,23 +65,25 @@ namespace RestBus.RabbitMQ.Client
             connectionMgr.EnsurePoolIsCreated();
         }
 
-        public void PrepareForResponse(string correlationId, ExpectedResponse arrival, BasicProperties basicProperties, HttpRequestMessage request, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage>  taskSource)
+        public ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage>  taskSource)
         {
             //Set Reply to queue
             basicProperties.ReplyTo = callbackQueueName;
 
             //Initialize response arrival object and add to expected responses dictionary
-            arrival = new ExpectedResponse();
+            var arrival = new ExpectedResponse();
             expectedResponses[correlationId] = arrival;
 
             RPCStrategyHelpers.WaitForResponse(request, arrival, requestTimeout, taskSource, () => CleanupMessagingResources(correlationId, arrival));
 
+            return arrival;
+
         }
 
-        public AmqpModelContainer GetModel()
+        public AmqpModelContainer GetModel(bool streamsPublisherConfirms)
         {
             var pooler = connectionMgr.GetPool();
-            return pooler.GetModel(ChannelFlags.None);
+            return pooler.GetModel(streamsPublisherConfirms ? ChannelFlags.PublisherConfirms : ChannelFlags.None);
         }
 
         public void CleanupMessagingResources(string correlationId, ExpectedResponse expectedResponse)
@@ -90,9 +94,9 @@ namespace RestBus.RabbitMQ.Client
                 expectedResponses.TryRemove(correlationId, out unused);
             }
 
-            if (expectedResponse != null && expectedResponse.ReceivedEvent != null)
+            if (expectedResponse != null)
             {
-                expectedResponse.ReceivedEvent.Dispose();
+                expectedResponse.Dispose();
             }
         }
 

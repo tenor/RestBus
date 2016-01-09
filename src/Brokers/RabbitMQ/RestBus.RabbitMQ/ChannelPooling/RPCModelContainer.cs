@@ -20,12 +20,11 @@ namespace RestBus.RabbitMQ.ChannelPooling
         volatile string _correlationId;
         volatile bool _isConsuming;
 
-        internal RPCModelContainer(IModel channel, 
-            ManualResetEventSlim receivedResponse, 
+        internal RPCModelContainer(IModel channel,  
             bool streamsPublisherConfirms, 
-            AmqpChannelPooler source ) : base(channel, ChannelFlags.RPC, source )
+            AmqpChannelPooler source ) : base(channel, streamsPublisherConfirms ? ChannelFlags.RPCWithPublisherConfirms : ChannelFlags.RPC, source )
         {
-            this._receivedResponse = receivedResponse;
+            this._receivedResponse = new ManualResetEventSlim();
             _consumer = new EventingBasicConsumer(channel);
             _consumer.ConsumerCancelled += (s, e) => SetModelToBeDiscarded();
             _consumer.Received += ResponseReceived;
@@ -55,6 +54,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
                 {
                     if (_isConsuming) return;
                     this.Channel.BasicConsume(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG, true, _consumer);
+                    _isConsuming = true;
                 }
             }
         }
@@ -64,6 +64,14 @@ namespace RestBus.RabbitMQ.ChannelPooling
             get
             {
                 return _expected != null;
+            }
+        }
+
+        public ManualResetEventSlim ReceivedResponseEvent
+        {
+            get
+            {
+                return _receivedResponse;
             }
         }
 

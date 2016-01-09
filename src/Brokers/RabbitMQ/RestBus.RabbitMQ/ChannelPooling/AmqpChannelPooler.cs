@@ -182,7 +182,13 @@ namespace RestBus.RabbitMQ.ChannelPooling
 
         private AmqpModelContainer CreateModel(ChannelFlags flags)
         {
-            return new AmqpModelContainer(conn.CreateModel(), flags, this) { Discard = flags == ChannelFlags.Consumer };
+            var model = conn.CreateModel();
+            if (flags == ChannelFlags.RPC || flags == ChannelFlags.RPCWithPublisherConfirms)
+            {
+                return new RPCModelContainer(model, flags == ChannelFlags.RPCWithPublisherConfirms, this);
+            }
+
+            return new AmqpModelContainer(model, flags, this) { Discard = flags == ChannelFlags.Consumer };
         }
 
         private static void DestroyModel(AmqpModelContainer modelContainer)

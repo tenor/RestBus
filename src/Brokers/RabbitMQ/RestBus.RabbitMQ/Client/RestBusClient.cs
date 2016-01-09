@@ -246,7 +246,7 @@ namespace RestBus.RabbitMQ.Client
                 //NOTE: You're not supposed to share channels across threads but Iin this situation where only one thread can have access to a channel at a time, all's good.
 
                 //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
-                model = rpcStrategy.GetModel();
+                model = rpcStrategy.GetModel(false);
 
                 RedeclareExchangesAndQueues(model);
 
@@ -266,7 +266,7 @@ namespace RestBus.RabbitMQ.Client
                         //In fact turn this whole thing into an extension
                     }
 
-                    rpcStrategy.PrepareForResponse(correlationId, arrival, basicProperties, request, requestTimeout, taskSource);
+                    arrival = rpcStrategy.PrepareForResponse(correlationId, basicProperties, model, request, requestTimeout, taskSource);
 
                 }
 

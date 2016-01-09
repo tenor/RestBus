@@ -10,9 +10,9 @@ namespace RestBus.RabbitMQ.Client
     {
         void EnsureConnected(bool requestExpectsResponse);
 
-        void PrepareForResponse(string correlationId, ExpectedResponse arrival, BasicProperties basicProperties, HttpRequestMessage request, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage> taskSource);
+        ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage> taskSource);
 
-        AmqpModelContainer GetModel();
+        AmqpModelContainer GetModel(bool streamsPublisherConfirms);
 
         void CleanupMessagingResources(string correlationId, ExpectedResponse expectedResponse);
     }
