@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
-using RabbitMQ.Client.Framing;
-using RestBus.RabbitMQ.ChannelPooling;
+﻿using RabbitMQ.Client.Framing;
 using RestBus.Common.Amqp;
+using RestBus.RabbitMQ.ChannelPooling;
+using System;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
 {
@@ -15,6 +13,15 @@ namespace RestBus.RabbitMQ.Client
         readonly ConnectionManager connectionMgr;
         readonly object reconnectionSync = new object();
 
+        public bool ReturnModelAfterSending
+        {
+            get
+            {
+                //Don't return model after sending message, to prevent another SendAsync from using the consumer while it's waiting for a response
+                //Model will be returned once the response is received or times out or cancelled.
+                return false;
+            }
+        }
 
         public DirectReplyToRPCStrategy(ClientSettings clientSettings, ExchangeConfiguration exchangeConfig)
         {
@@ -42,11 +49,10 @@ namespace RestBus.RabbitMQ.Client
             var pooler = connectionMgr.GetPool();
             var model = (RPCModelContainer) pooler.GetModel(streamsPublisherConfirms ? ChannelFlags.RPCWithPublisherConfirms : ChannelFlags.RPC );
             model.Reset();
-            model.StartConsuming();
             return model;
         }
 
-        public ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage> taskSource)
+        public ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage> taskSource)
         {
             //Set Reply to queue
             basicProperties.ReplyTo = RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG;
@@ -54,7 +60,7 @@ namespace RestBus.RabbitMQ.Client
             var arrival = new ExpectedResponse(rpcModel.ReceivedResponseEvent);
             rpcModel.ExpectResponse(correlationId, arrival);
 
-            RPCStrategyHelpers.WaitForResponse(request, arrival, requestTimeout, taskSource, () => CleanupMessagingResources(correlationId, arrival));
+            RPCStrategyHelpers.WaitForResponse(request, arrival, requestTimeout, model, true, cancellationToken, taskSource, () => CleanupMessagingResources(correlationId, arrival));
             return arrival;
         }
 

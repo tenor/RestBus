@@ -10,7 +10,6 @@ namespace RestBus.RabbitMQ.Client
         internal Exception DeserializationException;
         internal readonly ManualResetEventSlim ReceivedEvent;
         readonly bool _ownsReceivedEvent;
-        private ManualResetEventSlim receivedResponseEvent;
 
         internal ExpectedResponse()
         {

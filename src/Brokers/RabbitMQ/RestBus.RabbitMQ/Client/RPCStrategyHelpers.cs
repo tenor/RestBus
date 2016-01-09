@@ -1,5 +1,4 @@
-﻿using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
+﻿using RabbitMQ.Client.Events;
 using RestBus.Common;
 using RestBus.Common.Http;
 using RestBus.RabbitMQ.ChannelPooling;
@@ -15,7 +14,7 @@ namespace RestBus.RabbitMQ.Client
         internal const string DIRECT_REPLY_TO_QUEUENAME_ARG = "amq.rabbitmq.reply-to";
         internal const int HEART_BEAT = 30;
 
-        internal static void WaitForResponse (HttpRequestMessage request, ExpectedResponse arrival, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage> taskSource, Action cleanup)
+        internal static void WaitForResponse (HttpRequestMessage request, ExpectedResponse arrival, TimeSpan requestTimeout, AmqpModelContainer model, bool closeModel, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage> taskSource, Action cleanup)
         {
             //Spawning a new task to wait on the MRESlim is slower than using ThreadPool.RegisterWaitForSingleObject
             //
@@ -39,6 +38,8 @@ namespace RestBus.RabbitMQ.Client
                         try
                         {
                             SetResponseResult(request, !succeeded, arrival, taskSource);
+                            if (closeModel) model.Close();
+
                         }
                         catch
                         {
@@ -75,11 +76,13 @@ namespace RestBus.RabbitMQ.Client
                             //TODO: Check Cancelation Token when it's implemented
 
                             SetResponseResult(request, timedOut, arrival, taskSource);
+                            if (closeModel) model.Close();
 
                             lock (localVariableInitLock)
                             {
                                 callbackHandle.Unregister(null);
                             }
+
                         }
                         catch
                         {

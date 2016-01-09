@@ -31,6 +31,14 @@ namespace RestBus.RabbitMQ.Client
         readonly CancellationTokenSource disposedCancellationSource = new CancellationTokenSource();
         readonly object reconnectionSync = new object();
 
+        public bool ReturnModelAfterSending
+        {
+            get
+            {
+                return true;
+            }
+        }
+
         public CallbackQueueRPCStrategy(ClientSettings clientSettings, ExchangeConfiguration exchangeConfig)
         {
             this.clientSettings = clientSettings;
@@ -65,7 +73,7 @@ namespace RestBus.RabbitMQ.Client
             connectionMgr.EnsurePoolIsCreated();
         }
 
-        public ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage>  taskSource)
+        public ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage>  taskSource)
         {
             //Set Reply to queue
             basicProperties.ReplyTo = callbackQueueName;
@@ -74,7 +82,7 @@ namespace RestBus.RabbitMQ.Client
             var arrival = new ExpectedResponse();
             expectedResponses[correlationId] = arrival;
 
-            RPCStrategyHelpers.WaitForResponse(request, arrival, requestTimeout, taskSource, () => CleanupMessagingResources(correlationId, arrival));
+            RPCStrategyHelpers.WaitForResponse(request, arrival, requestTimeout, model, false, cancellationToken, taskSource, () => CleanupMessagingResources(correlationId, arrival));
 
             return arrival;
 

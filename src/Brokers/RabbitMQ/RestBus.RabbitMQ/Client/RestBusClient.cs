@@ -7,6 +7,7 @@ using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
@@ -128,8 +129,6 @@ namespace RestBus.RabbitMQ.Client
         }
 
 
-        //TODO: Confirm that this method is thread safe
-
         /// <summary>Send an HTTP request as an asynchronous operation.</summary>
         /// <returns>Returns <see cref="T:System.Threading.Tasks.Task`1" />.The task object representing the asynchronous operation.</returns>
         /// <param name="request">The HTTP request message to send.</param>
@@ -155,7 +154,6 @@ namespace RestBus.RabbitMQ.Client
             //Declare messaging resources
             ExpectedResponse arrival = null;
             AmqpModelContainer model = null;
-            bool modelClosed = false;
             string correlationId = null;
 
             try
@@ -266,7 +264,7 @@ namespace RestBus.RabbitMQ.Client
                         //In fact turn this whole thing into an extension
                     }
 
-                    arrival = rpcStrategy.PrepareForResponse(correlationId, basicProperties, model, request, requestTimeout, taskSource);
+                    arrival = rpcStrategy.PrepareForResponse(correlationId, basicProperties, model, request, requestTimeout, cancellationToken, taskSource);
 
                 }
 
@@ -281,8 +279,12 @@ namespace RestBus.RabbitMQ.Client
                                 request.ToHttpRequestPacket().Serialize());
 
                 //Close channel
-                CloseAmqpModel(model);
-                modelClosed = true;
+                if (rpcStrategy.ReturnModelAfterSending)
+                {
+                    var modelCopy = model;
+                    Interlocked.Exchange(ref model, null); //model is now null henceforth
+                    CloseAmqpModel(modelCopy);
+                }
 
                 #endregion
 
@@ -308,10 +310,14 @@ namespace RestBus.RabbitMQ.Client
             {
                 //TODO: Log this
 
-                if (!modelClosed)
+                if(model != null && (model.Flags == ChannelFlags.RPC || model.Flags == ChannelFlags.RPCWithPublisherConfirms))
                 {
-                    CloseAmqpModel(model);
+                    //Model might still be in use in waiting thread and so unsafe to be recycled
+                    model.Discard = true;
                 }
+
+                CloseAmqpModel(model);
+
                 rpcStrategy.CleanupMessagingResources(correlationId, arrival);
 
                 if (ex is HttpRequestException)
@@ -420,74 +426,6 @@ namespace RestBus.RabbitMQ.Client
         internal static HttpRequestException GetWrappedException(string message, Exception innerException)
         {
             return new HttpRequestException(message, innerException);
-        }
-
-
-        private static void SetResponseResult(HttpRequestMessage request, bool timedOut, ExpectedResponse arrival, TaskCompletionSource<HttpResponseMessage> taskSource)
-        {
-            if (timedOut)
-            {
-                //NOTE: This really ought to return an "Operation Timed Out" WebException and not a Cancellation as noted in the following posts
-                // http://social.msdn.microsoft.com/Forums/en-US/d8d87789-0ac9-4294-84a0-91c9fa27e353/bug-in-httpclientgetasync-should-throw-webexception-not-taskcanceledexception?forum=netfxnetcom&prof=required
-                // http://stackoverflow.com/questions/10547895/how-can-i-tell-when-httpclient-has-timed-out
-                // and http://stackoverflow.com/questions/12666922/distinguish-timeout-from-user-cancellation
-                //
-                // However, for compatibility with the HttpClient, it returns a cancellation
-                //
-
-                taskSource.SetCanceled();
-            }
-            else
-            {
-                if (arrival.DeserializationException == null)
-                {
-                    var res = arrival.Response;
-                    if (res != null)
-                    {
-                        //Add/Update Content-Length Header
-                        //TODO: Is there any need to add this here if it's subsequently removed/updated by TryGetHttpResponseMessage/HttpPacket.PopulateHeaders? (Is this useful in the exception/other path scenario?
-                        res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
-                    }
-                    else
-                    {
-                        //TODO: Log this -- Critical issue (or just assert)
-                    }
-                }
-
-                HttpResponseMessage msg;
-                if (arrival.DeserializationException == null && TryGetHttpResponseMessage(arrival.Response, out msg))
-                {
-                    msg.RequestMessage = request;
-                    taskSource.SetResult(msg);
-                }
-                else
-                {
-                    taskSource.SetException(GetWrappedException("An error occurred while reading the response.", arrival.DeserializationException));
-                }
-            }
-        }
-
-        private static bool TryGetHttpResponseMessage(HttpResponsePacket packet, out HttpResponseMessage response)
-        {
-            try
-            {
-                response = new HttpResponseMessage
-                {
-                    Content = new ByteArrayContent(packet.Content ?? new byte[0]),
-                    Version = new Version(packet.Version),
-                    ReasonPhrase = packet.StatusDescription,
-                    StatusCode = (System.Net.HttpStatusCode)packet.StatusCode
-                };
-
-                packet.PopulateHeaders(response.Content.Headers, response.Headers);
-            }
-            catch
-            {
-                response = null;
-                return false;
-            }
-
-            return true;
         }
 
         private static RabbitMQMessagingProperties GetMessagingProperties(RequestOptions options)

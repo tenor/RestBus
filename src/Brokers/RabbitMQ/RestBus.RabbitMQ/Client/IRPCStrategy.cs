@@ -2,6 +2,7 @@
 using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
@@ -10,9 +11,11 @@ namespace RestBus.RabbitMQ.Client
     {
         void EnsureConnected(bool requestExpectsResponse);
 
-        ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, TaskCompletionSource<HttpResponseMessage> taskSource);
+        ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage> taskSource);
 
         AmqpModelContainer GetModel(bool streamsPublisherConfirms);
+
+        bool ReturnModelAfterSending { get; }
 
         void CleanupMessagingResources(string correlationId, ExpectedResponse expectedResponse);
     }

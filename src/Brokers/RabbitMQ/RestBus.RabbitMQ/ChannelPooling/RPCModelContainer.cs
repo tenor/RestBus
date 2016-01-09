@@ -1,13 +1,8 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RestBus.RabbitMQ.Client;
-using RestBus.RabbitMQ.Consumer;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.ChannelPooling
 {
@@ -18,7 +13,6 @@ namespace RestBus.RabbitMQ.ChannelPooling
         readonly object startConsumingSync = new object();
         volatile ExpectedResponse _expected;
         volatile string _correlationId;
-        volatile bool _isConsuming;
 
         internal RPCModelContainer(IModel channel,  
             bool streamsPublisherConfirms, 
@@ -28,6 +22,9 @@ namespace RestBus.RabbitMQ.ChannelPooling
             _consumer = new EventingBasicConsumer(channel);
             _consumer.ConsumerCancelled += (s, e) => SetModelToBeDiscarded();
             _consumer.Received += ResponseReceived;
+
+            //Start consuming
+            channel.BasicConsume(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG, true, _consumer);
         }
 
         private void ResponseReceived(object sender, BasicDeliverEventArgs evt)
@@ -46,19 +43,6 @@ namespace RestBus.RabbitMQ.ChannelPooling
             this.Discard = true; // Consumer was cancelled so destroy this channel when done.
         }
 
-        internal void StartConsuming()
-        {
-            if(!_isConsuming)
-            {
-                lock(startConsumingSync)
-                {
-                    if (_isConsuming) return;
-                    this.Channel.BasicConsume(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG, true, _consumer);
-                    _isConsuming = true;
-                }
-            }
-        }
-
         internal bool IsExpectingResponse
         {
             get
@@ -75,7 +59,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
             }
         }
 
-        internal void ExpectResponse(string correlationId,  ExpectedResponse expected)
+        internal void ExpectResponse(string correlationId, ExpectedResponse expected)
         {
             _correlationId = correlationId;
             _expected = expected;
