@@ -149,14 +149,15 @@ namespace RestBus.RabbitMQ.Client
             //Get Request Options
             RequestOptions requestOptions = GetRequestOptions(request);
             var messageProperties = GetMessagingProperties(requestOptions);
+            TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
+            bool expectingResponse = requestTimeout != TimeSpan.Zero;
 
             //Declare messaging resources
             ExpectedResponse arrival = null;
             AmqpModelContainer model = null;
+            bool modelClosed = false;
             string correlationId = null;
 
-            TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
-            bool expectingResponse = requestTimeout != TimeSpan.Zero;
             try
             {
                 #region Ensure CallbackQueue is started / Connected to server
@@ -281,6 +282,7 @@ namespace RestBus.RabbitMQ.Client
                 if (!expectingResponse || rpcStrategy.ReturnModelAfterSending)
                 {
                     CloseAmqpModel(model);
+                    modelClosed = true;
                 }
 
                 #endregion
@@ -307,13 +309,16 @@ namespace RestBus.RabbitMQ.Client
             {
                 //TODO: Log this
 
-                if(model != null && expectingResponse && (model.Flags == ChannelFlags.RPC || model.Flags == ChannelFlags.RPCWithPublisherConfirms))
+                if (model != null && !modelClosed)
                 {
-                    //Model might still be in use in waiting thread and so unsafe to be recycled
-                    model.Discard = true;
-                }
+                    if (expectingResponse && model.Flags == ChannelFlags.RPC || model.Flags == ChannelFlags.RPCWithPublisherConfirms)
+                    {
+                        //Model might still be in use in waiting thread and so unsafe to be recycled
+                        model.Discard = true;
+                    }
 
-                CloseAmqpModel(model);
+                    CloseAmqpModel(model);
+                }
 
                 rpcStrategy.CleanupMessagingResources(correlationId, arrival);
 
