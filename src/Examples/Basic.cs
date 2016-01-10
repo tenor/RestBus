@@ -27,8 +27,6 @@ namespace Examples
 
             RestBusClient client = new RestBusClient(msgMapper);
 
-            //client.Timeout = TimeSpan.Zero; //Uncomment this to prevent client from waiting for a response. -- Useful when simply queueing messages.
-
             var msg = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, "/api/test")
             {
                 Content = new System.Net.Http.StringContent("{\"Val\":10}", new UTF8Encoding(), "application/json")

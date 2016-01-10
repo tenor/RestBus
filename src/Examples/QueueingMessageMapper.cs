@@ -22,7 +22,8 @@ namespace Examples
             {
                 PersistentMessages = true,
                 PersistentWorkQueuesAndExchanges = true,
-                MessageExpires = (m) => { return false; } //Messages never expire
+                MessageExpires = (m) => { return false; }, //Messages never expire
+                MessageExpectsReply = (m) => { return false; } //Messages are not replied to
             };
         }
 

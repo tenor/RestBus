@@ -149,8 +149,13 @@ namespace RestBus.RabbitMQ.Client
             //Get Request Options
             RequestOptions requestOptions = GetRequestOptions(request);
             var messageProperties = GetMessagingProperties(requestOptions);
+
+            //Determine if message expects a response
             TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
-            bool expectingResponse = requestTimeout != TimeSpan.Zero;
+            //TODO: expectingResponse has a slightly different meaning in publisher confirms 
+            //where timespan may be longer than zero but MessageExpectsReply is false
+            //in which case the timeout only applies to how long to wait for the publisher confirmation.
+            bool expectingResponse = requestTimeout != TimeSpan.Zero && GetExpectsReply(request);
 
             //Declare messaging resources
             ExpectedResponse arrival = null;
@@ -394,6 +399,18 @@ namespace RestBus.RabbitMQ.Client
             return timeoutVal.Duration();
         }
 
+        private bool GetExpectsReply(HttpRequestMessage request)
+        {
+            var options = GetRequestOptions(request);
+            if (options == null || options.ExpectsReply == null)
+            {
+                return exchangeConfig.MessageExpectsReply == null ? true : exchangeConfig.MessageExpectsReply(request);
+            }
+            else
+            {
+                return options.ExpectsReply.Value;
+            }
+        }
 
         private void PrepareMessage(HttpRequestMessage request)
         {

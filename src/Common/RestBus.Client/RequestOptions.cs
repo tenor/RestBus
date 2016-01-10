@@ -24,6 +24,8 @@ namespace RestBus.Client
             set { _timeout = value; }
         }
 
+        public bool? ExpectsReply { get; set; }
+
         public RequestHeaders Headers { get; set; }
 
         public RequestCookieCollection Cookies { get; }

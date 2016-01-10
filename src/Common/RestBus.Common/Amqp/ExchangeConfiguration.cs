@@ -54,5 +54,11 @@ namespace RestBus.Common.Amqp
         /// If not set, messages expire by default.
         /// </summary>
         public Func<HttpRequestMessage, bool> MessageExpires { get; set; }
+
+        /// <summary>
+        /// A function that returns an indicator that the message expects a reply.
+        /// If not set, messages expect replies by default.
+        /// </summary>
+        public Func<HttpRequestMessage, bool> MessageExpectsReply { get; set; }
     }
 }
