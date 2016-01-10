@@ -82,6 +82,14 @@ namespace RestBus.RabbitMQ.Subscription
             //CLose connections and channels
             if (subscriberChannel != null)
             {
+                if (subscriberConsumer != null)
+                {
+                    try
+                    {
+                        subscriberChannel.Channel.BasicCancel(subscriberConsumer.ConsumerTag);
+                    }
+                    catch { }
+                }
 
                 try
                 {
@@ -94,6 +102,15 @@ namespace RestBus.RabbitMQ.Subscription
 
             if (workChannel != null)
             {
+                if (workConsumer != null)
+                {
+                    try
+                    {
+                        workChannel.Channel.BasicCancel(workConsumer.ConsumerTag);
+                    }
+                    catch { }
+                }
+
                 try
                 {
                     workChannel.Close();
@@ -125,28 +142,6 @@ namespace RestBus.RabbitMQ.Subscription
 
             //Create work channel and declare exchanges and queues
             workChannel = pool.GetModel(ChannelFlags.Consumer);
-
-            //TODO: Work this into subscriber dispose and restart
-            /* Work this into subscriber dispose and restart
-            //Cancel consumers on server
-            if(workCTag != null)
-            {
-                try
-                {
-                    workChannel.BasicCancel(workCTag);
-                }
-                catch { }
-            }
-
-            if (subscriberCTag != null)
-            {
-                try
-                {
-                    workChannel.BasicCancel(subscriberCTag);
-                }
-                catch { }
-            }
-             */
 
             //Redeclare exchanges and queues
             AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeConfig, exchangeDeclareSync, Id);
@@ -304,11 +299,27 @@ namespace RestBus.RabbitMQ.Subscription
 
             if (workChannel != null)
             {
+                if (workConsumer != null)
+                {
+                    try
+                    {
+                        workChannel.Channel.BasicCancel(workConsumer.ConsumerTag);
+                    }
+                    catch { }
+                }
                 workChannel.Close();
             }
 
             if (subscriberChannel != null)
             {
+                if (subscriberConsumer != null)
+                {
+                    try
+                    {
+                        subscriberChannel.Channel.BasicCancel(subscriberConsumer.ConsumerTag);
+                    }
+                    catch { }
+                }
                 subscriberChannel.Close();
             }
 
