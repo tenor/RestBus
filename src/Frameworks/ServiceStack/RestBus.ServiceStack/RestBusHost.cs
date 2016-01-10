@@ -128,8 +128,8 @@ namespace RestBus.ServiceStack
 				}
 				catch (Exception e)
 				{
-					if (!(e is ObjectDisposedException))
-					{
+                    if (!(e is ObjectDisposedException || e is OperationCanceledException))
+                    {
 						//TODO: Log exception: Don't know what else to expect here
 
 					}

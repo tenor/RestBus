@@ -194,7 +194,7 @@ namespace RestBus.RabbitMQ.Client
                                     }
                                     catch
                                     {
-                                        //TODO: Log this exception except it's ObjectDisposedException
+                                        //TODO: Log this exception except it's ObjectDisposedException or OperationCancelledException
                                         throw;
                                     }
 
@@ -315,6 +315,7 @@ namespace RestBus.RabbitMQ.Client
                     return item;
                 }
 
+                //Throws OperationCanceledException if tken is cancelled
                 responseQueued.Wait(disposedCancellationSource.Token);
                 responseQueued.Reset();
             }

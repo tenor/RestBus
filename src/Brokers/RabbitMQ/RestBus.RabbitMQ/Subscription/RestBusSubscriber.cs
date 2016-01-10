@@ -220,13 +220,22 @@ namespace RestBus.RabbitMQ.Subscription
                     throw;
                 }
 
-                requestQueued.Wait(stopWaitingOnQueue.Token);
-
-                if(!disposed && connectionBroken.IsCancellationRequested )
+                try
                 {
-                    //Connection broken or consumer has been cancelled but client is not disposed
-                    //So reconnect
-                    Reconnect();
+                    requestQueued.Wait(stopWaitingOnQueue.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (!disposed && connectionBroken.IsCancellationRequested)
+                    {
+                        //Connection broken or consumer has been cancelled but client is not disposed
+                        //So reconnect
+                        Reconnect();
+                    }
+                    else
+                    {
+                        throw;
+                    }
                 }
 
                 requestQueued.Reset();
