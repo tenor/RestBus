@@ -16,12 +16,13 @@ namespace RestBus.RabbitMQ.Subscription
     {
         //TODO: Error handling on the subscriber when the queue(s) expires
 
-        IConnection conn;
         volatile AmqpChannelPooler _subscriberPool;
         volatile AmqpModelContainer workChannel;
         volatile AmqpModelContainer subscriberChannel;
         volatile ConcurrentQueueingConsumer workConsumer;
         volatile ConcurrentQueueingConsumer subscriberConsumer;
+        volatile CancellationTokenSource connectionBroken;
+        volatile CancellationTokenSource stopWaitingOnQueue;
         readonly ManualResetEventSlim requestQueued = new ManualResetEventSlim();
         readonly string[] subscriberIdHeader;
         readonly ExchangeConfiguration exchangeConfig;
@@ -107,28 +108,15 @@ namespace RestBus.RabbitMQ.Subscription
                 _subscriberPool.Dispose();
             }
 
-            if (conn != null)
-            {
-                try
-                {
-                    conn.Close();
-                }
-                catch
-                {
-                }
+            //NOTE: CreateConnection() can throw BrokerUnreachableException
+            //That's okay because the exception needs to propagate to Reconnect() or Start()
+            var conn = connectionFactory.CreateConnection();
 
-                try
-                {
-                    conn.Dispose();
-                }
-                catch 
-                {
-                }
-            }
+            if (connectionBroken != null) connectionBroken.Dispose();
+            connectionBroken = new CancellationTokenSource();
 
-
-            //TODO: CreateConnection() can always throw BrokerUnreachableException so keep that in mind when calling
-            conn = connectionFactory.CreateConnection();
+            if (stopWaitingOnQueue != null) stopWaitingOnQueue.Dispose();
+            stopWaitingOnQueue = CancellationTokenSource.CreateLinkedTokenSource(disposedCancellationSource.Token, connectionBroken.Token);
 
             var pool = new AmqpChannelPooler(conn);
             _subscriberPool = pool;
@@ -177,6 +165,11 @@ namespace RestBus.RabbitMQ.Subscription
 
             subscriberChannel.Channel.BasicQos(0, 50, false);
             subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, subscriberConsumer);
+
+            //Cancel connectionBroken on connection/consumer problems 
+            pool.Connection.ConnectionShutdown += (s, e) => { connectionBroken.Cancel(); };
+            workConsumer.ConsumerCancelled += (s, e) => { connectionBroken.Cancel(); };
+            subscriberConsumer.ConsumerCancelled += (s, e) => { connectionBroken.Cancel(); };
         }
 
         //Will block until a request is received from either queue
@@ -222,37 +215,25 @@ namespace RestBus.RabbitMQ.Subscription
                 }
                 catch (Exception e)
                 {
-                    if (!(e is System.IO.EndOfStreamException))
-                    {
-                        //TODO: Log exception: Don't know what else to expect here
+                    //TODO: Remove this below -- EndOfStreamException is no longer called since all dequeueing takes place on the queue and no longer with RabbitMQ.Client network resources
+                    //if (!(e is System.IO.EndOfStreamException))
+                    //{
+                    //    //TODO: Log exception: Don't know what else to expect here
 
-                    }
+                    //}
 
-                    //TODO: IS this the best place to place reconnection logic? In a catch block??
-
-                    //Loop until a connection is made
-                    bool successfulRestart = false;
-                    while (true)
-                    {
-                        try
-                        {
-                            Restart();
-                            successfulRestart = true;
-                        }
-                        catch { }
-
-                        if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
-
-                        if (successfulRestart) break;
-                        Thread.Sleep(1);
-                    }
-
-                    //Check for next message
-                    continue;
+                    throw;
                 }
 
-                //TODO: Combine CancellationToken passed in Dequeue() with token below 
-                requestQueued.Wait(disposedCancellationSource.Token);
+                requestQueued.Wait(stopWaitingOnQueue.Token);
+
+                if(!disposed && connectionBroken.IsCancellationRequested )
+                {
+                    //Connection broken or consumer has been cancelled but client is not disposed
+                    //So reconnect
+                    Reconnect();
+                }
+
                 requestQueued.Reset();
             }
 
@@ -336,24 +317,31 @@ namespace RestBus.RabbitMQ.Subscription
                 _subscriberPool.Dispose();
             }
 
-            if (conn != null)
+            requestQueued.Dispose();
+            disposedCancellationSource.Dispose();
+            if (stopWaitingOnQueue != null) stopWaitingOnQueue.Dispose();
+            if (connectionBroken != null) connectionBroken.Dispose();
+
+        }
+
+        private void Reconnect()
+        {
+            //Loop until a connection is made
+            bool successfulRestart = false;
+            while (true)
             {
                 try
                 {
-                    conn.Close();
+                    Restart();
+                    successfulRestart = true;
                 }
                 catch { }
 
-                try
-                {
-                    conn.Dispose();
-                }
-                catch { }
+                if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
+
+                if (successfulRestart) break;
+                Thread.Sleep(1);
             }
-
-            requestQueued.Dispose();
-            disposedCancellationSource.Dispose();
-
         }
 
         public void SendResponse(MessageContext context, HttpResponsePacket response )
@@ -380,7 +368,7 @@ namespace RestBus.RabbitMQ.Subscription
             //Exit method if no replyToQueue was specified.
             if (String.IsNullOrEmpty(context.ReplyToQueue)) return;
 
-            if (conn == null)
+            if (_subscriberPool.Connection == null)
             {
                 //TODO: Log this -- it technically shouldn't happen. Also translate to a HTTP Unreachable because it means StartCallbackQueueConsumer didn't create a connection
                 throw new ApplicationException("This is Bad");
