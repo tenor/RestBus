@@ -7,7 +7,6 @@ using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
@@ -279,11 +278,9 @@ namespace RestBus.RabbitMQ.Client
                                 request.ToHttpRequestPacket().Serialize());
 
                 //Close channel
-                if (rpcStrategy.ReturnModelAfterSending)
+                if (!expectingResponse || rpcStrategy.ReturnModelAfterSending)
                 {
-                    var modelCopy = model;
-                    Interlocked.Exchange(ref model, null); //model is now null henceforth
-                    CloseAmqpModel(modelCopy);
+                    CloseAmqpModel(model);
                 }
 
                 #endregion
@@ -310,7 +307,7 @@ namespace RestBus.RabbitMQ.Client
             {
                 //TODO: Log this
 
-                if(model != null && (model.Flags == ChannelFlags.RPC || model.Flags == ChannelFlags.RPCWithPublisherConfirms))
+                if(model != null && expectingResponse && (model.Flags == ChannelFlags.RPC || model.Flags == ChannelFlags.RPCWithPublisherConfirms))
                 {
                     //Model might still be in use in waiting thread and so unsafe to be recycled
                     model.Discard = true;
