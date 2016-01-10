@@ -156,13 +156,13 @@ namespace RestBus.RabbitMQ.Client
             AmqpModelContainer model = null;
             string correlationId = null;
 
+            TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
+            bool expectingResponse = requestTimeout != TimeSpan.Zero;
             try
             {
                 #region Ensure CallbackQueue is started / Connected to server
 
-                TimeSpan requestTimeout = GetRequestTimeout(requestOptions);
-
-                rpcStrategy.EnsureConnected(requestTimeout != TimeSpan.Zero);
+                rpcStrategy.EnsureConnected(expectingResponse);
 
                 #endregion
 
@@ -187,7 +187,7 @@ namespace RestBus.RabbitMQ.Client
                     basicProperties.Headers = exchangeHeaders;
                 }
 
-                if (requestTimeout != TimeSpan.Zero)
+                if (expectingResponse)
                 {
                     //Set CorrelationId
                     correlationId = correlationIdGen.GetNextId();
@@ -255,7 +255,7 @@ namespace RestBus.RabbitMQ.Client
 
                 #region Start waiting for response
                 //Start waiting for response if a request timeout is set.
-                if (requestTimeout != TimeSpan.Zero)
+                if (expectingResponse)
                 {
                     //TODO: Better to just check if cancellationHasbeen requested instead of checking if it's None
                     if (!cancellationToken.Equals(System.Threading.CancellationToken.None))
@@ -290,7 +290,7 @@ namespace RestBus.RabbitMQ.Client
 
                 #region Cleanup if not expecting response
                 //Exit with OK result if no request timeout was set.
-                if (requestTimeout == TimeSpan.Zero)
+                if (!expectingResponse)
                 {
                     //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before replying OK.
 
@@ -391,7 +391,6 @@ namespace RestBus.RabbitMQ.Client
 
             return timeoutVal.Duration();
         }
-
 
 
         private void PrepareMessage(HttpRequestMessage request)
