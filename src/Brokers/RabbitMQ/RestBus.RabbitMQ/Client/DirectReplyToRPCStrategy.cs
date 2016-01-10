@@ -23,9 +23,9 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        public DirectReplyToRPCStrategy(ClientSettings clientSettings, ExchangeConfiguration exchangeConfig)
+        public DirectReplyToRPCStrategy(ClientSettings clientSettings, ConnectionManager connectionManager)
         {
-            connectionMgr = new ConnectionManager(exchangeConfig);
+            this.connectionMgr = connectionManager;
         }
 
         public void CleanupMessagingResources(string correlationId, ExpectedResponse expectedResponse)

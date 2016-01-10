@@ -39,7 +39,7 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        public CallbackQueueRPCStrategy(ClientSettings clientSettings, ExchangeConfiguration exchangeConfig)
+        public CallbackQueueRPCStrategy(ClientSettings clientSettings, ExchangeConfiguration exchangeConfig, ConnectionManager connectionManager)
         {
             this.clientSettings = clientSettings;
             this.indirectReplyToQueueName = AmqpUtils.GetCallbackQueueName(exchangeConfig, AmqpUtils.GetNewExclusiveQueueId());
@@ -48,7 +48,7 @@ namespace RestBus.RabbitMQ.Client
             expectedResponses = new ConcurrentDictionary<string, ExpectedResponse>();
 
             //Initialize connection manager
-            connectionMgr = new ConnectionManager(exchangeConfig);
+            this.connectionMgr = connectionManager;
         }
 
         public void EnsureConnected(bool requestExpectsResponse)

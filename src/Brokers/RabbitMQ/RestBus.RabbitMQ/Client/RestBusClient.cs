@@ -21,6 +21,7 @@ namespace RestBus.RabbitMQ.Client
         readonly IRPCStrategy rpcStrategy;
 
         readonly object exchangeDeclareSync = new object();
+        readonly ConnectionManager connectionMgr;
         volatile int lastExchangeDeclareTickCount = 0;
         volatile bool disposed = false;
 
@@ -50,7 +51,8 @@ namespace RestBus.RabbitMQ.Client
             //Set ClientSettings
             this.Settings = new ClientSettings(this); // Always have a default version if it wasn't passed in.
 
-            rpcStrategy = new CallbackQueueRPCStrategy(this.Settings, exchangeConfig);
+            connectionMgr = new ConnectionManager(exchangeConfig);
+            rpcStrategy = new CallbackQueueRPCStrategy(this.Settings, exchangeConfig, connectionMgr);
 
         }
 
