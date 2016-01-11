@@ -18,10 +18,11 @@ namespace RestBus.RabbitMQ.Client
         readonly IMessageMapper messageMapper;
         readonly ExchangeConfiguration exchangeConfig;
         readonly string exchangeName;
-        readonly IRPCStrategy rpcStrategy;
+        readonly ConnectionManager connectionMgr;
+        readonly IRPCStrategy directStrategy;
+        readonly IRPCStrategy callbackStrategy;
 
         readonly object exchangeDeclareSync = new object();
-        readonly ConnectionManager connectionMgr;
         volatile int lastExchangeDeclareTickCount = 0;
         volatile bool disposed = false;
 
@@ -51,8 +52,10 @@ namespace RestBus.RabbitMQ.Client
             //Set ClientSettings
             this.Settings = new ClientSettings(this); // Always have a default version if it wasn't passed in.
 
+            //Instantiate connection manager and RPC strategies;
             connectionMgr = new ConnectionManager(exchangeConfig);
-            rpcStrategy = new CallbackQueueRPCStrategy(this.Settings, exchangeConfig, connectionMgr);
+            directStrategy = new DirectReplyToRPCStrategy();
+            callbackStrategy = new CallbackQueueRPCStrategy(this.Settings, exchangeConfig);
 
         }
 
@@ -146,10 +149,6 @@ namespace RestBus.RabbitMQ.Client
 
             if (disposed) throw new ObjectDisposedException(GetType().FullName);
             hasKickStarted = true;
-
-            //Get channel pool
-            var pool = connectionMgr.GetConnectedPool();
-
             PrepareMessage(request);
 
             //Get Request Options
@@ -169,9 +168,13 @@ namespace RestBus.RabbitMQ.Client
             bool modelClosed = false;
             string correlationId = null;
 
+            //Get channel pool and decide on RPC strategy
+            var pool = connectionMgr.GetConnectedPool();
+            IRPCStrategy rpcStrategy = pool.IsDirectReplyToCapable && !Settings.DisableDirectReplies ? directStrategy : callbackStrategy;
+
             try
             {
-                #region Ensure CallbackQueue is started / Connected to server
+                #region Ensure CallbackQueue is started (If Using CallbackQueue Strategy)
 
                 rpcStrategy.StartStrategy(pool, expectingResponse);
 
@@ -353,8 +356,8 @@ namespace RestBus.RabbitMQ.Client
         protected override void Dispose(bool disposing)
         {
             disposed = true;
-            //TODO: Dispose both strategies
-            rpcStrategy.Dispose();
+            directStrategy.Dispose();
+            callbackStrategy.Dispose();
             connectionMgr.Dispose();
 
             base.Dispose(disposing);

@@ -7,6 +7,12 @@ using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
 {
+    /// <summary>
+    /// Represents an RPC strategy that uses the RabbitMQ Direct Reply To feature.
+    /// </summary>
+    /// <remarks>
+    /// See https://www.rabbitmq.com/direct-reply-to.html
+    /// </remarks>
     internal class DirectReplyToRPCStrategy : IRPCStrategy
     {
         public bool ReturnModelAfterSending

@@ -13,6 +13,9 @@ using System.Threading.Tasks;
 
 namespace RestBus.RabbitMQ.Client
 {
+    /// <summary>
+    /// Represents an RPC strategy that uses a callback queue to receive responses.
+    /// </summary>
     internal class CallbackQueueRPCStrategy : IRPCStrategy
     {
         volatile ConcurrentQueueingConsumer callbackConsumer;
@@ -37,7 +40,7 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        public CallbackQueueRPCStrategy(ClientSettings clientSettings, ExchangeConfiguration exchangeConfig, ConnectionManager connectionManager)
+        public CallbackQueueRPCStrategy(ClientSettings clientSettings, ExchangeConfiguration exchangeConfig)
         {
             this.clientSettings = clientSettings;
             this.indirectReplyToQueueName = AmqpUtils.GetCallbackQueueName(exchangeConfig, AmqpUtils.GetNewExclusiveQueueId());
@@ -143,6 +146,9 @@ namespace RestBus.RabbitMQ.Client
                                 }
                                 else
                                 {
+                                    //TODO: REMOVE LATER: This clause is never called because in this case the DirectReplyToRPCStrategy would be in use
+                                    //instead of this strategy.
+                                    //throw an InvalidOperationException instead
                                     channel.BasicConsume(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG, true, consumer);
 
                                     //Discover direct reply to queue name
@@ -309,6 +315,9 @@ namespace RestBus.RabbitMQ.Client
             channel.QueueDeclare(queueName, false, false, true, callbackQueueArgs);
         }
 
+
+        //TODO: REMOVE LATER: This method is never called because the DirectReplyToStrategy is used when the client decides to use
+        //the direct reply to feature.
         /// <summary>
         /// Discovers the Direct reply-to queue name ( https://www.rabbitmq.com/direct-reply-to.html ) by messaging itself.
         /// </summary>
