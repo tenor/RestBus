@@ -288,7 +288,7 @@ namespace RestBus.RabbitMQ.Client
                 if (disposed) throw new ObjectDisposedException(GetType().FullName);
 
                 BasicDeliverEventArgs item;
-                if (callbackConsumer.TryInstantDequeue(out item))
+                if (callbackConsumer.TryInstantDequeue(out item, throwIfClosed: false))
                 {
                     return item;
                 }
@@ -339,7 +339,7 @@ namespace RestBus.RabbitMQ.Client
 
                 System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
                 watch.Start();
-                while (!receiver.TryInstantDequeue(out delivery))
+                while (!receiver.TryInstantDequeue(out delivery, throwIfClosed: false))
                 {
                     Thread.Sleep(1);
                     if (watch.Elapsed > TimeSpan.FromSeconds(10) || messageReturned.IsSet)

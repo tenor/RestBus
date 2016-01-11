@@ -163,9 +163,9 @@ namespace RestBus.RabbitMQ.Consumer
         /// </summary>
         /// <param name="result">The dequeued item.</param>
         /// <returns>True if succeeded, false otherwise</returns>
-        public bool TryInstantDequeue(out BasicDeliverEventArgs result)
+        public bool TryInstantDequeue(out BasicDeliverEventArgs result, bool throwIfClosed = false)
         {
-            if(_isClosed)
+            if(throwIfClosed && _isClosed)
             {
                 throw new EndOfStreamException("Consumer closed");
             }

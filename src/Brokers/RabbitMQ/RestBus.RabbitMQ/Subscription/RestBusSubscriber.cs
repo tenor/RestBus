@@ -213,12 +213,7 @@ namespace RestBus.RabbitMQ.Subscription
                 }
                 catch (Exception e)
                 {
-                    //TODO: Remove this below -- EndOfStreamException is no longer called since all dequeueing takes place on the queue and no longer with RabbitMQ.Client network resources
-                    //if (!(e is System.IO.EndOfStreamException))
-                    //{
-                    //    //TODO: Log exception: Don't know what else to expect here
-
-                    //}
+                    //TODO: Log this -- no exception is expected from the calls in the try block.
 
                     throw;
                 }
@@ -261,7 +256,7 @@ namespace RestBus.RabbitMQ.Subscription
             dispatch = null;
 
             BasicDeliverEventArgs item;
-            if (!consumer.TryInstantDequeue(out item))
+            if (!consumer.TryInstantDequeue(out item, throwIfClosed: false))
             {
                 return false;
             }
