@@ -33,6 +33,9 @@ namespace RestBus.RabbitMQ.Subscription
         ConcurrentQueueingConsumer lastProcessedConsumerQueue = null;
         readonly ConnectionFactory connectionFactory;
 
+        //TODO: Consider moving this to a helper class.
+        static string[] TRUE_STRING_ARRAY = new string[] { true.ToString() };
+
         public RestBusSubscriber(IMessageMapper messageMapper )
         {
             exchangeConfig = messageMapper.GetExchangeConfig();
@@ -287,7 +290,7 @@ namespace RestBus.RabbitMQ.Subscription
                 //Add redelivered header if item was redelivered.
                 if (item.Redelivered)
                 {
-                    request.Headers[Common.Shared.REDELIVERED_HEADER] = new string[] { true.ToString() };
+                    request.Headers[Common.Shared.REDELIVERED_HEADER] = TRUE_STRING_ARRAY;
                 }
             }
             //Reject message if deserialization failed.

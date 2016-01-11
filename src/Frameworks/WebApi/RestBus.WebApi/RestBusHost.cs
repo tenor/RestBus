@@ -26,6 +26,9 @@ namespace RestBus.WebApi
         //TODO: Consider moving this into Common, Maybe Client (Requires a reference to System.Net.Http)
         internal static readonly ByteArrayContent _emptyByteArrayContent = new ByteArrayContent(new byte[0]);
 
+        //TODO: Consider moving this to Common
+        internal static Version VERSION_1_1 = new Version("1.1");
+
         public RestBusHost(IRestBusSubscriber subscriber, HttpConfiguration config)
         {
             this.subscriber = subscriber;
@@ -237,7 +240,7 @@ namespace RestBus.WebApi
                 request = new HttpRequestMessage
                 {
                     Content = packet.Content == null ? _emptyByteArrayContent : new ByteArrayContent(packet.Content),
-                    Version = new Version(packet.Version),
+                    Version = packet.Version == "1.1" ? VERSION_1_1 : new Version(packet.Version),
                     Method = new HttpMethod(packet.Method ?? "GET"),
                     RequestUri = packet.BuildUri(virtualPath, hostname)
                 };

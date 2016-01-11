@@ -14,6 +14,9 @@ namespace RestBus.RabbitMQ.Client
         internal const string DIRECT_REPLY_TO_QUEUENAME_ARG = "amq.rabbitmq.reply-to";
         internal const int HEART_BEAT = 30;
 
+        //TODO: Consider moving this to Common
+        internal static Version VERSION_1_1 = new Version("1.1");
+
         internal static void WaitForResponse (HttpRequestMessage request, ExpectedResponse arrival, TimeSpan requestTimeout, AmqpModelContainer model, bool closeModel, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage> taskSource, Action cleanup)
         {
             //Spawning a new task to wait on the MRESlim is slower than using ThreadPool.RegisterWaitForSingleObject
@@ -170,7 +173,7 @@ namespace RestBus.RabbitMQ.Client
                 response = new HttpResponseMessage
                 {
                     Content = packet.Content == null ? RestBusClient._emptyByteArrayContent : new ByteArrayContent(packet.Content),
-                    Version = new Version(packet.Version),
+                    Version = packet.Version == "1.1" ? VERSION_1_1 : new Version(packet.Version),
                     ReasonPhrase = packet.StatusDescription,
                     StatusCode = (System.Net.HttpStatusCode)packet.StatusCode
                 };
