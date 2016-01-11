@@ -10,5 +10,8 @@ namespace RestBus.RabbitMQ.ChannelPooling
         RPCWithPublisherConfirms = 4 //RPC channel with publisher confirms.
         
         //NOTE: Add Tx channel type if AMQP transactions are ever supported.
+
+        //NOTE: Despite the name, this enum does not have a [Flags] attribute and is not designed to be 
+        //combined in a bitwise manner.
     }
 }
