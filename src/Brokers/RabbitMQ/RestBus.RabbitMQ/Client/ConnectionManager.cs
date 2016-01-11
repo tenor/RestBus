@@ -6,10 +6,12 @@ using System.Threading;
 
 namespace RestBus.RabbitMQ.Client
 {
-    internal class ConnectionManager
+    internal class ConnectionManager : IDisposable
     {
-        readonly ConnectionFactory connectionFactory;
         volatile AmqpChannelPooler _clientPool;
+        volatile bool _disposed;
+        readonly ConnectionFactory connectionFactory;
+        readonly object connectionSync = new object();
 
         public ConnectionManager(ExchangeConfiguration exchangeConfig)
         {
@@ -19,41 +21,36 @@ namespace RestBus.RabbitMQ.Client
             connectionFactory.RequestedHeartbeat = RPCStrategyHelpers.HEART_BEAT;
         }
 
-        public void ConnectIfUnconnected(object syncObj)
+        public AmqpChannelPooler GetConnectedPool()
         {
-            if (_clientPool == null || _clientPool.Connection  == null || !_clientPool.Connection.IsOpen)
-            {
-                //TODO: Can double-checked locking here be simplified?
+            return ConnectIfUnconnected();
+        }
 
-                lock (syncObj)
+        private AmqpChannelPooler ConnectIfUnconnected()
+        {
+            var pool = _clientPool;
+            if (pool == null || pool.Connection  == null || !pool.Connection.IsOpen || pool.GetRecycle())
+            {
+                lock (connectionSync)
                 {
-                    if (_clientPool == null || _clientPool.Connection == null || !_clientPool.Connection.IsOpen)
+                    if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
+                    if (_clientPool == null || _clientPool.Connection == null || !_clientPool.Connection.IsOpen || _clientPool.GetRecycle())
                     {
-                        CreateNewChannelPool();
+                        return CreateNewChannelPool();
+                    }
+                    else
+                    {
+                        return _clientPool;
                     }
                 }
             }
+
+            return pool;
         }
 
-        public void EnsurePoolIsCreated()
-        {
-            //Test if conn or pooler is null, then leave
-            if (_clientPool == null || _clientPool.Connection == null || _clientPool == null)
-            {
-                // This means a connection could not be created most likely because the server was Unreachable.
-                // This shouldn't happen because StartCallbackQueueConsumer should have thrown the exception
 
-                //TODO: The inner exception here is a good candidate for a RestBusException
-                throw RestBusClient.GetWrappedException("Unable to establish a connection.", new ApplicationException("Unable to establish a connection."));
-            }
-        }
-
-        public AmqpChannelPooler GetPool()
-        {
-            return _clientPool;
-        }
-
-        public AmqpChannelPooler CreateNewChannelPool()
+        private AmqpChannelPooler CreateNewChannelPool()
         {
             //NOTE: This is the only place where connections are created in the client
             //NOTE: CreateConnection() can always throw RabbitMQ.Client.Exceptions.BrokerUnreachableException
@@ -61,7 +58,7 @@ namespace RestBus.RabbitMQ.Client
 
             //Swap out client connection and pooler, so other threads can use the new objects:
 
-            //wap out old pool with new pool
+            //swap out old pool with new pool
             var newPool = new AmqpChannelPooler(newConn);
             var oldpool = Interlocked.Exchange(ref _clientPool, newPool);
 
@@ -74,12 +71,15 @@ namespace RestBus.RabbitMQ.Client
             return newPool;
         }
 
-        public bool IsConnected
+        public void Dispose()
         {
-            get
+            _disposed = true;
+            lock(connectionSync)
             {
-                var pool = _clientPool;
-                return pool != null && pool.Connection != null && pool.Connection.IsOpen;
+                if(_clientPool != null)
+                {
+                    _clientPool.Dispose();
+                }
             }
         }
     }

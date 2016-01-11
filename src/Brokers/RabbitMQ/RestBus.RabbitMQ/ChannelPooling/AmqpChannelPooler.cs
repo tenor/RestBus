@@ -1,4 +1,5 @@
 ﻿using RabbitMQ.Client;
+using RestBus.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ namespace RestBus.RabbitMQ.ChannelPooling
     internal sealed class AmqpChannelPooler : IDisposable
     {
         readonly IConnection conn;
+        InterlockedBoolean _recycle;
         volatile bool _disposed;
 
 #if !DISABLE_CHANNELPOOLING
@@ -141,7 +143,18 @@ namespace RestBus.RabbitMQ.ChannelPooling
 #endif
         }
 
+        /// <summary>
+        /// Sets a flag that indicates that pool should not be used any longer.
+        /// </summary>
+        internal void SetRecycle()
+        {
+            _recycle.SetTrueIf(false);
+        }
 
+        internal bool GetRecycle()
+        {
+            return _recycle;
+        }
 
         public void Dispose()
         {

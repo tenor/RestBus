@@ -144,8 +144,12 @@ namespace RestBus.RabbitMQ.Client
                throw new InvalidOperationException("The request URI must either be set or BaseAddress must be set");
             }
 
-            if (disposed) throw new ObjectDisposedException("Client has been disposed");
+            if (disposed) throw new ObjectDisposedException(GetType().FullName);
             hasKickStarted = true;
+
+            //Get channel pool
+            var pool = connectionMgr.GetConnectedPool();
+
             PrepareMessage(request);
 
             //Get Request Options
@@ -169,7 +173,7 @@ namespace RestBus.RabbitMQ.Client
             {
                 #region Ensure CallbackQueue is started / Connected to server
 
-                rpcStrategy.EnsureConnected(expectingResponse);
+                rpcStrategy.StartStrategy(pool, expectingResponse);
 
                 #endregion
 
@@ -251,7 +255,7 @@ namespace RestBus.RabbitMQ.Client
                 //NOTE: You're not supposed to share channels across threads but Iin this situation where only one thread can have access to a channel at a time, all's good.
 
                 //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
-                model = rpcStrategy.GetModel(false);
+                model = rpcStrategy.GetModel(pool, false);
 
                 RedeclareExchangesAndQueues(model);
 
@@ -349,7 +353,9 @@ namespace RestBus.RabbitMQ.Client
         protected override void Dispose(bool disposing)
         {
             disposed = true;
+            //TODO: Dispose both strategies
             rpcStrategy.Dispose();
+            connectionMgr.Dispose();
 
             base.Dispose(disposing);
         }

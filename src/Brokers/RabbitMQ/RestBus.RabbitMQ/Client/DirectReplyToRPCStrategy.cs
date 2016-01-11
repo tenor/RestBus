@@ -1,5 +1,4 @@
 ﻿using RabbitMQ.Client.Framing;
-using RestBus.Common.Amqp;
 using RestBus.RabbitMQ.ChannelPooling;
 using System;
 using System.Net.Http;
@@ -10,9 +9,6 @@ namespace RestBus.RabbitMQ.Client
 {
     internal class DirectReplyToRPCStrategy : IRPCStrategy
     {
-        readonly ConnectionManager connectionMgr;
-        readonly object reconnectionSync = new object();
-
         public bool ReturnModelAfterSending
         {
             get
@@ -23,31 +19,19 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        public DirectReplyToRPCStrategy(ClientSettings clientSettings, ConnectionManager connectionManager)
-        {
-            this.connectionMgr = connectionManager;
-        }
-
         public void CleanupMessagingResources(string correlationId, ExpectedResponse expectedResponse)
         {
             if (expectedResponse != null) expectedResponse.Dispose();
         }
 
-        public void EnsureConnected(bool requestExpectsResponse)
+        public void StartStrategy(AmqpChannelPooler pool, bool requestExpectsResponse)
         {
-            //Client has never seen any request expecting a response
-            //so just try to connect if not already connected
-            connectionMgr.ConnectIfUnconnected(reconnectionSync);
-
-            //TODO: This call is unnecessary if we can guarantee the block above always creates a connection and pool.
-            //Consider runningonly in debug mode.
-            connectionMgr.EnsurePoolIsCreated();
+            //Nothing to start
         }
 
-        public AmqpModelContainer GetModel(bool streamsPublisherConfirms)
+        public AmqpModelContainer GetModel(AmqpChannelPooler pool, bool streamsPublisherConfirms)
         {
-            var pooler = connectionMgr.GetPool();
-            var model = (RPCModelContainer) pooler.GetModel(streamsPublisherConfirms ? ChannelFlags.RPCWithPublisherConfirms : ChannelFlags.RPC );
+            var model = (RPCModelContainer)pool.GetModel(streamsPublisherConfirms ? ChannelFlags.RPCWithPublisherConfirms : ChannelFlags.RPC );
             model.Reset();
             return model;
         }
@@ -66,8 +50,7 @@ namespace RestBus.RabbitMQ.Client
 
         public void Dispose()
         {
-            var pool = connectionMgr.GetPool();
-            if (pool != null) pool.Dispose();
+            //Nothing to dispose
         }
     }
 }

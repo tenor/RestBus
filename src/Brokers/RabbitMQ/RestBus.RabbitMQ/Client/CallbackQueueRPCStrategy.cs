@@ -17,7 +17,6 @@ namespace RestBus.RabbitMQ.Client
     {
         volatile ConcurrentQueueingConsumer callbackConsumer;
         volatile bool isInConsumerLoop;
-        volatile bool reconnectToServer;
         volatile bool consumerCancelled;
         volatile string callbackQueueName;
         volatile bool seenRequestExpectingResponse;
@@ -26,10 +25,9 @@ namespace RestBus.RabbitMQ.Client
         readonly string indirectReplyToQueueName;
         readonly ConcurrentDictionary<string, ExpectedResponse> expectedResponses;
         readonly ClientSettings clientSettings;
-        readonly ConnectionManager connectionMgr;
         readonly ManualResetEventSlim responseQueued = new ManualResetEventSlim();
         readonly CancellationTokenSource disposedCancellationSource = new CancellationTokenSource();
-        readonly object reconnectionSync = new object();
+        readonly object restartConsumerSync = new object();
 
         public bool ReturnModelAfterSending
         {
@@ -47,11 +45,9 @@ namespace RestBus.RabbitMQ.Client
             //Initialize expectedResponses
             expectedResponses = new ConcurrentDictionary<string, ExpectedResponse>();
 
-            //Initialize connection manager
-            this.connectionMgr = connectionManager;
         }
 
-        public void EnsureConnected(bool requestExpectsResponse)
+        public void StartStrategy(AmqpChannelPooler pool, bool requestExpectsResponse)
         {
             if (requestExpectsResponse) seenRequestExpectingResponse = true;
 
@@ -59,18 +55,8 @@ namespace RestBus.RabbitMQ.Client
             {
                 //This client has seen a request expecting a response so
                 //Start Callback consumer if it hasn't started
-                StartCallbackQueueConsumer();
+                StartCallbackQueueConsumer(pool);
             }
-            else
-            {
-                //Client has never seen any request expecting a response
-                //so just try to connect if not already connected
-                connectionMgr.ConnectIfUnconnected(reconnectionSync);
-            }
-
-            //TODO: This call is unnecessary if we can guarantee the block above always creates a connection and pool.
-            //Consider runningonly in debug mode.
-            connectionMgr.EnsurePoolIsCreated();
         }
 
         public ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage>  taskSource)
@@ -88,10 +74,9 @@ namespace RestBus.RabbitMQ.Client
 
         }
 
-        public AmqpModelContainer GetModel(bool streamsPublisherConfirms)
+        public AmqpModelContainer GetModel(AmqpChannelPooler pool, bool streamsPublisherConfirms)
         {
-            var pooler = connectionMgr.GetPool();
-            return pooler.GetModel(streamsPublisherConfirms ? ChannelFlags.PublisherConfirms : ChannelFlags.None);
+            return pool.GetModel(streamsPublisherConfirms ? ChannelFlags.PublisherConfirms : ChannelFlags.None);
         }
 
         public void CleanupMessagingResources(string correlationId, ExpectedResponse expectedResponse)
@@ -109,16 +94,15 @@ namespace RestBus.RabbitMQ.Client
         }
 
 
-        private void StartCallbackQueueConsumer()
+        private void StartCallbackQueueConsumer(AmqpChannelPooler pool)
         {
             //TODO: Double-checked locking -- make this better
             //TODO: Consider moving the conn related checks into a pooler method
-            if (callbackConsumer == null || !isInConsumerLoop || !connectionMgr.IsConnected)
+            if (callbackConsumer == null || !isInConsumerLoop || !pool.Connection.IsOpen)
             {
-                //NOTE: Same lock is used in when calling RPCStrategyHelpers.ConnectToServer
-                lock (reconnectionSync)
+                lock (restartConsumerSync)
                 {
-                    if (!(callbackConsumer == null || !isInConsumerLoop || !connectionMgr.IsConnected)) return;
+                    if (!(callbackConsumer == null || !isInConsumerLoop || !pool.Connection.IsOpen)) return;
 
                     //This method waits on this signal to make sure the callbackprocessor thread either started successfully or failed.
                     ManualResetEventSlim consumerSignal = new ManualResetEventSlim(false);
@@ -126,19 +110,9 @@ namespace RestBus.RabbitMQ.Client
 
                     Thread callBackProcessor = new Thread(p =>
                     {
-                        AmqpChannelPooler pool = null;
                         ConcurrentQueueingConsumer consumer = null;
                         try
                         {
-                            //Do not create a new connection or pool if there is a good one already existing (possibly created by ConnectionManager.ConnectIfUnconnected()
-                            //unless consumer explicitly signalled to reconnect to server
-                            pool = connectionMgr.GetPool();
-                            if (pool == null || pool.Connection == null || !pool.Connection.IsOpen || reconnectToServer)
-                            {
-                                pool = connectionMgr.CreateNewChannelPool();
-                                reconnectToServer = false;
-                            }
-
                             //Start consumer
                             AmqpModelContainer channelContainer = null;
                             try
@@ -237,7 +211,7 @@ namespace RestBus.RabbitMQ.Client
                             finally
                             {
                                 isInConsumerLoop = false;
-                                reconnectToServer = true;
+                                pool.SetRecycle();
 
                                 if (channelContainer != null)
                                 {
@@ -267,8 +241,6 @@ namespace RestBus.RabbitMQ.Client
                                 consumerSignal.Set();
                             }
                             catch { }
-
-
                         }
                         finally
                         {
@@ -307,7 +279,7 @@ namespace RestBus.RabbitMQ.Client
         {
             while (true)
             {
-                if (disposed) throw new ObjectDisposedException("Client has been disposed");
+                if (disposed) throw new ObjectDisposedException(GetType().FullName);
 
                 BasicDeliverEventArgs item;
                 if (callbackConsumer.TryInstantDequeue(out item))
@@ -401,9 +373,6 @@ namespace RestBus.RabbitMQ.Client
         public void Dispose()
         {
             disposedCancellationSource.Cancel();
-
-            var pool = connectionMgr.GetPool();
-            if (pool != null) pool.Dispose();
 
             responseQueued.Dispose();
             disposedCancellationSource.Dispose();

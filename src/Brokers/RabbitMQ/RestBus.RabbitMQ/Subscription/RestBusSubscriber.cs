@@ -170,7 +170,7 @@ namespace RestBus.RabbitMQ.Subscription
         //Will block until a request is received from either queue
         public MessageContext Dequeue()
         {
-            if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
+            if (disposed) throw new ObjectDisposedException(GetType().FullName);
             if(workConsumer == null || subscriberConsumer == null) throw new InvalidOperationException("Start the subscriber prior to calling Dequeue");
 
             //TODO: Test what happens if either of these consumers are cancelled by the server, should consumer.Cancelled be handled?
@@ -182,7 +182,7 @@ namespace RestBus.RabbitMQ.Subscription
 
             while (true)
             {
-                if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
+                if (disposed) throw new ObjectDisposedException(GetType().FullName);
                 if (lastProcessedConsumerQueue == subscriberConsumer)
                 {
                     queue1 = workConsumer;
@@ -357,7 +357,7 @@ namespace RestBus.RabbitMQ.Subscription
                 }
                 catch { }
 
-                if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
+                if (disposed) throw new ObjectDisposedException(GetType().FullName);
 
                 if (successfulRestart) break;
                 Thread.Sleep(1);
@@ -366,7 +366,7 @@ namespace RestBus.RabbitMQ.Subscription
 
         public void SendResponse(MessageContext context, HttpResponsePacket response )
         {
-            if (disposed) throw new ObjectDisposedException("Subscriber has been disposed");
+            if (disposed) throw new ObjectDisposedException(GetType().FullName);
 
             var dispatch = context.Dispatch as MessageDispatch;
             if (dispatch != null)

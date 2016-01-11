@@ -9,11 +9,11 @@ namespace RestBus.RabbitMQ.Client
 {
     internal interface IRPCStrategy : IDisposable
     {
-        void EnsureConnected(bool requestExpectsResponse);
+        void StartStrategy(AmqpChannelPooler pool, bool requestExpectsResponse);
 
         ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage> taskSource);
 
-        AmqpModelContainer GetModel(bool streamsPublisherConfirms);
+        AmqpModelContainer GetModel(AmqpChannelPooler pool, bool streamsPublisherConfirms);
 
         bool ReturnModelAfterSending { get; }
 
