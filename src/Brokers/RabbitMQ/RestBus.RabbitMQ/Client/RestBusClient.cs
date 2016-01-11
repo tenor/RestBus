@@ -33,6 +33,9 @@ namespace RestBus.RabbitMQ.Client
 
         static readonly RabbitMQMessagingProperties _defaultMessagingProperties = new RabbitMQMessagingProperties();
 
+        //TODO: Consider moving this into Common, Maybe Client (Requires a reference to System.Net.Http)
+        internal static readonly ByteArrayContent _emptyByteArrayContent = new ByteArrayContent(new byte[0]);
+
         /// <summary>Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.</summary>
         public RestBusClient(IMessageMapper messageMapper) : base(new HttpClientHandler(), true)
         {
@@ -308,8 +311,7 @@ namespace RestBus.RabbitMQ.Client
                     //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before replying OK.
 
                     //Zero timespan means the client isn't interested in a response
-                    //TODO: Have new ByteArrayContent be a static object.
-                    taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[0]) });
+                    taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = _emptyByteArrayContent });
 
                     rpcStrategy.CleanupMessagingResources(correlationId, arrival);
                 }

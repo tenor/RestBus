@@ -169,7 +169,7 @@ namespace RestBus.RabbitMQ.Client
             {
                 response = new HttpResponseMessage
                 {
-                    Content = new ByteArrayContent(packet.Content ?? new byte[0]),
+                    Content = packet.Content == null ? RestBusClient._emptyByteArrayContent : new ByteArrayContent(packet.Content),
                     Version = new Version(packet.Version),
                     ReasonPhrase = packet.StatusDescription,
                     StatusCode = (System.Net.HttpStatusCode)packet.StatusCode

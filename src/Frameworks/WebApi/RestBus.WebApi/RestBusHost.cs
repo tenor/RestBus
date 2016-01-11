@@ -23,6 +23,9 @@ namespace RestBus.WebApi
         InterlockedBoolean hasStarted;
         volatile bool disposed = false;
 
+        //TODO: Consider moving this into Common, Maybe Client (Requires a reference to System.Net.Http)
+        internal static readonly ByteArrayContent _emptyByteArrayContent = new ByteArrayContent(new byte[0]);
+
         public RestBusHost(IRestBusSubscriber subscriber, HttpConfiguration config)
         {
             this.subscriber = subscriber;
@@ -233,7 +236,7 @@ namespace RestBus.WebApi
             {
                 request = new HttpRequestMessage
                 {
-                    Content = new ByteArrayContent(packet.Content ?? new byte[0]),
+                    Content = packet.Content == null ? _emptyByteArrayContent : new ByteArrayContent(packet.Content),
                     Version = new Version(packet.Version),
                     Method = new HttpMethod(packet.Method ?? "GET"),
                     RequestUri = packet.BuildUri(virtualPath, hostname)

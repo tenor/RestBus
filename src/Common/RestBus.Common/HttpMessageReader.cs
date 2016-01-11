@@ -4,6 +4,8 @@ namespace RestBus.Common
 {
     internal class HttpMessageReader
     {
+        static byte[] _emptyByteArray = new byte[0];
+
         int lineStart = 0;
         int lineEnd = -1;
         readonly int len;
@@ -59,7 +61,7 @@ namespace RestBus.Common
         public byte[] GetContent()
         {
             if (!contentMode) throw new InvalidOperationException("Content has not been read yet");
-            if (lineStart >= len) return new byte[0];
+            if (lineStart >= len) return _emptyByteArray;
 
             byte[] content = new byte[len - lineStart];
             Array.Copy(data, lineStart, content, 0, len - lineStart);
