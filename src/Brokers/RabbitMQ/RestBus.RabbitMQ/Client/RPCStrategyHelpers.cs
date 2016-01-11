@@ -140,14 +140,7 @@ namespace RestBus.RabbitMQ.Client
             {
                 if (arrival.DeserializationException == null)
                 {
-                    var res = arrival.Response;
-                    if (res != null)
-                    {
-                        //Add/Update Content-Length Header
-                        //TODO: Is there any need to add this here if it's subsequently removed/updated by TryGetHttpResponseMessage/HttpPacket.PopulateHeaders? (Is this useful in the exception/other path scenario?
-                        res.Headers["Content-Length"] = new string[] { (res.Content == null ? 0 : res.Content.Length).ToString() }; ;
-                    }
-                    else
+                    if (arrival.Response == null)
                     {
                         //TODO: Log this -- Critical issue (or just assert)
                     }
