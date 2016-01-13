@@ -4,19 +4,19 @@ using System.Threading;
 namespace RestBus.Common
 {
     /// <summary>
-    /// Provides a boolean value that is written to using Interlocked.Exchange.
+    /// Provides a boolean value that can be atomically modified using Interlocked operations.
     /// Use this struct only as a field in a class and access it directly from any callee.
     /// Do not pass this struct to methods/indexers etc. as it will be copied.
     /// </summary>
     /// <remarks>
-    /// Consider using a volatile bool field instead of this type, unless you need CompareExchange (SetIf) operations.
+    /// Consider using a volatile bool field instead of this type, unless you need Exchange or CompareExchange (SetIf) operations.
     /// This type is implicitly convertible to boolean.
     /// </remarks>
     public struct InterlockedBoolean : IComparable, IComparable<InterlockedBoolean>, IComparable<bool>, IEquatable<InterlockedBoolean>, IEquatable<bool>
     {
         const int FALSE = 0;
         const int TRUE = ~FALSE; //-1
-        private int _value; //Will be initialized as False
+        volatile int _value; //Will be initialized as False
 
         /// <summary>
         /// Returns True, if the value is false
@@ -47,7 +47,7 @@ namespace RestBus.Common
         public void Set(bool value)
         {
             int i_value = value == true ? TRUE : FALSE;
-            Interlocked.Exchange(ref _value, i_value);
+            _value = i_value;
         }
 
         /// <summary>
@@ -79,6 +79,19 @@ namespace RestBus.Common
         public bool SetFalseIf(bool valueEquals)
         {
             return SetIf(valueEquals, false);
+        }
+
+        /// <summary>
+        /// Atomically exchanges the value to a specified value
+        /// </summary>
+        /// <returns>
+        /// The original value
+        /// </returns>
+        /// <param name="value">The new value</param>
+        public bool Exchange(bool value)
+        {
+            int i_value = value == true ? TRUE : FALSE;
+            return Interlocked.Exchange(ref _value, i_value) == FALSE ? false : true;
         }
 
         public int CompareTo(object obj)
