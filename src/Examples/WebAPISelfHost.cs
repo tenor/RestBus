@@ -10,7 +10,7 @@ using System.Web.Http;
 
 namespace Examples
 {
-    public class WebAPI2Host
+    public class WebAPISelfHost
     {
         public IList<IDisposable> Start()
         {

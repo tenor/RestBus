@@ -80,7 +80,7 @@
     <Compile Include="Basic.cs" />
     <Compile Include="QueueingMessageMapper.cs" />
     <Compile Include="SpeedTest.cs" />
-    <Compile Include="WebAPI2Host.cs" />
+    <Compile Include="WebAPISelfHost.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

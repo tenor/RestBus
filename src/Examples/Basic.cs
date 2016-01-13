@@ -18,7 +18,7 @@ namespace Examples
              */
 
             //Start Web API 2 host to receive message.
-            WebAPI2Host host = new WebAPI2Host();
+            WebAPISelfHost host = new WebAPISelfHost();
             var servers = host.Start();
 
             //Create client
