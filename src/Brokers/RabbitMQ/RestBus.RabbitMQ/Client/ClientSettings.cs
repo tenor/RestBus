@@ -9,11 +9,9 @@ namespace RestBus.RabbitMQ.Client
         bool _disableDirectReplies;
         int _prefetchCount;
 
-        const int DEFAULT_PREFETCH_COUNT = 50; //Based on measurements from http://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/
-
         public ClientSettings()
         {
-            PrefetchCount = DEFAULT_PREFETCH_COUNT;
+            PrefetchCount = AmqpUtils.DEFAULT_PREFETCH_COUNT;
         }
 
         internal ClientSettings(RestBusClient client)
@@ -47,7 +45,7 @@ namespace RestBus.RabbitMQ.Client
             set
             {
                 EnsureNotStartedOrDisposed();
-                if (value < 0) throw new ArgumentException("Consumer prefetch must be a positive number or zero.");
+                if (value < 0 || value > ushort.MaxValue) throw new ArgumentException("PrefetchCount must be between 0 and 65535.");
                 _prefetchCount = value;
             }
         }

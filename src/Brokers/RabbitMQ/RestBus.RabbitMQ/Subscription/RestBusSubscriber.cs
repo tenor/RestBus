@@ -165,7 +165,7 @@ namespace RestBus.RabbitMQ.Subscription
             workConsumer = new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued);
             string workQueueName = AmqpUtils.GetWorkQueueName(exchangeConfig);
 
-            workChannel.Channel.BasicQos(0, 50, false);
+            workChannel.Channel.BasicQos(0, (ushort)Settings.PrefetchCount, false);
             workChannel.Channel.BasicConsume(workQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, workConsumer);
 
             //Listen on subscriber queue
@@ -173,7 +173,7 @@ namespace RestBus.RabbitMQ.Subscription
             subscriberConsumer = new ConcurrentQueueingConsumer(subscriberChannel.Channel, requestQueued);
             string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeConfig, Id);
 
-            subscriberChannel.Channel.BasicQos(0, 50, false);
+            subscriberChannel.Channel.BasicQos(0, (ushort)Settings.PrefetchCount, false);
             subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, subscriberConsumer);
 
             //Cancel connectionBroken on connection/consumer problems 

@@ -14,7 +14,9 @@ namespace RestBus.RabbitMQ
         const string subscriberQueuePath = "/sq";
 		const string workQueueRoutingKey = "";
 
-		public static string GetCallbackQueueName(ExchangeConfiguration exchangeConfig, string clientId)
+        public const int DEFAULT_PREFETCH_COUNT = 50; //Based on measurements from http://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/
+
+        public static string GetCallbackQueueName(ExchangeConfiguration exchangeConfig, string clientId)
 		{
 			return queuePrefix + PrefixSlashIfNotEmpty(exchangeConfig.ServiceName) + callbackQueuePath + "/" + clientId;
 		}
