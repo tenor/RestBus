@@ -36,8 +36,20 @@ namespace RestBus.RabbitMQ.Client
         //TODO: Consider moving this into Common, Maybe Client (Requires a reference to System.Net.Http)
         internal static readonly ByteArrayContent _emptyByteArrayContent = new ByteArrayContent(new byte[0]);
 
-        /// <summary>Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.</summary>
-        public RestBusClient(IMessageMapper messageMapper) : base(new HttpClientHandler(), true)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.
+        /// </summary>
+        /// <param name="messageMapper">The <see cref="IMessageMapper" /> the client uses to route messages.</param>
+        public RestBusClient(IMessageMapper messageMapper) : this(messageMapper, null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:RestBus.RabbitMQ.RestBusClient" /> class.
+        /// </summary>
+        /// <param name="messageMapper">The <see cref="IMessageMapper" /> the client uses to route messages.</param>
+        /// <param name="settings">Client settings.</param>
+        public RestBusClient(IMessageMapper messageMapper, ClientSettings settings ) : base(new HttpClientHandler(), true)
         {
             //Set default HttpClient related fields
             timeout = TimeSpan.FromSeconds(100);
@@ -53,13 +65,12 @@ namespace RestBus.RabbitMQ.Client
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, ExchangeKind.Direct);
 
             //Set ClientSettings
-            this.Settings = new ClientSettings(this); // Always have a default version if it wasn't passed in.
+            this.Settings = settings ?? new ClientSettings(this); // Always have a default instance, if it wasn't passed in.
 
             //Instantiate connection manager and RPC strategies;
             connectionMgr = new ConnectionManager(exchangeConfig);
             directStrategy = new DirectReplyToRPCStrategy();
             callbackStrategy = new CallbackQueueRPCStrategy(this.Settings, exchangeConfig);
-
         }
 
         /// <summary>Gets or sets the base address of Uniform Resource Identifier (URI) of the Internet resource used when sending requests.</summary>
