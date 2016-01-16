@@ -134,7 +134,7 @@ namespace RestBus.RabbitMQ.Client
                                 consumerCancelled = false;
                                 consumer.ConsumerCancelled += (s, e) => { consumerCancelled = true; };
 
-                                channel.BasicQos(0, 50, false);
+                                channel.BasicQos(0, (ushort)clientSettings.PrefetchCount, false);
                                 //Start consumer:
 
                                 string replyToQueueName;

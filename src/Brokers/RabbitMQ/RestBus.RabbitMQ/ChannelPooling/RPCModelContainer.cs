@@ -23,6 +23,8 @@ namespace RestBus.RabbitMQ.ChannelPooling
             _consumer.ConsumerCancelled += (s, e) => SetModelToBeDiscarded();
             _consumer.Received += ResponseReceived;
 
+            //NOTE: Consumer is expecting just one response, so there is no need to call BasicQos here.
+
             //Start consuming
             channel.BasicConsume(RPCStrategyHelpers.DIRECT_REPLY_TO_QUEUENAME_ARG, true, _consumer);
         }
