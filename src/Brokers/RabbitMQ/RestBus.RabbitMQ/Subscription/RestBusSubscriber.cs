@@ -12,10 +12,9 @@ using System.Linq;
 
 namespace RestBus.RabbitMQ.Subscription
 {
+    //TODO: Describe what this class does.
     public class RestBusSubscriber : IRestBusSubscriber
     {
-        //TODO: Error handling on the subscriber when the queue(s) expires
-
         volatile AmqpChannelPooler _subscriberPool;
         volatile AmqpModelContainer workChannel;
         volatile AmqpModelContainer subscriberChannel;
@@ -36,7 +35,20 @@ namespace RestBus.RabbitMQ.Subscription
         //TODO: Consider moving this to a helper class.
         static string[] TRUE_STRING_ARRAY = new string[] { true.ToString() };
 
-        public RestBusSubscriber(IMessageMapper messageMapper )
+        /// <summary>
+        /// Initislizes a new instance of the <see cref="RestBusSubscriber"/>
+        /// </summary>
+        /// <param name="messageMapper">The <see cref="IMessageMapper"/> used by the subscriber.</param>
+        public RestBusSubscriber(IMessageMapper messageMapper ) : this(messageMapper, null)
+        {
+        }
+
+        /// <summary>
+        /// Initislizes a new instance of the <see cref="RestBusSubscriber"/>
+        /// </summary>
+        /// <param name="messageMapper">The <see cref="IMessageMapper"/> used by the subscriber.</param>
+        /// <param name="settings">The subscriber settings</param>
+        public RestBusSubscriber(IMessageMapper messageMapper, SubscriberSettings settings)
         {
             exchangeConfig = messageMapper.GetExchangeConfig();
             if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
@@ -48,7 +60,7 @@ namespace RestBus.RabbitMQ.Subscription
             ConnectionNames = exchangeConfig.ServerUris.Select(u => u.FriendlyName ?? String.Empty).ToArray();
             connectionFactory.RequestedHeartbeat = Client.RPCStrategyHelpers.HEART_BEAT;
 
-            this.Settings = new SubscriberSettings(); //Make sure a default value is provided if not supplied by user.
+            this.Settings = settings ?? new SubscriberSettings(); //Make sure a default value is set, if not supplied by user.
         }
 
         public string Id
