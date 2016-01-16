@@ -61,6 +61,7 @@ namespace RestBus.RabbitMQ.Subscription
             connectionFactory.RequestedHeartbeat = Client.RPCStrategyHelpers.HEART_BEAT;
 
             this.Settings = settings ?? new SubscriberSettings(); //Make sure a default value is set, if not supplied by user.
+            this.Settings.Subscriber = this; //Indicate that the subcriber settings is owned by this subscriber.
         }
 
         public string Id

@@ -65,7 +65,8 @@ namespace RestBus.RabbitMQ.Client
             this.exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, ExchangeKind.Direct);
 
             //Set ClientSettings
-            this.Settings = settings ?? new ClientSettings(this); // Always have a default instance, if it wasn't passed in.
+            this.Settings = settings ?? new ClientSettings(); // Always have a default instance, if it wasn't passed in.
+            this.Settings.Client = this; //Indicate that the settings is owned by this client.
 
             //Instantiate connection manager and RPC strategies;
             connectionMgr = new ConnectionManager(exchangeConfig);

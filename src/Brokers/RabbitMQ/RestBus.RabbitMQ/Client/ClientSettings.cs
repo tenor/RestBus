@@ -14,11 +14,6 @@ namespace RestBus.RabbitMQ.Client
             PrefetchCount = AmqpUtils.DEFAULT_PREFETCH_COUNT;
         }
 
-        internal ClientSettings(RestBusClient client)
-        {
-            this._client = client;
-        }
-
         public ClientAckBehavior AckBehavior
         {
             get { return _ackBehavior; }
@@ -54,6 +49,7 @@ namespace RestBus.RabbitMQ.Client
         {
             set
             {
+                if (_client != null) throw new InvalidOperationException("This instance of ClientSettings is already in use by another client." );
                 _client = value;
             }
         }

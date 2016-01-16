@@ -13,11 +13,6 @@ namespace RestBus.RabbitMQ.Subscription
             PrefetchCount = AmqpUtils.DEFAULT_PREFETCH_COUNT;
         }
 
-        internal SubscriberSettings(RestBusSubscriber subscriber)
-        {
-            this._subscriber = subscriber;
-        }
-
         public SubscriberAckBehavior AckBehavior
         {
             get
@@ -47,6 +42,7 @@ namespace RestBus.RabbitMQ.Subscription
         {
             set
             {
+                if (_subscriber != null) throw new InvalidOperationException("This instance of SubscriberSettings is already in use by another subscriber.");
                 _subscriber = value;
             }
         }
