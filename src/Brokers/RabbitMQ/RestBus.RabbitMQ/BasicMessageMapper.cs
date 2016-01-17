@@ -39,7 +39,7 @@ namespace RestBus.RabbitMQ
             return serviceName;
         }
 
-        public virtual string GetRoutingKey(HttpRequestMessage request)
+        public virtual string GetRoutingKey(HttpRequestMessage request, ExchangeKind exchangeKind)
         {
             return null;
         }

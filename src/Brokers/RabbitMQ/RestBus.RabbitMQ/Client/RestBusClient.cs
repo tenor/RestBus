@@ -279,9 +279,11 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: Check if cancellation token was set before operation even began
                 var taskSource = new TaskCompletionSource<HttpResponseMessage>();
 
+                var exchangeKind = ExchangeKind.Direct;
                 //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
                 //TODO: Pull exchangeName from a concurrent dictionary that has a key of serviceName, exchangeKind
-                var exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, serviceName, ExchangeKind.Direct);
+                //exchangeKind could be an index into arrays that have concurrentDictionaries.
+                var exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, serviceName, exchangeKind);
 
                 #endregion
 
@@ -306,7 +308,7 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: Implement routing to a different exchangeKind via substituting exchangeName
                 //Send message
                 model.Channel.BasicPublish(exchangeName,
-                                messageProperties.RoutingKey ?? messageMapper.GetRoutingKey(request) ?? AmqpUtils.GetWorkQueueRoutingKey(),
+                                messageProperties.RoutingKey ?? messageMapper.GetRoutingKey(request, exchangeKind) ?? AmqpUtils.GetWorkQueueRoutingKey(),
                                 basicProperties,
                                 request.ToHttpRequestPacket().Serialize());
 
