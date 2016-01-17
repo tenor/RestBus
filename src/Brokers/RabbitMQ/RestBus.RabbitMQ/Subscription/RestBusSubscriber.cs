@@ -26,6 +26,7 @@ namespace RestBus.RabbitMQ.Subscription
         readonly string[] subscriberIdHeader;
         readonly ExchangeConfiguration exchangeConfig;
         readonly object exchangeDeclareSync = new object();
+        readonly string serviceName;
         readonly InterlockedBoolean hasStarted;
         volatile bool disposed = false;
         readonly CancellationTokenSource disposedCancellationSource = new CancellationTokenSource();
@@ -52,6 +53,8 @@ namespace RestBus.RabbitMQ.Subscription
         {
             exchangeConfig = messageMapper.GetExchangeConfig();
             if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
+
+            serviceName = (messageMapper.GetServiceName(null) ?? String.Empty).Trim();
 
             subscriberIdHeader = new string[] { AmqpUtils.GetNewExclusiveQueueId() };
 
@@ -160,11 +163,11 @@ namespace RestBus.RabbitMQ.Subscription
             workChannel = pool.GetModel(ChannelFlags.Consumer);
 
             //Redeclare exchanges and queues
-            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeConfig, exchangeDeclareSync, Id);
+            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeConfig, serviceName, exchangeDeclareSync, Id);
 
             //Listen on work queue
             workConsumer = new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued);
-            string workQueueName = AmqpUtils.GetWorkQueueName(exchangeConfig);
+            string workQueueName = AmqpUtils.GetWorkQueueName(exchangeConfig, serviceName);
 
             workChannel.Channel.BasicQos(0, (ushort)Settings.PrefetchCount, false);
             workChannel.Channel.BasicConsume(workQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, workConsumer);
@@ -172,7 +175,7 @@ namespace RestBus.RabbitMQ.Subscription
             //Listen on subscriber queue
             subscriberChannel = pool.GetModel(ChannelFlags.Consumer);
             subscriberConsumer = new ConcurrentQueueingConsumer(subscriberChannel.Channel, requestQueued);
-            string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(exchangeConfig, Id);
+            string subscriberWorkQueueName = AmqpUtils.GetSubscriberQueueName(serviceName, Id);
 
             subscriberChannel.Channel.BasicQos(0, (ushort)Settings.PrefetchCount, false);
             subscriberChannel.Channel.BasicConsume(subscriberWorkQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, subscriberConsumer);

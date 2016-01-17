@@ -17,7 +17,6 @@ namespace RestBus.RabbitMQ.Client
 
         readonly IMessageMapper messageMapper;
         readonly ExchangeConfiguration exchangeConfig;
-        readonly string exchangeName;
         readonly ConnectionManager connectionMgr;
         readonly IRPCStrategy directStrategy;
         readonly IRPCStrategy callbackStrategy;
@@ -61,9 +60,6 @@ namespace RestBus.RabbitMQ.Client
             this.exchangeConfig = messageMapper.GetExchangeConfig();
             if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
 
-            //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
-            this.exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, ExchangeKind.Direct);
-
             //Set ClientSettings
             this.Settings = settings ?? new ClientSettings(); // Always have a default instance, if it wasn't passed in.
             this.Settings.Client = this; //Indicate that the settings is owned by this client.
@@ -71,7 +67,7 @@ namespace RestBus.RabbitMQ.Client
             //Instantiate connection manager and RPC strategies;
             connectionMgr = new ConnectionManager(exchangeConfig);
             directStrategy = new DirectReplyToRPCStrategy();
-            callbackStrategy = new CallbackQueueRPCStrategy(this.Settings, exchangeConfig);
+            callbackStrategy = new CallbackQueueRPCStrategy(this.Settings, messageMapper.GetServiceName(null));
         }
 
         /// <summary>Gets or sets the base address of Uniform Resource Identifier (URI) of the Internet resource used when sending requests.</summary>
@@ -270,15 +266,22 @@ namespace RestBus.RabbitMQ.Client
                 #endregion
 
                 #region Get Ready to Send Message
-                //NOTE: You're not supposed to share channels across threads but Iin this situation where only one thread can have access to a channel at a time, all's good.
 
-                //TODO: Consider placing model acquisition/return in a try-finally block: Implement once this method has been simplified.
                 model = rpcStrategy.GetModel(pool, false);
 
-                RedeclareExchangesAndQueues(model);
+                var serviceName =
+                    (requestOptions == null || requestOptions.ServiceName == null)
+                    ? (messageMapper.GetServiceName(request) ?? String.Empty).Trim()
+                    : requestOptions.ServiceName.Trim();
+
+                RedeclareExchangesAndQueues(model, serviceName);
 
                 //TODO: Check if cancellation token was set before operation even began
                 var taskSource = new TaskCompletionSource<HttpResponseMessage>();
+
+                //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
+                //TODO: Pull exchangeName from a concurrent dictionary that has a key of serviceName, exchangeKind
+                var exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, serviceName, ExchangeKind.Direct);
 
                 #endregion
 
@@ -377,10 +380,12 @@ namespace RestBus.RabbitMQ.Client
             base.Dispose(disposing);
         }
 
-        private void RedeclareExchangesAndQueues(AmqpModelContainer model)
+        private void RedeclareExchangesAndQueues(AmqpModelContainer model, string serviceName)
         {
             //Redeclare exchanges and queues every minute if exchanges and queues are transient, or the first time client is sending a message
             TimeSpan elapsedSinceLastDeclareExchange = TimeSpan.FromMilliseconds(Environment.TickCount - lastExchangeDeclareTickCount);
+
+            //TODO: Partition elapsedSinceLastDeclareExchange by serviceName and connection so that redeclares take place on new servicenames and connections.
 
             //Discovering firstDeclare by comparing lastExchangeDeclareTickCount to zero is not perfect 
             //because tickcount can wrap back to zero (through the negative number range), if client is running long enough.
@@ -395,7 +400,7 @@ namespace RestBus.RabbitMQ.Client
                     //So do not swap out this value on first declare
                     lastExchangeDeclareTickCount = Environment.TickCount;
                 }
-                AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeConfig, exchangeDeclareSync, null);
+                AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeConfig, serviceName, exchangeDeclareSync, null);
                 if (firstDeclare)
                 {
                     //Swap out this value after declaring on firstdeclare

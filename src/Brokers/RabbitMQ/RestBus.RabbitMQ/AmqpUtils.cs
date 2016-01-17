@@ -16,24 +16,24 @@ namespace RestBus.RabbitMQ
 
         public const int DEFAULT_PREFETCH_COUNT = 50; //Based on measurements from http://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/
 
-        public static string GetCallbackQueueName(ExchangeConfiguration exchangeConfig, string clientId)
+        public static string GetCallbackQueueName(string serviceName, string clientId)
 		{
-			return queuePrefix + PrefixSlashIfNotEmpty(exchangeConfig.ServiceName) + callbackQueuePath + "/" + clientId;
+			return queuePrefix + PrefixSlashIfNotEmpty(serviceName) + callbackQueuePath + "/" + clientId;
 		}
 
-		public static string GetSubscriberQueueName(ExchangeConfiguration exchangeConfig, string subscriberId)
+		public static string GetSubscriberQueueName(string serviceName, string subscriberId)
 		{
-			return queuePrefix + PrefixSlashIfNotEmpty(exchangeConfig.ServiceName) + subscriberQueuePath + "/" + subscriberId;
+			return queuePrefix + PrefixSlashIfNotEmpty(serviceName) + subscriberQueuePath + "/" + subscriberId;
 		}
 
-		public static string GetWorkQueueName(ExchangeConfiguration exchangeConfig)
+		public static string GetWorkQueueName(ExchangeConfiguration exchangeConfig, string serviceName)
 		{
-            return queuePrefix + PrefixSlashIfNotEmpty(exchangeConfig.ServiceName) + workQueuePath + (exchangeConfig.PersistentWorkQueuesAndExchanges ? "/persistent" : String.Empty);
+            return queuePrefix + PrefixSlashIfNotEmpty(serviceName) + workQueuePath + (exchangeConfig.PersistentWorkQueuesAndExchanges ? "/persistent" : String.Empty);
         }
 
-		public static string GetExchangeName(ExchangeConfiguration exchangeConfig, ExchangeKind kind)
+		public static string GetExchangeName(ExchangeConfiguration exchangeConfig, string serviceName, ExchangeKind kind)
 		{
-			return exchangePrefix + exchangeConfig.ServiceName + "." + GetExchangeKindName(kind) + (exchangeConfig.PersistentWorkQueuesAndExchanges ? ".persistent" : String.Empty);
+			return exchangePrefix + serviceName + "." + GetExchangeKindName(kind) + (exchangeConfig.PersistentWorkQueuesAndExchanges ? ".persistent" : String.Empty);
 		}
 
 		public static string GetWorkQueueRoutingKey()
@@ -71,17 +71,17 @@ namespace RestBus.RabbitMQ
 
 
 		//NOTE This is the only method that cannot be moved into RestBus.Common so keep that in mind if integrating other Amqp brokers
-		public static void DeclareExchangeAndQueues(IModel channel, ExchangeConfiguration exchangeConfig, object syncObject, string subscriberId )
+		public static void DeclareExchangeAndQueues(IModel channel, ExchangeConfiguration exchangeConfig, string serviceName, object syncObject, string subscriberId )
 		{
 			//TODO: IS the lock statement here necessary?
 			lock (syncObject)
 			{
                 //TODO: Other Exchange types.
 
-				string exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, ExchangeKind.Direct);
-				string workQueueName = AmqpUtils.GetWorkQueueName(exchangeConfig);
+				string exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, serviceName, ExchangeKind.Direct);
+				string workQueueName = AmqpUtils.GetWorkQueueName(exchangeConfig, serviceName);
 
-				if (exchangeConfig.ServiceName != "")
+				if (serviceName != "")
 				{
                     //Declare direct exchange
                     if (exchangeConfig.SupportedKinds.HasFlag(ExchangeKind.Direct))
@@ -107,7 +107,7 @@ namespace RestBus.RabbitMQ
 
 				if(subscriberId != null)
 				{
-					string subscriberQueueName = AmqpUtils.GetSubscriberQueueName(exchangeConfig, subscriberId);
+					string subscriberQueueName = AmqpUtils.GetSubscriberQueueName(serviceName, subscriberId);
 
                     //The queue is set to be auto deleted once the last consumer stops using it.
                     //However, RabbitMQ will not delete the queue if no consumer ever got to use it.

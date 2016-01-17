@@ -9,8 +9,8 @@ namespace RestBus.RabbitMQ
 {
     public class BasicMessageMapper : IMessageMapper
     {
-        protected string[] amqpHostUris;
-        protected string serviceName;
+        protected readonly string[] amqpHostUris;
+        protected readonly string serviceName;
 
         public BasicMessageMapper(string amqpHostUri, string serviceName)
         {
@@ -31,7 +31,12 @@ namespace RestBus.RabbitMQ
         public virtual ExchangeConfiguration GetExchangeConfig()
         {
             var connectionInfos = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfoAndQuery(u) }).ToArray();
-            return new ExchangeConfiguration(connectionInfos, serviceName);
+            return new ExchangeConfiguration(connectionInfos);
+        }
+
+        public virtual string GetServiceName(HttpRequestMessage request)
+        {
+            return serviceName;
         }
 
         public virtual string GetRoutingKey(HttpRequestMessage request)

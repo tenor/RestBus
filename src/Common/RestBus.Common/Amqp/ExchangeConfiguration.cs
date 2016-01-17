@@ -7,7 +7,7 @@ namespace RestBus.Common.Amqp
     //TODO: Describe what this class does.
     public class ExchangeConfiguration
     {
-        public ExchangeConfiguration(IList<AmqpConnectionInfo> serverUris, string serviceName)
+        public ExchangeConfiguration(IList<AmqpConnectionInfo> serverUris)
         {
             //TODO: Check for invalid parameters
 
@@ -23,12 +23,10 @@ namespace RestBus.Common.Amqp
             }
 
             this.ServerUris = serverUris;
-            this.ServiceName = (serviceName ?? String.Empty).Trim();
             this.SupportedKinds = ExchangeKind.Direct;
         }
 
         public IList<AmqpConnectionInfo> ServerUris { get; protected set; }
-        public string ServiceName { get; protected set; }
         public ExchangeKind SupportedKinds { get; set; }
 
         /// <summary>

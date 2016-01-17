@@ -1,7 +1,7 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Framing;
-using RestBus.Common.Amqp;
+using RestBus.Common;
 using RestBus.RabbitMQ.ChannelPooling;
 using RestBus.RabbitMQ.Consumer;
 using System;
@@ -40,10 +40,19 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        public CallbackQueueRPCStrategy(ClientSettings clientSettings, ExchangeConfiguration exchangeConfig)
+        public CallbackQueueRPCStrategy(ClientSettings clientSettings, string queueName)
         {
             this.clientSettings = clientSettings;
-            this.indirectReplyToQueueName = AmqpUtils.GetCallbackQueueName(exchangeConfig, AmqpUtils.GetNewExclusiveQueueId());
+
+            if(String.IsNullOrEmpty(queueName))
+            {
+                queueName = SynchronizedRandom.Instance.Next().ToString();
+            }
+            else
+            {
+                queueName = queueName.Trim();
+            }
+            this.indirectReplyToQueueName = AmqpUtils.GetCallbackQueueName(queueName, AmqpUtils.GetNewExclusiveQueueId());
 
             //Initialize expectedResponses
             expectedResponses = new ConcurrentDictionary<string, ExpectedResponse>();
