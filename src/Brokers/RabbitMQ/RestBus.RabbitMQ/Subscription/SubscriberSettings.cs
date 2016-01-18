@@ -56,9 +56,11 @@ namespace RestBus.RabbitMQ.Subscription
         }
 
         //TODO: Add other settings
-        //AMQP Headers for Headers exchange subscription.
-        //AMQP Topic for Topic Exchange subscription.
         //Throttling option -- Lets subscriber throttle how many messages can be processed at once (PrefetchCount kind of takes care of this)
         //RequestedHeartBeat (use in coordination with RequestedHeartBeat query string in connection URI)
+
+        //TODO: Discover from IMessageMapper
+        //AMQP Headers for Headers exchange subscription.
+        //AMQP Topic for Topic Exchange subscription.
     }
 }
