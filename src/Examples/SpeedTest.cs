@@ -10,7 +10,7 @@ namespace Examples
 {
     public class SpeedTest
     {
-        public static void Run(int iterations)
+        public async static void Run(int iterations)
         {
             /*
              * An example that performs a speed test via the RestBus RabbitMQ client.
@@ -41,7 +41,7 @@ namespace Examples
             watch.Start();
             for (int i = 0; i < iterations; i++)
             {
-                res = client.SendAsync(msg, System.Threading.CancellationToken.None).Result;
+                res = await client.SendAsync(msg, System.Threading.CancellationToken.None);
             }
 
             watch.Stop();

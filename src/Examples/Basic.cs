@@ -8,7 +8,7 @@ namespace Examples
 {
     static class Basic
     {
-        public static void Run()
+        public async static void Run()
         {
             /*
              * An example that composes a HttpRequest Message and sends it via the RestBus RabbitMQ client.
@@ -36,7 +36,7 @@ namespace Examples
 
             Console.WriteLine("Sending Message ...");
 
-            var res = client.SendAsync(msg, System.Threading.CancellationToken.None).Result;
+            var res = await client.SendAsync(msg, System.Threading.CancellationToken.None);
 
             Console.WriteLine("Response Received:\n{0}\nContent:\n{1}\n", res, Encoding.UTF8.GetString((res.Content as ByteArrayContent).ReadAsByteArrayAsync().Result));
 
