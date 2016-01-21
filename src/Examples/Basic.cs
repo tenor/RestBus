@@ -27,6 +27,7 @@ namespace Examples
 
             RestBusClient client = new RestBusClient(msgMapper);
 
+            //Compose message
             var msg = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, "/api/test")
             {
                 Content = new System.Net.Http.StringContent("{\"Val\":10}", new UTF8Encoding(), "application/json")
@@ -34,6 +35,7 @@ namespace Examples
 
             msg.Headers.Add("Accept", "application/json, text/javascript, */*; q=0.01, */*; q=0.01");
 
+            //Send message
             Console.WriteLine("Sending Message ...");
 
             var res = await client.SendAsync(msg, System.Threading.CancellationToken.None);

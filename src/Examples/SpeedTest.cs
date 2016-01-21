@@ -28,6 +28,7 @@ namespace Examples
             BasicMessageMapper msgMapper = new BasicMessageMapper(ConfigurationManager.AppSettings["rabbitmqserver"], "test");
             RestBusClient client = new RestBusClient(msgMapper);
 
+            //Compose message
             var msg = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, "api/test/random")
             {
                 Content = new System.Net.Http.StringContent("{\"Val\":10}", new UTF8Encoding(), "application/json")
@@ -41,6 +42,7 @@ namespace Examples
             watch.Start();
             for (int i = 0; i < iterations; i++)
             {
+                //Send message
                 res = await client.SendAsync(msg, System.Threading.CancellationToken.None);
             }
 
