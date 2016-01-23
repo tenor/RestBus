@@ -13,12 +13,12 @@ namespace Examples
         {
         }
 
-        public override ExchangeConfiguration GetExchangeConfig()
+        public override MessagingConfiguration GetMessagingConfig()
         {
-            //Returns an ExchangeConfig set up to have persistent queues and messages.
+            //Returns a MessagingConfig set up to have persistent queues and messages.
 
             var connectionInfos = base.amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = base.StripUserInfoAndQuery(u) }).ToArray();
-            return new ExchangeConfiguration(connectionInfos)
+            return new MessagingConfiguration(connectionInfos)
             {
                 PersistentMessages = true,
                 PersistentWorkQueuesAndExchanges = true,

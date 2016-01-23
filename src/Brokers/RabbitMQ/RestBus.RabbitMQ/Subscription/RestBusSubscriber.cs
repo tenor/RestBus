@@ -24,7 +24,7 @@ namespace RestBus.RabbitMQ.Subscription
         volatile CancellationTokenSource stopWaitingOnQueue;
         readonly ManualResetEventSlim requestQueued = new ManualResetEventSlim();
         readonly string[] subscriberIdHeader;
-        readonly ExchangeConfiguration exchangeConfig;
+        readonly MessagingConfiguration messagingConfig;
         readonly object exchangeDeclareSync = new object();
         readonly string serviceName;
         readonly InterlockedBoolean hasStarted;
@@ -51,16 +51,16 @@ namespace RestBus.RabbitMQ.Subscription
         /// <param name="settings">The subscriber settings</param>
         public RestBusSubscriber(IMessageMapper messageMapper, SubscriberSettings settings)
         {
-            exchangeConfig = messageMapper.GetExchangeConfig();
-            if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
+            messagingConfig = messageMapper.GetMessagingConfig();
+            if (messagingConfig == null) throw new ArgumentException("messageMapper.GetMessagingConfig() returned null");
 
             serviceName = (messageMapper.GetServiceName(null) ?? String.Empty).Trim();
 
             subscriberIdHeader = new string[] { AmqpUtils.GetNewExclusiveQueueId() };
 
             this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = exchangeConfig.ServerUris[0].Uri;
-            ConnectionNames = exchangeConfig.ServerUris.Select(u => u.FriendlyName ?? String.Empty).ToArray();
+            connectionFactory.Uri = messagingConfig.ServerUris[0].Uri;
+            ConnectionNames = messagingConfig.ServerUris.Select(u => u.FriendlyName ?? String.Empty).ToArray();
             connectionFactory.RequestedHeartbeat = Client.RPCStrategyHelpers.HEART_BEAT;
 
             this.Settings = settings ?? new SubscriberSettings(); //Make sure a default value is set, if not supplied by user.
@@ -163,11 +163,11 @@ namespace RestBus.RabbitMQ.Subscription
             workChannel = pool.GetModel(ChannelFlags.Consumer);
 
             //Redeclare exchanges and queues
-            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, exchangeConfig, serviceName, exchangeDeclareSync, Id);
+            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, messagingConfig, serviceName, exchangeDeclareSync, Id);
 
             //Listen on work queue
             workConsumer = new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued);
-            string workQueueName = AmqpUtils.GetWorkQueueName(exchangeConfig, serviceName);
+            string workQueueName = AmqpUtils.GetWorkQueueName(messagingConfig, serviceName);
 
             workChannel.Channel.BasicQos(0, (ushort)Settings.PrefetchCount, false);
             workChannel.Channel.BasicConsume(workQueueName, Settings.AckBehavior == SubscriberAckBehavior.Automatic, workConsumer);

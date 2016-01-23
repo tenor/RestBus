@@ -13,11 +13,11 @@ namespace RestBus.RabbitMQ.Client
         readonly ConnectionFactory connectionFactory;
         readonly object connectionSync = new object();
 
-        public ConnectionManager(ExchangeConfiguration exchangeConfig)
+        public ConnectionManager(MessagingConfiguration messagingConfig)
         {
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = exchangeConfig.ServerUris[0].Uri;
+            connectionFactory.Uri = messagingConfig.ServerUris[0].Uri;
             connectionFactory.RequestedHeartbeat = RPCStrategyHelpers.HEART_BEAT;
         }
 

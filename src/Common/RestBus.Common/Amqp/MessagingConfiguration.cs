@@ -5,9 +5,9 @@ using System.Net.Http;
 namespace RestBus.Common.Amqp
 {
     //TODO: Describe what this class does.
-    public class ExchangeConfiguration
+    public class MessagingConfiguration
     {
-        public ExchangeConfiguration(IList<AmqpConnectionInfo> serverUris)
+        public MessagingConfiguration(IList<AmqpConnectionInfo> serverUris)
         {
             //TODO: Check for invalid parameters
 
@@ -23,11 +23,11 @@ namespace RestBus.Common.Amqp
             }
 
             this.ServerUris = serverUris;
-            this.SupportedKinds = ExchangeKind.Direct;
+            this.SupportedExchangeKinds = ExchangeKind.Direct;
         }
 
         public IList<AmqpConnectionInfo> ServerUris { get; protected set; }
-        public ExchangeKind SupportedKinds { get; set; }
+        public ExchangeKind SupportedExchangeKinds { get; set; }
 
         /// <summary>
         /// Controls the message delivery mode.

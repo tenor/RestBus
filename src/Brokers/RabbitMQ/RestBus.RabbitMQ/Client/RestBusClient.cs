@@ -16,7 +16,7 @@ namespace RestBus.RabbitMQ.Client
         static SequenceGenerator correlationIdGen = SequenceGenerator.FromUtcNow();
 
         readonly IMessageMapper messageMapper;
-        readonly ExchangeConfiguration exchangeConfig;
+        readonly MessagingConfiguration messagingConfig;
         readonly ConnectionManager connectionMgr;
         readonly IRPCStrategy directStrategy;
         readonly IRPCStrategy callbackStrategy;
@@ -57,15 +57,15 @@ namespace RestBus.RabbitMQ.Client
 
             //Configure RestBus fields/properties
             this.messageMapper = messageMapper;
-            this.exchangeConfig = messageMapper.GetExchangeConfig();
-            if (exchangeConfig == null) throw new ArgumentException("messageMapper.GetExchangeConfig() returned null");
+            this.messagingConfig = messageMapper.GetMessagingConfig();
+            if (messagingConfig == null) throw new ArgumentException("messageMapper.GetMessagingConfig() returned null");
 
             //Set ClientSettings
             this.Settings = settings ?? new ClientSettings(); // Always have a default instance, if it wasn't passed in.
             this.Settings.Client = this; //Indicate that the settings is owned by this client.
 
             //Instantiate connection manager and RPC strategies;
-            connectionMgr = new ConnectionManager(exchangeConfig);
+            connectionMgr = new ConnectionManager(messagingConfig);
             directStrategy = new DirectReplyToRPCStrategy();
             callbackStrategy = new CallbackQueueRPCStrategy(this.Settings, messageMapper.GetServiceName(null));
         }
@@ -198,9 +198,9 @@ namespace RestBus.RabbitMQ.Client
 
                 //Set message delivery mode -- Make message persistent if either:
                 // 1. Properties.Persistent is true
-                // 2. exchangeConfig.PersistentMessages is true and Properties.Persistent is null
-                // 3. exchangeConfig.PersistentMessages is true and Properties.Persistent is true
-                if (messageProperties.Persistent == true || (exchangeConfig.PersistentMessages && messageProperties.Persistent != false))
+                // 2. messagingConfig.PersistentMessages is true and Properties.Persistent is null
+                // 3. messagingConfig.PersistentMessages is true and Properties.Persistent is true
+                if (messageProperties.Persistent == true || (messagingConfig.PersistentMessages && messageProperties.Persistent != false))
                 {
                     basicProperties.Persistent = true;
                 }
@@ -220,7 +220,7 @@ namespace RestBus.RabbitMQ.Client
 
                     //Set Expiration if messageProperties doesn't override Client.Timeout, RequestOptions and MessageMapper.
                     if (!messageProperties.Expiration.HasValue && requestTimeout != System.Threading.Timeout.InfiniteTimeSpan 
-                        && ( exchangeConfig.MessageExpires == null || exchangeConfig.MessageExpires(request)))
+                        && ( messagingConfig.MessageExpires == null || messagingConfig.MessageExpires(request)))
                     {
                         if (requestTimeout.TotalMilliseconds > Int32.MaxValue)
                         {
@@ -232,7 +232,7 @@ namespace RestBus.RabbitMQ.Client
                         }
                     }
                 }
-                else if (!messageProperties.Expiration.HasValue && (exchangeConfig.MessageExpires == null || exchangeConfig.MessageExpires(request)))
+                else if (!messageProperties.Expiration.HasValue && (messagingConfig.MessageExpires == null || messagingConfig.MessageExpires(request)))
                 {
                     //Request has a zero timeout and the message mapper indicates it should expire and messageproperties expiration is not set:
                     //Set the expiration to zero which means RabbitMQ will only transmit if there is a consumer ready to receive it.
@@ -283,7 +283,7 @@ namespace RestBus.RabbitMQ.Client
                 //TODO: Get ExchangeKind from CLient.Settings.ExchangeKind
                 //TODO: Pull exchangeName from a concurrent dictionary that has a key of serviceName, exchangeKind
                 //exchangeKind could be an index into arrays that have concurrentDictionaries.
-                var exchangeName = AmqpUtils.GetExchangeName(exchangeConfig, serviceName, exchangeKind);
+                var exchangeName = AmqpUtils.GetExchangeName(messagingConfig, serviceName, exchangeKind);
 
                 #endregion
 
@@ -393,7 +393,7 @@ namespace RestBus.RabbitMQ.Client
             //because tickcount can wrap back to zero (through the negative number range), if client is running long enough.
             //However, redeclaring exchanges and queues are a safe operation, so this is okay if it occurs more than once in persistent queues.
             bool firstDeclare = lastExchangeDeclareTickCount == 0;
-            if (firstDeclare || (!exchangeConfig.PersistentWorkQueuesAndExchanges && (elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 60)))
+            if (firstDeclare || (!messagingConfig.PersistentWorkQueuesAndExchanges && (elapsedSinceLastDeclareExchange.TotalMilliseconds < 0 || elapsedSinceLastDeclareExchange.TotalSeconds > 60)))
             {
                 if (!firstDeclare)
                 {
@@ -402,7 +402,7 @@ namespace RestBus.RabbitMQ.Client
                     //So do not swap out this value on first declare
                     lastExchangeDeclareTickCount = Environment.TickCount;
                 }
-                AmqpUtils.DeclareExchangeAndQueues(model.Channel, exchangeConfig, serviceName, exchangeDeclareSync, null);
+                AmqpUtils.DeclareExchangeAndQueues(model.Channel, messagingConfig, serviceName, exchangeDeclareSync, null);
                 if (firstDeclare)
                 {
                     //Swap out this value after declaring on firstdeclare
@@ -436,7 +436,7 @@ namespace RestBus.RabbitMQ.Client
             var options = GetRequestOptions(request);
             if (options == null || options.ExpectsReply == null)
             {
-                return exchangeConfig.MessageExpectsReply == null ? true : exchangeConfig.MessageExpectsReply(request);
+                return messagingConfig.MessageExpectsReply == null ? true : messagingConfig.MessageExpectsReply(request);
             }
             else
             {

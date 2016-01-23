@@ -28,10 +28,10 @@ namespace RestBus.RabbitMQ
             this.serviceName = serviceName;
         }
 
-        public virtual ExchangeConfiguration GetExchangeConfig()
+        public virtual MessagingConfiguration GetMessagingConfig()
         {
             var connectionInfos = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfoAndQuery(u) }).ToArray();
-            return new ExchangeConfiguration(connectionInfos);
+            return new MessagingConfiguration(connectionInfos);
         }
 
         public virtual string GetServiceName(HttpRequestMessage request)
