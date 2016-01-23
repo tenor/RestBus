@@ -109,7 +109,6 @@ namespace RestBus.RabbitMQ.Client
         private void StartCallbackQueueConsumer(AmqpChannelPooler pool)
         {
             //TODO: Double-checked locking -- make this better
-            //TODO: Consider moving the conn related checks into a pooler method
             if (callbackConsumer == null || !isInConsumerLoop || !pool.Connection.IsOpen)
             {
                 lock (restartConsumerSync)
@@ -317,8 +316,6 @@ namespace RestBus.RabbitMQ.Client
 
             var callbackQueueArgs = new Dictionary<string, object>();
             callbackQueueArgs.Add("x-expires", (long)AmqpUtils.GetCallbackQueueExpiry().TotalMilliseconds);
-
-            //TODO: AckBehavior is applied here.
 
             //Declare call back queue
             channel.QueueDeclare(queueName, false, false, true, callbackQueueArgs);

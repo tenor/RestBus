@@ -40,8 +40,6 @@ namespace RestBus.Common
 
         protected void WriteHeaders(MemoryStream ms, System.Text.UTF8Encoding encoder)
         {
-            //TODO: Confirm that the purpose of an IEnumerable<string> value is to store multiple headers of the same name
-
             //Write Headers
             string name;
             foreach (var header in Headers)

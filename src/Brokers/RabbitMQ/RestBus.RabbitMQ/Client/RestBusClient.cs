@@ -326,6 +326,7 @@ namespace RestBus.RabbitMQ.Client
                 if (!expectingResponse)
                 {
                     //TODO: Investigate adding a publisher confirm for zero timeout messages so we know that RabbitMQ did pick up the message before replying OK.
+                    //Might add extra complexity to this class.
 
                     //Zero timespan means the client isn't interested in a response
                     taskSource.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = _emptyByteArrayContent });

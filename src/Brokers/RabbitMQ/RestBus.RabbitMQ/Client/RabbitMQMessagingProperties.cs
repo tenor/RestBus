@@ -35,19 +35,18 @@ namespace RestBus.RabbitMQ.Client
         public TimeSpan? Expiration { get; set; } //Difference between this and RequestOptions.Timeout is that client doesn't use this value to decide how long to wait for a response.
 
         //TODO: In SendAsync, Make sure ExchangeKind is in the supportedlist in messagingConfig.SupportedExchangeKinds
-        //TODO: Make sure the Client setting is actually called RestBus.RabbitMQ.Client.RestBusClient.Settings.ExchangeKind
 
         /// <summary>
         /// Controls what kind of exchange the message is sent to.
-        /// This overrides the ExchangeKind setting specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Settings.ExchangeKind"/>.
-        /// Set to null, to use the ExchangeKind setting specified by <see cref="RestBus.RabbitMQ.Client.RestBusClient.Settings.ExchangeKind"/>.
+        /// This overrides the ExchangeKind setting specified in <see cref="RestBus.RabbitMQ.Client.RestBusClient.Settings"/>.
+        /// Set to null, to use the ExchangeKind setting specified in <see cref="RestBus.RabbitMQ.Client.RestBusClient.Settings"/>.
         /// </summary>
         public ExchangeKind? ExchangeKind { get; set; }
 
         /// <summary>
         /// Controls the routing key for the message.
-        /// This overrides the routing key setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.GetRoutingKey(System.Net.Http.HttpRequestMessage)"/>.
-        /// Set to null to use the routing key setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.GetRoutingKey(System.Net.Http.HttpRequestMessage)"/>.
+        /// This overrides the routing key setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.GetRoutingKey(System.Net.Http.HttpRequestMessage, Common.Amqp.ExchangeKind)"/>.
+        /// Set to null to use the routing key setting specified by <see cref="RestBus.Common.Amqp.IMessageMapper.GetRoutingKey(System.Net.Http.HttpRequestMessage, Common.Amqp.ExchangeKind)"/>.
         /// </summary>
         public string RoutingKey { get; set; }
 

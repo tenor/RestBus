@@ -36,6 +36,8 @@ namespace RestBus.RabbitMQ
 
         public virtual string GetServiceName(HttpRequestMessage request)
         {
+            //TODO: Have a static helper that callers to GetServiceName will use to check that for valid servicenames.
+
             return serviceName;
         }
 

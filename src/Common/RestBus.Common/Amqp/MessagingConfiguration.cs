@@ -9,10 +9,6 @@ namespace RestBus.Common.Amqp
     {
         public MessagingConfiguration(IList<AmqpConnectionInfo> serverUris)
         {
-            //TODO: Check for invalid parameters
-
-            //TODO: Have a static IsValidExchangeOrQueueName that this method checks, the BasicMessageMapper will check that too for servicenames.
-
             //Check serverUris
             if (serverUris == null) throw new ArgumentNullException("serverUris");
             if (serverUris.Count == 0) throw new ArgumentException("serverUris must not be empty.");

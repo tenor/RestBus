@@ -193,6 +193,7 @@ namespace RestBus.RabbitMQ.Subscription
             if(workConsumer == null || subscriberConsumer == null) throw new InvalidOperationException("Start the subscriber prior to calling Dequeue");
 
             //TODO: Test what happens if either of these consumers are cancelled by the server, should consumer.Cancelled be handled?
+            //In that scenario, requestQueued.Wait below should throw an exception and try to reconnect.
 
             HttpRequestPacket request;
             MessageDispatch dispatch;
