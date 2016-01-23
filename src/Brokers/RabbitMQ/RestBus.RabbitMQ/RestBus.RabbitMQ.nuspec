@@ -10,7 +10,7 @@
     <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>RabbitMQ broker for RestBus</description>
-    <tags>restbus rabbitmq amqp messaging queue queueing rest http</tags>
+    <tags>restbus rabbitmq amqp messaging queue queueing rest http services webservices microservices</tags>
     <dependencies>
        <dependency id="Newtonsoft.Json" version="5.0.8" />
        <dependency id="RabbitMQ.Client" version="3.6.0" />

@@ -11,7 +11,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Common library for RestBus clients.</description>
     <releaseNotes></releaseNotes>
-    <tags>messaging amqp rabbitmq queue queueing servicestack webapi rest http</tags>
+    <tags>messaging amqp rabbitmq queue queueing servicestack webapi aspnet asp.net aspnetcore rest http services webservices microservices</tags>
     <dependencies>
       <dependency id="Newtonsoft.Json" version="5.0.8" />
     </dependencies>

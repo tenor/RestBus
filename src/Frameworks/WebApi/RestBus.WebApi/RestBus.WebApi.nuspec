@@ -9,8 +9,8 @@
     <projectUrl>http://www.restbus.org</projectUrl>
     <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Web API 2 support for RestBus</description>
-    <tags>webapi amqp rabbitmq messaging queueing restbus rest http</tags>
+    <description>Web API 2 framework support for RestBus</description>
+    <tags>webapi amqp rabbitmq messaging queueing restbus rest http aspnet asp.net services webservices microservices</tags>
     <dependencies>
        <dependency id="RestBus.Common" version="0.6.1-rc1" />
     </dependencies>

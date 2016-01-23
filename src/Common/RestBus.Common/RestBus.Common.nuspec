@@ -9,8 +9,8 @@
     <projectUrl>http://www.restbus.org</projectUrl>
     <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Easy Asynchronous Messaging and Queueing for .NET</description>
+    <description>Easy, Service Oriented, Asynchronous Messaging and Queueing for .NET</description>
     <releaseNotes></releaseNotes>
-    <tags>messaging amqp rabbitmq queue queueing servicestack webapi rest http</tags>
+    <tags>messaging amqp rabbitmq queue queueing servicestack webapi aspnet asp.net aspnetcore rest http services webservices microservices</tags>
   </metadata>
 </package>

@@ -9,8 +9,8 @@
     <projectUrl>http://www.restbus.org</projectUrl>
     <iconUrl>https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>ServiceStack support for RestBus</description>
-    <tags>servicestack amqp rabbitmq messaging queueing restbus rest http</tags>
+    <description>ServiceStack framework support for RestBus</description>
+    <tags>servicestack amqp rabbitmq messaging queueing restbus rest http aspnet asp.net services webservices microservices</tags>
     <dependencies>
        <dependency id="ServiceStack" version="[3.9.71,4)" />
        <dependency id="ServiceStack.Common" version="[3.9.71,4)" />
