@@ -1,5 +1,5 @@
 {
-  "version": "0.6.0-rc1-*",
+  "version": "0.6.1-*",
   "description": "ASP.NET Core (ASP.NET 5) framework support for RestBus",
   "authors": [ "Sunny Ahuwanya" ],
   "tags": [ "asp.net aspnet aspnetcore amqp rabbitmq messaging queueing restbus rest http services webservices microservices" ],
@@ -13,7 +13,7 @@
     "Microsoft.AspNet.Hosting.Server.Abstractions": "1.0.0-rc2-*",
     "Microsoft.AspNet.Http": "1.0.0-rc2-*",
     "Microsoft.AspNet.Http.Abstractions": "1.0.0-rc2-*",
-    "RestBus.Common": "0.6.1-rc1",
+    "RestBus.Common": "0.6.2",
     "System.Net.Http": "4.0.1-beta-23516"
   },
 
