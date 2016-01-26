@@ -12,7 +12,7 @@
     <description>ASP.NET Web API 2 framework support for RestBus</description>
     <tags>webapi amqp rabbitmq messaging queueing restbus rest http aspnet asp.net services webservices microservices</tags>
     <dependencies>
-       <dependency id="RestBus.Common" version="0.6.2" />
+       <dependency id="RestBus.Common" version="0.6.3" />
     </dependencies>
   </metadata>
 </package>
