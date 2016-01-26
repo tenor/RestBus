@@ -5,23 +5,23 @@
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
-    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
-    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
 
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
 
-    <title>RestBus - Easy Asynchronous Messaging and Queueing for .Net</title>
+    <title>RestBus by tenor</title>
   </head>
 
   <body>
     <header>
       <div class="inner">
-        <h1><span style="color: lightyellow;">Rest</span>Bus</h1>
-        <h2>Easy Asynchronous Messaging and Queueing for .Net</h2>
-        <a href="https://github.com/tenor/RestBus" class="button"><small>View project on</small>GitHub</a>
+        <h1>RestBus</h1>
+        <h2>Easy, Service Oriented, Asynchronous Messaging and Queueing for .Net</h2>
+        <a href="https://github.com/tenor/RestBus" class="button"><small>View project on</small> GitHub</a>
       </div>
     </header>
 
@@ -31,26 +31,31 @@
           <p>RestBus enables you to consume your WebAPI and ServiceStack service endpoints via RabbitMQ.<br>
 With RestBus, queuing or sending a message asynchronously is as simple as:</p>
 
-<div class="highlight highlight-csharp"><pre><span class="kt">var</span> <span class="n">amqpUrl</span> <span class="p">=</span> <span class="s">"amqp:localhost:5672"</span><span class="p">;</span> <span class="c1">//AMQP URI for RabbitMQ server</span>
-<span class="kt">var</span> <span class="n">serviceName</span> <span class="p">=</span> <span class="s">"madagascar"</span><span class="p">;</span> <span class="c1">//The unique identifier for the target service</span>
+<div class="highlight highlight-source-cs"><pre><span class="pl-k">var</span> amqpUrl = <span class="pl-s"><span class="pl-pds">"</span>amqp://localhost:5672<span class="pl-pds">"</span></span>; <span class="pl-c">//AMQP URI for RabbitMQ server</span>
+<span class="pl-k">var</span> serviceName = <span class="pl-s"><span class="pl-pds">"</span>samba<span class="pl-pds">"</span></span>; <span class="pl-c">//The unique identifier for the target service</span>
 
-<span class="kt">var</span> <span class="n">client</span> <span class="p">=</span> <span class="k">new</span> <span class="n">RestBusClient</span><span class="p">(</span><span class="k">new</span> <span class="n">BasicMessageMapper</span><span class="p">(</span><span class="n">amqpUrl</span><span class="p">,</span> <span class="n">serviceName</span><span class="p">));</span>
+<span class="pl-k">var</span> client = <span class="pl-k">new</span> RestBusClient(<span class="pl-k">new</span> BasicMessageMapper(amqpUrl, serviceName));
 
-<span class="c1">//Call the /hello/random endpoint</span>
-<span class="kt">var</span> <span class="n">response</span> <span class="p">=</span> <span class="k">await</span> <span class="n">client</span><span class="p">.</span><span class="n">GetAsync</span><span class="p">(</span><span class="s">"/hello/random"</span><span class="p">);</span>
-</pre></div>
+<span class="pl-c">//Call the /hello/random endpoint</span>
+<span class="pl-k">var</span> response = <span class="pl-k">await</span> client.GetAsync(<span class="pl-s"><span class="pl-pds">"</span>/hello/random<span class="pl-pds">"</span></span>);</pre></div>
 
 <p>Does that look familiar?<br>
-If you're conversant with <a href="http://msdn.microsoft.com/en-us/library/system.net.http.httpclient(v=vs.110).aspx" target="_blank">.NET's HttpClient</a> class, you'll be right at home with the <code>RestBusClient</code> class. In fact they both derive from the same base class.<br>
-Yes, <code>RestBusClient</code> is a HTTP client. It just happens to route HTTP messages through RabbitMQ.</p>
+If you're conversant with <a href="http://msdn.microsoft.com/en-us/library/system.net.http.httpclient(v=vs.110).aspx" target="_blank">.NET's HttpClient</a> class, you'll be right at home with the <code>RestBusClient</code> class. In fact they both derive from the same base class.  </p>
+
+<p>The <code>/hello/random</code> endpoint is an ordinary web service endpoint in an ASP.NET Core, Web API or ServiceStack service. RestBus routes the request over RabbitMQ, invokes the endpoint and returns the response, over RabbitMQ too, without ever hitting the HTTP transport.</p>
 
 <h2>
-<a name="why-do-i-need-this" class="anchor" href="#why-do-i-need-this"><span class="octicon octicon-link"></span></a>Why do I need this?</h2>
+<a id="why-do-i-need-this" class="anchor" href="#why-do-i-need-this" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Why do I need this?</h2>
+
+<p>RestBus is a great library for using RabbitMQ in .NET.<br>
+For more reasons, see <a href="https://github.com/tenor/RestBus/wiki/Why-RestBus%3F" target="_blank">Why RestBus?</a></p>
 
 <h2>
-<a name="getting-started" class="anchor" href="#getting-started"><span class="octicon octicon-link"></span></a>Getting Started</h2>
+<a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Getting Started</h2>
 
 <ul>
+<li>
+<a href="https://github.com/tenor/RestBus/wiki/ASP.NET-Core-service-(RabbitMQ-callable)" target="_blank">Using RestBus in an ASP.NET Core Project</a> </li>
 <li>
 <a href="https://github.com/tenor/RestBus/wiki/Web-API-service-(RabbitMQ-callable)" target="_blank">Using RestBus in a Web API service</a><br>
 </li>
@@ -64,53 +69,59 @@ Yes, <code>RestBusClient</code> is a HTTP client. It just happens to route HTTP 
 <a href="https://github.com/tenor/RestBus/wiki/Self-hosting-ServiceStack-service-(RabbitMQ-callable)" target="_blank">Using RestBus in a Self-Hosted ServiceStack service</a><br>
 </li>
 <li>Queuing Messages</li>
-</ul><h2>
-<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
+</ul>
+
+<h2>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Features</h2>
 
 <h3>
-<a name="zero-configuration" class="anchor" href="#zero-configuration"><span class="octicon octicon-link"></span></a>Zero Configuration</h3>
+<a id="zero-configuration" class="anchor" href="#zero-configuration" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Zero Configuration</h3>
+
+<p>You don't need to configure the RabbitMQ server. RestBus automatically creates queues and exchanges as needed.</p>
 
 <h3>
-<a name="use-your-existing-web-services" class="anchor" href="#use-your-existing-web-services"><span class="octicon octicon-link"></span></a>Use your Existing Web Services</h3>
+<a id="use-your-existing-web-services" class="anchor" href="#use-your-existing-web-services" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Use your Existing Web Services</h3>
 
 <p>Your web services can still be consumed via HTTP while supporting RabbitMQ calls.</p>
 
 <ul>
 <li>If you are already making calls with the <code>HttpClient</code> class, simply switch the client to a <code>RestBusClient</code> class and your messages will be routed through RabbitMQ.</li>
-</ul><h3>
-<a name="asynchronous-operations" class="anchor" href="#asynchronous-operations"><span class="octicon octicon-link"></span></a>Asynchronous Operations</h3>
+</ul>
 
 <h3>
-<a name="concurrent-processing" class="anchor" href="#concurrent-processing"><span class="octicon octicon-link"></span></a>Concurrent Processing</h3>
+<a id="horizontal-scaling" class="anchor" href="#horizontal-scaling" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Horizontal scaling</h3>
 
-<p>(Frm ServiceStack.Redis messaging features)</p>
-
-<h3>
-<a name="horizontal-scaling" class="anchor" href="#horizontal-scaling"><span class="octicon octicon-link"></span></a>Horizontal scaling</h3>
+<p>Scaling your services horizontally is as easy as launching new instances.</p>
 
 <h3>
-<a name="its-fast" class="anchor" href="#its-fast"><span class="octicon octicon-link"></span></a>It's Fast</h3>
+<a id="its-fast" class="anchor" href="#its-fast" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>It's Fast</h3>
 
-<p>RestBus pools RabbitMQ channels for even faster throughput.
-[Add test speeds]</p>
+<p>RestBus compares very favorably with other messaging libraries.</p>
+
+<p><img src="https://raw.githubusercontent.com/tenor/RestBus.Benchmarks/master/images/RabbitMQ/rpc_throughput_20_threads.png" alt="One Way RPC Test Results"></p>
+
+<p>For more details, see <a href="https://github.com/tenor/RestBus.Benchmarks" target="_blank">the benchmarks project</a>.</p>
 
 <h3>
-<a name="customizable" class="anchor" href="#customizable"><span class="octicon octicon-link"></span></a>Customizable</h3>
+<a id="customizable" class="anchor" href="#customizable" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Customizable</h3>
 
 <p>Roll your own MessageMapper class for custom messaging behavior.</p>
 
 <h2>
-<a name="how-it-works" class="anchor" href="#how-it-works"><span class="octicon octicon-link"></span></a>How it works</h2>
+<a id="how-it-works" class="anchor" href="#how-it-works" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>How it works</h2>
+
+<p>See <a href="https://github.com/tenor/RestBus/wiki/How-it-works" target="_blank">How It Works</a> </p>
 
 <h2>
-<a name="advanced-scenarios" class="anchor" href="#advanced-scenarios"><span class="octicon octicon-link"></span></a>Advanced Scenarios</h2>
+<a id="advanced-scenarios" class="anchor" href="#advanced-scenarios" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Advanced Scenarios</h2>
 
 <ul>
-<li>Using async/await</li>
 <li>Specifying options for individual messages (Timeout, Cookies, Headers)</li>
 <li>Sticky messaging</li>
-</ul><h2>
-<a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h2>
+</ul>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>License</h2>
 
 <p>Apache License, Version 2.0</p>
         </section>
@@ -125,7 +136,7 @@ Yes, <code>RestBusClient</code> is a HTTP client. It just happens to route HTTP 
             .tar.gz file
           </a>
 
-          <p class="repo-owner"><a href="https://github.com/tenor/RestBus"></a> is maintained by <a href="https://github.com/tenor">Sunny Ahuwanya</a>.</p>
+          <p class="repo-owner"><a href="https://github.com/tenor/RestBus"></a> is maintained by <a href="https://github.com/tenor">tenor</a>.</p>
 
           <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
         </aside>
