@@ -48,7 +48,7 @@ RestBus routes the request over RabbitMQ, invokes the endpoint and returns the r
 <h2>
 <a id="why-do-i-need-this" class="anchor" href="#why-do-i-need-this" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Why do I need this?</h2>
 
-<p>Using RabbitMQ from .NET is not a smooth experience. RestBus makes it ridiculously easy.<br>
+<p>Using RabbitMQ from .NET is currently not a smooth experience. RestBus makes it ridiculously easy.<br>
 For more reasons, see <a href="https://github.com/tenor/RestBus/wiki/Why-RestBus%3F" target="_blank">Why RestBus?</a></p>
 
 <h2>
@@ -91,6 +91,11 @@ For more reasons, see <a href="https://github.com/tenor/RestBus/wiki/Why-RestBus
 Migrating your services to a message oriented architecture is as easy as writing a few lines of code.</p>
 
 <h3>
+<a id="asynchronous-messaging" class="anchor" href="#asynchronous-messaging" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Asynchronous Messaging</h3>
+
+<p>Highly efficient service request processing as endpoints can now be invoked asynchronously.</p>
+
+<h3>
 <a id="horizontal-scaling" class="anchor" href="#horizontal-scaling" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Horizontal scaling</h3>
 
 <p>Scaling your services horizontally is as easy as launching new instances.</p>
@@ -98,7 +103,7 @@ Migrating your services to a message oriented architecture is as easy as writing
 <h3>
 <a id="its-fast" class="anchor" href="#its-fast" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>It's Fast</h3>
 
-<p>RestBus compares very favorably with other messaging libraries.</p>
+<p>RestBus compares very favorably with other messaging libraries, and is the fastest library in many cases.</p>
 
 <p><img src="https://raw.githubusercontent.com/tenor/RestBus.Benchmarks/master/images/RabbitMQ/rpc_throughput_20_threads.png" alt="One Way RPC Test Results"></p>
 
@@ -119,10 +124,8 @@ For more details, see <a href="https://github.com/tenor/RestBus/wiki/How-it-work
 <a id="advanced-scenarios" class="anchor" href="#advanced-scenarios" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Advanced Scenarios</h2>
 
 <ul>
-<li>
-<a href="https://github.com/tenor/RestBus/wiki/Messaging-options" target="_blank">Specifying messaging options</a>.</li>
-<li>
-<a href="https://github.com/tenor/RestBus/wiki/Sticky-messaging" target="_blank">Sticky messaging</a>. </li>
+<li><a href="https://github.com/tenor/RestBus/wiki/Messaging-options" target="_blank">Specifying messaging options</a></li>
+<li><a href="https://github.com/tenor/RestBus/wiki/Sticky-messaging" target="_blank">Sticky messaging</a></li>
 </ul>
 
 <h2>
