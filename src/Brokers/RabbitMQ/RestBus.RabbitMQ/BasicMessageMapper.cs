@@ -26,12 +26,20 @@ namespace RestBus.RabbitMQ
 
             this.amqpHostUris = new string[] { amqpHostUri };
             this.serviceName = serviceName;
+
+            ServerUris = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfoAndQuery(u) }).ToArray();
+            SupportedExchangeKinds = ExchangeKind.Direct;
         }
 
-        public virtual MessagingConfiguration GetMessagingConfig()
+        public virtual IList<AmqpConnectionInfo> ServerUris { get; protected set; }
+        public virtual ExchangeKind SupportedExchangeKinds { get; protected set; }
+
+        public virtual MessagingConfiguration MessagingConfig
         {
-            var connectionInfos = amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = StripUserInfoAndQuery(u) }).ToArray();
-            return new MessagingConfiguration(connectionInfos);
+            get
+            {
+                return new MessagingConfiguration();
+            }
         }
 
         public virtual string GetServiceName(HttpRequestMessage request)
@@ -67,7 +75,7 @@ namespace RestBus.RabbitMQ
         /// </remarks>
         /// <param name="request"></param>
         /// <returns></returns>
-        protected RequestOptions GetRequestOptions(HttpRequestMessage request)
+        public static RequestOptions GetRequestOptions(HttpRequestMessage request)
         {
             return MessageInvokerBase.GetRequestOptions(request);
         }
@@ -75,7 +83,7 @@ namespace RestBus.RabbitMQ
         /// <summary>
         ///  Removes the username, password and query components of an AMQP uri.
         /// </summary>
-        protected string StripUserInfoAndQuery(string amqpUri)
+        public static string StripUserInfoAndQuery(string amqpUri)
         {
             if(amqpUri == null)
             {

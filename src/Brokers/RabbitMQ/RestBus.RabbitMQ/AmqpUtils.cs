@@ -71,7 +71,7 @@ namespace RestBus.RabbitMQ
 
 
 		//NOTE This is the only method that cannot be moved into RestBus.Common so keep that in mind if integrating other Amqp brokers
-		public static void DeclareExchangeAndQueues(IModel channel, MessagingConfiguration messagingConfig, string serviceName, object syncObject, string subscriberId )
+		public static void DeclareExchangeAndQueues(IModel channel, IMessageMapper messageMapper, MessagingConfiguration messagingConfig, string serviceName, object syncObject, string subscriberId )
 		{
 			//TODO: IS the lock statement here necessary?
 			lock (syncObject)
@@ -84,7 +84,7 @@ namespace RestBus.RabbitMQ
 				if (serviceName != "")
 				{
                     //Declare direct exchange
-                    if (messagingConfig.SupportedExchangeKinds.HasFlag(ExchangeKind.Direct))
+                    if (messageMapper.SupportedExchangeKinds.HasFlag(ExchangeKind.Direct))
                     {
                         channel.ExchangeDeclare(exchangeName, AmqpUtils.GetExchangeKindName(ExchangeKind.Direct), messagingConfig.PersistentWorkQueuesAndExchanges, !messagingConfig.PersistentWorkQueuesAndExchanges, null);
                     }

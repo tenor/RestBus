@@ -7,24 +7,6 @@ namespace RestBus.Common.Amqp
     //TODO: Describe what this class does.
     public class MessagingConfiguration
     {
-        public MessagingConfiguration(IList<AmqpConnectionInfo> serverUris)
-        {
-            //Check serverUris
-            if (serverUris == null) throw new ArgumentNullException("serverUris");
-            if (serverUris.Count == 0) throw new ArgumentException("serverUris must not be empty.");
-            for(int i = 0; i < serverUris.Count; i++)
-            {
-                if (serverUris[i] == null) throw new ArgumentException("Index " + i + " of serverUris argument is null.");
-                if (serverUris[i].Uri == null) throw new ArgumentException("Uri property of Index " + i + " of serverUris argument is null.");
-            }
-
-            this.ServerUris = serverUris;
-            this.SupportedExchangeKinds = ExchangeKind.Direct;
-        }
-
-        public IList<AmqpConnectionInfo> ServerUris { get; protected set; }
-        public ExchangeKind SupportedExchangeKinds { get; set; }
-
         /// <summary>
         /// Controls the message delivery mode.
         /// Set to true to persist messages to disk and false to not.

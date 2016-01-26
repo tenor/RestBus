@@ -1,6 +1,6 @@
-﻿using RestBus.Common.Amqp;
+﻿using System.Net.Http;
+using RestBus.Common.Amqp;
 using RestBus.RabbitMQ;
-using System.Linq;
 
 namespace Examples
 {
@@ -13,19 +13,20 @@ namespace Examples
         {
         }
 
-        public override MessagingConfiguration GetMessagingConfig()
+        public override MessagingConfiguration MessagingConfig
         {
-            //Returns a MessagingConfig set up to have persistent queues and messages.
-
-            var connectionInfos = base.amqpHostUris.Select(u => new AmqpConnectionInfo { Uri = u, FriendlyName = base.StripUserInfoAndQuery(u) }).ToArray();
-            return new MessagingConfiguration(connectionInfos)
+            get
             {
-                PersistentMessages = true,
-                PersistentWorkQueuesAndExchanges = true,
-                MessageExpires = (m) => { return false; }, //Messages never expire
-                MessageExpectsReply = (m) => { return false; } //Messages are not replied to
-            };
-        }
+                //Returns a MessagingConfig set up to have persistent queues and messages.
 
+                return new MessagingConfiguration
+                {
+                    PersistentMessages = true,
+                    PersistentWorkQueuesAndExchanges = true,
+                    MessageExpires = (m) => { return false; }, //Messages never expire
+                    MessageExpectsReply = (m) => { return false; } //Messages are not replied to
+                };
+            }
+        }
     }
 }

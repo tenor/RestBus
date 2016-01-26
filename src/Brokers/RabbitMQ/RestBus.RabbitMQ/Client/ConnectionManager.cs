@@ -2,6 +2,7 @@
 using RestBus.Common.Amqp;
 using RestBus.RabbitMQ.ChannelPooling;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace RestBus.RabbitMQ.Client
@@ -13,11 +14,11 @@ namespace RestBus.RabbitMQ.Client
         readonly ConnectionFactory connectionFactory;
         readonly object connectionSync = new object();
 
-        public ConnectionManager(MessagingConfiguration messagingConfig)
+        public ConnectionManager(IList<AmqpConnectionInfo> serverUris)
         {
             //Map request to RabbitMQ Host and exchange, 
             this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = messagingConfig.ServerUris[0].Uri;
+            connectionFactory.Uri = serverUris[0].Uri;
             connectionFactory.RequestedHeartbeat = RPCStrategyHelpers.HEART_BEAT;
         }
 

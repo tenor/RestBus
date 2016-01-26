@@ -24,6 +24,7 @@ namespace RestBus.RabbitMQ.Subscription
         volatile CancellationTokenSource stopWaitingOnQueue;
         readonly ManualResetEventSlim requestQueued = new ManualResetEventSlim();
         readonly string[] subscriberIdHeader;
+        readonly IMessageMapper messageMapper;
         readonly MessagingConfiguration messagingConfig;
         readonly object exchangeDeclareSync = new object();
         readonly string serviceName;
@@ -51,16 +52,23 @@ namespace RestBus.RabbitMQ.Subscription
         /// <param name="settings">The subscriber settings</param>
         public RestBusSubscriber(IMessageMapper messageMapper, SubscriberSettings settings)
         {
-            messagingConfig = messageMapper.GetMessagingConfig();
-            if (messagingConfig == null) throw new ArgumentException("messageMapper.GetMessagingConfig() returned null");
+            this.messageMapper = messageMapper;
+            messagingConfig = messageMapper.MessagingConfig; //Fetched only once
+            if (messagingConfig == null) throw new ArgumentException("messageMapper.MessagingConfig returned null", "messageMapper");
+
+            if (messageMapper.SupportedExchangeKinds == default(ExchangeKind))
+            {
+                throw new ArgumentException("messageMapper.SupportedExchangeKinds is not set up.", "messageMapper");
+            }
 
             serviceName = (messageMapper.GetServiceName(null) ?? String.Empty).Trim();
 
             subscriberIdHeader = new string[] { AmqpUtils.GetNewExclusiveQueueId() };
 
+            AmqpConnectionInfo.EnsureValid(messageMapper.ServerUris, "messageMapper.ServerUris");
             this.connectionFactory = new ConnectionFactory();
-            connectionFactory.Uri = messagingConfig.ServerUris[0].Uri;
-            ConnectionNames = messagingConfig.ServerUris.Select(u => u.FriendlyName ?? String.Empty).ToArray();
+            connectionFactory.Uri = messageMapper.ServerUris[0].Uri;
+            ConnectionNames = messageMapper.ServerUris.Select(u => u.FriendlyName ?? String.Empty).ToArray();
             connectionFactory.RequestedHeartbeat = Client.RPCStrategyHelpers.HEART_BEAT;
 
             this.Settings = settings ?? new SubscriberSettings(); //Make sure a default value is set, if not supplied by user.
@@ -163,7 +171,7 @@ namespace RestBus.RabbitMQ.Subscription
             workChannel = pool.GetModel(ChannelFlags.Consumer);
 
             //Redeclare exchanges and queues
-            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, messagingConfig, serviceName, exchangeDeclareSync, Id);
+            AmqpUtils.DeclareExchangeAndQueues(workChannel.Channel, messageMapper, messagingConfig, serviceName, exchangeDeclareSync, Id);
 
             //Listen on work queue
             workConsumer = new ConcurrentQueueingConsumer(workChannel.Channel, requestQueued);

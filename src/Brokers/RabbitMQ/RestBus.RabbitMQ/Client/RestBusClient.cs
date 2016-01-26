@@ -55,17 +55,20 @@ namespace RestBus.RabbitMQ.Client
             MaxResponseContentBufferSize = int.MaxValue;
             //TODO: Setup cancellation token here.
 
+            //Ensure messageMapper server uris are valid
+            AmqpConnectionInfo.EnsureValid(messageMapper.ServerUris, "messageMapper.ServerUris");
+
             //Configure RestBus fields/properties
             this.messageMapper = messageMapper;
-            this.messagingConfig = messageMapper.GetMessagingConfig();
-            if (messagingConfig == null) throw new ArgumentException("messageMapper.GetMessagingConfig() returned null");
+            this.messagingConfig = messageMapper.MessagingConfig; //Fetched only once.
+            if (messagingConfig == null) throw new ArgumentException("messageMapper.MessagingConfig returned null");
 
             //Set ClientSettings
             this.Settings = settings ?? new ClientSettings(); // Always have a default instance, if it wasn't passed in.
             this.Settings.Client = this; //Indicate that the settings is owned by this client.
 
             //Instantiate connection manager and RPC strategies;
-            connectionMgr = new ConnectionManager(messagingConfig);
+            connectionMgr = new ConnectionManager(messageMapper.ServerUris);
             directStrategy = new DirectReplyToRPCStrategy();
             callbackStrategy = new CallbackQueueRPCStrategy(this.Settings, messageMapper.GetServiceName(null));
         }
@@ -403,7 +406,7 @@ namespace RestBus.RabbitMQ.Client
                     //So do not swap out this value on first declare
                     lastExchangeDeclareTickCount = Environment.TickCount;
                 }
-                AmqpUtils.DeclareExchangeAndQueues(model.Channel, messagingConfig, serviceName, exchangeDeclareSync, null);
+                AmqpUtils.DeclareExchangeAndQueues(model.Channel, messageMapper, messagingConfig, serviceName, exchangeDeclareSync, null);
                 if (firstDeclare)
                 {
                     //Swap out this value after declaring on firstdeclare
