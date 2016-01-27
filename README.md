@@ -1,5 +1,4 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/be40ai1lfg1wucxw/branch/master?svg=true)](https://ci.appveyor.com/project/tenor/restbus/branch/master)
-
 ## Easy, Service Oriented, Asynchronous Messaging and Queueing for .NET ##
 
 RestBus is a high performance library for RabbitMQ that lets you consume your ASP.NET Core (ASP.NET 5), Web API and ServiceStack endpoints via RabbitMQ.
@@ -19,7 +18,7 @@ var response = await client.GetAsync("/hello/random");
 where `/hello/random` is an ordinary endpoint in an ASP.NET Core, Web API or ServiceStack service.
 
 |------|------|
-|**[Home page](https://restbus.org)**|**[Documentation](https://github.com/tenor/RestBus/wiki)**|
+| **[Home page](https://restbus.org)** | **[Documentation](https://github.com/tenor/RestBus/wiki)** |
 
 ### Quick Start
 
