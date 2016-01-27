@@ -17,7 +17,8 @@ var response = await client.GetAsync("/hello/random");
 
 where `/hello/random` is an ordinary endpoint in an ASP.NET Core, Web API or ServiceStack service.
 
-|--------------------------------------|------------------------------------------------------------|
+|  |  |
+|--|--|
 | **[Home page](https://restbus.org)** | **[Documentation](https://github.com/tenor/RestBus/wiki)** |
 
 ### Quick Start
