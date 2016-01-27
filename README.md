@@ -18,7 +18,7 @@ var response = await client.GetAsync("/hello/random");
 where `/hello/random` is an ordinary web service endpoint in an ASP.NET Core, Web API or ServiceStack service.  
 RestBus routes the request over RabbitMQ, invokes the endpoint and returns the response, without ever hitting the HTTP transport.
 
-[Home page](https://restbus.org) | [Documentation](https://github.com/tenor/RestBus/wiki) | <a href="https://github.com/tenor/RestBus.Examples" target="_blank">Example Projects</a>
+[Home page](http://restbus.org) | [Documentation](https://github.com/tenor/RestBus/wiki) | <a href="https://github.com/tenor/RestBus.Examples" target="_blank">Example Projects</a>
 ------- | ------- | --------
 
 ### Getting Started
