@@ -2,7 +2,4 @@
 
 <h1><span style="color: lightyellow;">Rest</span>Bus</h1>
 
-2. Change title to RestBus - Easy Asynchronous Messaging and Queueing for .Net
-
-3. Change is maintaned by tenor to
-is maintained by Sunny Ahuwanya
+2. Change title to RestBus - Easy, Service Oriented, Asynchronous Messaging and Queueing for .Net
