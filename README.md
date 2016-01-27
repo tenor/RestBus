@@ -17,12 +17,8 @@ var response = await client.GetAsync("/hello/random");
 
 where `/hello/random` is an ordinary endpoint in an ASP.NET Core, Web API or ServiceStack service.
 
-|  |  |
-|--|--|
-| **** | **** |
-
-[Home page](https://restbus.org)  | [Documentation](https://github.com/tenor/RestBus/wiki)
-------------- | -------------
+[Home page](https://restbus.org) | [Documentation](https://github.com/tenor/RestBus/wiki) | <a href="https://github.com/tenor/RestBus.Examples" target="_blank">RestBus.Examples</a>
+------------- | -------------|--------
 
 ### Quick Start
 
@@ -34,10 +30,6 @@ You can:
 Open `RestBus.sln` in Visual Studio 2015.  
 Restore Nuget packages.  
 Run the [Examples](https://github.com/tenor/RestBus/tree/master/src/Examples) project.
-
-### Examples
-
-The <a href="https://github.com/tenor/RestBus.Examples" target="_blank">RestBus.Examples</a> repo contains working example console and web clients, ASP.NET, Core Web API and ServiceStack servers.
 
 ### Benchmarks
 
