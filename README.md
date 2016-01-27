@@ -5,7 +5,7 @@ RestBus is a high performance library for RabbitMQ that lets you consume your AS
 
 Sending a message is as easy as:
 
-```
+```csharp
 var amqpUrl = "amqp://localhost:5672"; //AMQP URI for RabbitMQ server
 var serviceName = "samba"; //The unique identifier for the target service
 
@@ -17,7 +17,7 @@ var response = await client.GetAsync("/hello/random");
 
 where `/hello/random` is an ordinary endpoint in an ASP.NET Core, Web API or ServiceStack service.
 
-|------|------|
+|--------------------------------------|------------------------------------------------------------|
 | **[Home page](https://restbus.org)** | **[Documentation](https://github.com/tenor/RestBus/wiki)** |
 
 ### Quick Start
