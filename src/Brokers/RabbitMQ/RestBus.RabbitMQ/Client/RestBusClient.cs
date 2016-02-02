@@ -70,6 +70,8 @@ namespace RestBus.RabbitMQ.Client
             //Instantiate connection manager and RPC strategies;
             connectionMgr = new ConnectionManager(messageMapper.ServerUris);
             directStrategy = new DirectReplyToRPCStrategy();
+
+            //TODO: Confirm service name is valid
             callbackStrategy = new CallbackQueueRPCStrategy(this.Settings, messageMapper.GetServiceName(null));
         }
 
@@ -271,6 +273,8 @@ namespace RestBus.RabbitMQ.Client
                 #region Get Ready to Send Message
 
                 model = rpcStrategy.GetModel(pool, false);
+
+                //TODO: Confirm service name is valid
 
                 var serviceName =
                     (requestOptions == null || requestOptions.ServiceName == null)

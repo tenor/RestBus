@@ -61,6 +61,8 @@ namespace RestBus.RabbitMQ.Subscription
                 throw new ArgumentException("messageMapper.SupportedExchangeKinds is not set up.", "messageMapper");
             }
 
+            //TODO: Confirm service name is valid
+
             serviceName = (messageMapper.GetServiceName(null) ?? String.Empty).Trim();
 
             subscriberIdHeader = new string[] { AmqpUtils.GetNewExclusiveQueueId() };
