@@ -30,17 +30,6 @@ namespace RestBus.Client
 
         public RequestHeaders Headers { get; set; }
 
-        public RequestCookieCollection Cookies { get; }
-
-        string RemoveQuotes(string text)
-        {
-            if (text != null && text.Length > 1 && text.StartsWith("\"", StringComparison.Ordinal) && text.EndsWith("\"", StringComparison.Ordinal))
-            {
-                return text.Substring(1, text.Length - 2);
-            }
-
-            return text;
-        }
-        
+        public RequestCookieCollection Cookies { get; }        
     }
 }
