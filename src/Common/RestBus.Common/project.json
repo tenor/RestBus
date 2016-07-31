@@ -1,13 +1,45 @@
 {
-  "frameworks": {
-    ".NETPortable,Version=v4.5,Profile=Profile7": { },
-    "dotnet5.2": {
-      "dependencies": {
-      }
-    }
+  "version": "0.6.3",
+  "description": "RestBus.Common",
+  "authors": [ "Sunny Ahuwanya" ],
+  "copyright": "Copyright ?Sunny Ahuwanya 2016",
+  "packOptions": {
+    "owners": [ "Sunny Ahuwanya" ],
+    "projectUrl": "http://www.restbus.org",
+    "iconUrl": "https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png",
+    "tags": [ "asp.net aspnet aspnetcore amqp rabbitmq messaging queueing restbus rest http services webservices microservices" ]
   },
 
-  "runtimes": {
-    "win-anycpu": { }
+  "dependencies": {
+  },
+
+  "frameworks": {
+    "portable45-net45+win8": {
+      "dependencies": {
+      },
+      "frameworkAssemblies": {
+        "mscorlib": "",
+        "Microsoft.CSharp": "",
+        "System.Runtime": "",
+        "System.Collections": "",
+        "System.IO": "",
+        "System.Linq": "",
+        "System.Net": "",
+        "System.Net.Http": "",
+        "System.Text.Encoding": "",
+        "System.Text.Encoding.Extensions": ""
+      }
+    },
+    "netstandard1.0": {
+      "dependencies": {
+        "NETStandard.Library": "1.6.0",
+        "System.Net.Http": "4.0.0"
+      },
+      "imports": [
+        "dnxcore50",
+        "dotnet5.6",
+        "portable-net45+win8"
+      ]
+    }
   }
 }

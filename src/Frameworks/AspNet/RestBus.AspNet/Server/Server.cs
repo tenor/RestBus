@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.AspNet.Hosting;
-using Microsoft.AspNet.Hosting.Server;
-using Microsoft.AspNet.Http.Features;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RestBus.AspNet.Server
 {
@@ -13,8 +14,8 @@ namespace RestBus.AspNet.Server
         private readonly IApplicationLifetime _applicationLifetime;
         private readonly ILogger _logger;
 
-        internal const string ConfigServerArgumentName = "server"; // The argument passed to Microsoft.AspNet.Hosting.Program.Main()
-        internal const string ConfigServerAssembly = "RestBus.AspNet"; // The server assembly name passed to Microsoft.AspNet.Hosting.Program.Main()
+        internal const string ConfigServerArgumentName = "server"; // The argument passed to Microsoft.AspNetCore..Hosting.Program.Main()
+        internal const string ConfigServerAssembly = "RestBus.AspNet"; // The server assembly name passed to Microsoft.AspNetCore..Hosting.Program.Main()
 
         public Server(IFeatureCollection features, IApplicationLifetime applicationLifetime, ILogger logger)
         {

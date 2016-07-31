@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting.Server.Features;
+﻿using Microsoft.AspNet.Server.Features;
 using RestBus.Common;
 
 namespace RestBus.AspNet.Server

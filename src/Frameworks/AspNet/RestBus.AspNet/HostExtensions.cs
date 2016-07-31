@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Hosting;
-using Microsoft.AspNet.Hosting.Internal;
-using Microsoft.AspNet.Http;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Internal;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RestBus.Common;
@@ -36,8 +36,8 @@ namespace RestBus.AspNet
             if (app == null) throw new ArgumentNullException("app");
             if (subscriber == null) throw new ArgumentNullException("subscriber");
 
-            if (!skipRestBusServerCheck && 
-                app.ApplicationServices.GetRequiredService<IHostingEnvironment>().Configuration[Server.Server.ConfigServerArgumentName] == Server.Server.ConfigServerAssembly)
+            if (!skipRestBusServerCheck &&
+                app.ApplicationServices.GetRequiredService<Server.Server>() != null)
             {
                 //The application is running RestBusServer, so exit
                 return;

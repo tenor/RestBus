@@ -1,7 +1,6 @@
 {
-    "sdk": {
-      "version": "1.0.0-rc2-16357",
-        "runtime": "clr",
-        "architecture": "x64"
-    }
+  "projects": [ "Frameworks", "Common" ],
+  "sdk": {
+    "version": "1.0.0-preview2-003121"
+  }
 }

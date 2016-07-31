@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Http.Features;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Features;
 using RestBus.Common;
 using System;
 

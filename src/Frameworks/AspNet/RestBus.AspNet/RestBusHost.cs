@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNet.Hosting.Server;
+﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Http.Features;
 using RestBus.Common;
 using System;
 using System.Net;
@@ -219,8 +220,8 @@ namespace RestBus.AspNet
         private static ServiceMessage CreateResponse(HttpStatusCode status, string reasonPhrase, string body = null)
         {
             var msg = new ServiceMessage();
-            ((Microsoft.AspNet.Http.Features.IHttpResponseFeature)msg).StatusCode = (int)status;
-            ((Microsoft.AspNet.Http.Features.IHttpResponseFeature)msg).ReasonPhrase = reasonPhrase;
+            ((IHttpResponseFeature)msg).StatusCode = (int)status;
+            ((IHttpResponseFeature)msg).ReasonPhrase = reasonPhrase;
 
             if(body != null)
             {

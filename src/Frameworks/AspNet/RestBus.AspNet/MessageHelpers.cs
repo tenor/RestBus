@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNet.Http.Features;
-using Microsoft.AspNet.Http.Internal;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.Internal;
 using RestBus.Common;
 using System;
 using System.IO;

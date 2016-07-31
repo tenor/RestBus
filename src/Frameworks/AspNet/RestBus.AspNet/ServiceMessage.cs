@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNet.Http;
-using Microsoft.AspNet.Http.Features;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using RestBus.Common;
 using System;
 using System.Collections;
@@ -99,7 +99,6 @@ namespace RestBus.AspNet
             //Set connection feature properties
             ((IHttpConnectionFeature)this).RemoteIpAddress = IPAddress.IPv6Any;
             ((IHttpConnectionFeature)this).LocalIpAddress = null;
-            ((IHttpConnectionFeature)this).IsLocal = false;
         }
 
         #region IFeatureCollection Implementation
@@ -341,6 +340,16 @@ namespace RestBus.AspNet
             OnCompleted(callback, state);
         }
 
+        public TFeature Get<TFeature>()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Set<TFeature>(TFeature instance)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         #region IHttpConnectionFeature Implementation
@@ -352,8 +361,9 @@ namespace RestBus.AspNet
 
         int IHttpConnectionFeature.LocalPort { get; set; }
 
-        bool IHttpConnectionFeature.IsLocal { get; set; }
+        public string RawTarget { get; set; }
 
+        public string ConnectionId { get; set; }
         #endregion
     }
 }
