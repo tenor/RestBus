@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 namespace RestBus.AspNet.Server
 {
     //TODO: Describe what this class does
+    // Since IServerFactory was removed in ASP.NET Core 1.0 RTM, we don't need it any more.
+    // See https://github.com/aspnet/Hosting/issues/698
     //public class ServerFactory : IServerFactory
     //{
     //    private readonly IApplicationLifetime _appLifetime;
