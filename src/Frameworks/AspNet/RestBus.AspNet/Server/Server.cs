@@ -8,16 +8,22 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace RestBus.AspNet.Server
 {
+
     public class Server : IServer
     {
-        private Stack<IDisposable> _disposables;
-        private readonly IApplicationLifetime _applicationLifetime;
-        private readonly ILogger _logger;
 
         internal const string ConfigServerArgumentName = "server"; // The argument passed to Microsoft.AspNetCore..Hosting.Program.Main()
         internal const string ConfigServerAssembly = "RestBus.AspNet"; // The server assembly name passed to Microsoft.AspNetCore..Hosting.Program.Main()
 
-        public Server(IFeatureCollection features, IApplicationLifetime applicationLifetime, ILogger logger)
+        private readonly IApplicationLifetime _applicationLifetime;
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _logFactory;
+
+        private Stack<IDisposable> _disposables;
+
+        public IFeatureCollection Features { get; }
+
+        public Server(IFeatureCollection features, IApplicationLifetime applicationLifetime, ILoggerFactory logFactory)
         {
             if (features == null)
             {
@@ -29,17 +35,17 @@ namespace RestBus.AspNet.Server
                 throw new ArgumentNullException(nameof(applicationLifetime));
             }
 
-            if (logger == null)
+            if (logFactory == null)
             {
-                throw new ArgumentNullException(nameof(logger));
+                throw new ArgumentNullException(nameof(logFactory));
             }
 
-            _applicationLifetime = applicationLifetime;
-            _logger = logger;
-            Features = features;
-        }
+            this._logFactory = logFactory;
+            this._applicationLifetime = applicationLifetime;
+            this._logger = logFactory.CreateLogger<Server>();
 
-        public IFeatureCollection Features { get; }
+            this.Features = features;
+        }
 
         public void Start<TContext>(IHttpApplication<TContext> application)
         {
@@ -55,21 +61,21 @@ namespace RestBus.AspNet.Server
             {
                 var information = (ServerInformation)Features.Get<IServerInformation>();
 
-                if(information.Subscriber == null)
+                if (information.Subscriber == null)
                 {
                     throw new InvalidOperationException($"RestBus subscriber could not be found. To use the RestBus server, call app.{nameof(ServerExtensions.ConfigureRestBusServer)} in Startup.Configure method and specify a subscriber to use.");
                 }
 
                 //TODO: Add _logger properly
 
-                var host = new RestBusHost<TContext>(information.Subscriber, application, this._applicationLifetime);
+                var host = new RestBusHost<TContext>(information.Subscriber, application, this._applicationLifetime, this._logFactory);
                 _disposables.Push(host);
 
                 //TODO: Make IApplicationLifeTime.Stopping to stop polling the queue.
 
                 host.Start();
 
-                foreach(var name in information.Subscriber.ConnectionNames)
+                foreach (var name in information.Subscriber.ConnectionNames)
                 {
                     information.AddAddress(name);
                 }

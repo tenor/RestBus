@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Logging;
 using RestBus.Common;
 using System;
 using System.Net;
@@ -18,6 +19,7 @@ namespace RestBus.AspNet
         private readonly IRestBusSubscriber subscriber;
         private readonly IHttpApplication<TContext> application;
         private readonly IApplicationLifetime applicationLifetime;
+        private readonly ILogger logger;
 
         private InterlockedBoolean hasStarted;
         private volatile bool disposed;
@@ -27,11 +29,12 @@ namespace RestBus.AspNet
         /// </summary>
         /// <param name="subscriber">The RestBus Subscriber</param>
         /// <param name="application">The HttpApplication</param>
-        internal RestBusHost(IRestBusSubscriber subscriber, IHttpApplication<TContext> application, IApplicationLifetime applicationLifetime)
+        internal RestBusHost(IRestBusSubscriber subscriber, IHttpApplication<TContext> application, IApplicationLifetime applicationLifetime, ILoggerFactory logFactory)
         {
             this.subscriber = subscriber;
             this.application = application;
             this.applicationLifetime = applicationLifetime;
+            this.logger = logFactory.CreateLogger<RestBusHost<TContext>>();
         }
 
         /// <summary>
@@ -85,6 +88,7 @@ namespace RestBus.AspNet
                     if (!(e is ObjectDisposedException || e is OperationCanceledException))
                     {
                         //TODO: Log exception: Don't know what else to expect here
+                        this.logger.LogError(e.Message + Environment.NewLine + e.StackTrace);
                     }
 
                     //Exit method if host has been disposed
@@ -119,6 +123,7 @@ namespace RestBus.AspNet
             catch (Exception ex)
             {
                 //TODO: SHouldn't occur (the called method should be safe): Log execption and return a server error
+                this.logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
 
@@ -199,9 +204,10 @@ namespace RestBus.AspNet
                 {
                     subscriber.SendResponse(restbusContext, responsePkt);
                 }
-                catch
+                catch(Exception ex)
                 {
                     //TODO: Log SendResponse error
+                    this.logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
                 }
 
                 //Call OnCompleted callbacks
@@ -303,6 +309,7 @@ namespace RestBus.AspNet
         {
             msg._applicationException = ex;
             //TODO: Log Application error
+            this.logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
         }
         #endregion
     }
