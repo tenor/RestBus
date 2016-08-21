@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting.Server;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using RestBus.Common;
 using System;
@@ -8,25 +9,30 @@ using System.Threading.Tasks;
 
 namespace RestBus.AspNet
 {
+
     //TODO: Describe what this class does
-    internal class RestBusHost<TContext> : IDisposable
+    internal class RestBusHost<TContext>
+        : IDisposable
     {
+
         private readonly IRestBusSubscriber subscriber;
         private readonly IHttpApplication<TContext> application;
-        InterlockedBoolean hasStarted;
-        volatile bool disposed;
+        private readonly IApplicationLifetime applicationLifetime;
+
+        private InterlockedBoolean hasStarted;
+        private volatile bool disposed;
 
         /// <summary>
         /// Initializes a new instance of <see cref="RestBusHost{TContext}"/>
         /// </summary>
         /// <param name="subscriber">The RestBus Subscriber</param>
         /// <param name="application">The HttpApplication</param>
-        internal RestBusHost(IRestBusSubscriber subscriber, IHttpApplication<TContext> application)
+        internal RestBusHost(IRestBusSubscriber subscriber, IHttpApplication<TContext> application, IApplicationLifetime applicationLifetime)
         {
             this.subscriber = subscriber;
             this.application = application;
+            this.applicationLifetime = applicationLifetime;
         }
-
 
         /// <summary>
         /// Starts the host
@@ -41,7 +47,6 @@ namespace RestBus.AspNet
             subscriber.Start();
 
             Task.Factory.StartNew(RunLoop, creationOptions: TaskCreationOptions.LongRunning);
-
         }
 
         /// <summary>
@@ -56,7 +61,6 @@ namespace RestBus.AspNet
             }
         }
 
-
         /// <summary>
         /// Main loop which dequeues requests and spawns new tasks to process them.
         /// </summary>
@@ -67,14 +71,20 @@ namespace RestBus.AspNet
             {
                 try
                 {
-                    context = subscriber.Dequeue();
+                    if (!this.applicationLifetime.ApplicationStopping.IsCancellationRequested)
+                    {
+                        context = subscriber.Dequeue();
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
                 catch (Exception e)
                 {
                     if (!(e is ObjectDisposedException || e is OperationCanceledException))
                     {
                         //TODO: Log exception: Don't know what else to expect here
-
                     }
 
                     //Exit method if host has been disposed
@@ -90,7 +100,6 @@ namespace RestBus.AspNet
 
                 var cancellationToken = CancellationToken.None;
                 Task.Factory.StartNew((Func<object, Task>)Process, Tuple.Create(context, cancellationToken), cancellationToken);
-
             }
         }
 
@@ -223,7 +232,7 @@ namespace RestBus.AspNet
             ((IHttpResponseFeature)msg).StatusCode = (int)status;
             ((IHttpResponseFeature)msg).ReasonPhrase = reasonPhrase;
 
-            if(body != null)
+            if (body != null)
             {
                 msg.CreateResponseBody();
                 var buffer = System.Text.Encoding.UTF8.GetBytes(body);

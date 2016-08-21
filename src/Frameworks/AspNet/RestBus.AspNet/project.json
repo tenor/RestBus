@@ -15,7 +15,8 @@
     "Microsoft.AspNetCore.Hosting": "1.0.0",
     "Microsoft.Extensions.Logging": "1.0.0",
     "RestBus.Common": {
-      "target": "project"
+      "target": "package",
+      "version": "0.6.3.1"
     }
   },
 

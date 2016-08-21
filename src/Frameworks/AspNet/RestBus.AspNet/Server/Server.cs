@@ -62,7 +62,7 @@ namespace RestBus.AspNet.Server
 
                 //TODO: Add _logger properly
 
-                var host = new RestBusHost<TContext>(information.Subscriber, application);
+                var host = new RestBusHost<TContext>(information.Subscriber, application, this._applicationLifetime);
                 _disposables.Push(host);
 
                 //TODO: Make IApplicationLifeTime.Stopping to stop polling the queue.
