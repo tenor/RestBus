@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.6.9.1",
+  "version": "0.6.9.1-rc1",
   "description": "RabbitMQ broker for RestBus",
   "authors": [ "Sunny Ahuwanya", "LonghronShen" ],
   "copyright": "Copyright © Sunny Ahuwanya 2014-2016",
@@ -19,10 +19,7 @@
   "dependencies": {
     "RabbitMQ.Client": "4.0.1-rc1",
     "RestBus.Client": "0.5.2",
-    "RestBus.Common": {
-      "version": "0.6.3",
-      "target": "package"
-    },
+    "RestBus.Common": "0.6.3.2"
   },
 
   "frameworks": {

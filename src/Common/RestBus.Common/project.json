@@ -14,6 +14,76 @@
   },
 
   "frameworks": {
+    "portable45-net45+win8": {
+      "dependencies": {
+      },
+      "frameworkAssemblies": {
+        "mscorlib": {
+          "version": "",
+          "type": "build"
+        },
+        "Microsoft.CSharp": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Runtime": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Runtime.Extensions": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Threading": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Threading.Tasks": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Core": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Collections": {
+          "version": "",
+          "type": "build"
+        },
+        "System.IO": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Linq": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net.Http": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net.Primitives": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Text.Encoding": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Text.Encoding.Extensions": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Globalization": {
+          "version": "",
+          "type": "build"
+        }
+      }
+    },
     "netstandard1.0": {
       "dependencies": {
         "System.Net.Http": "4.0.0",
