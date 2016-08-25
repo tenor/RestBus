@@ -1,5 +1,5 @@
 {
-  "version": "0.6.3.1",
+  "version": "0.6.3.2",
   "description": "RestBus.Common",
   "authors": [ "Sunny Ahuwanya" ],
   "copyright": "Copyright ?Sunny Ahuwanya 2016",
@@ -14,32 +14,10 @@
   },
 
   "frameworks": {
-    "portable45-net45+win8": {
-      "dependencies": {
-      },
-      "frameworkAssemblies": {
-        "mscorlib": "",
-        "Microsoft.CSharp": "",
-        "System.Runtime": "",
-        "System.Runtime.Extensions": "",
-        "System.Threading": "",
-        "System.Threading.Tasks": "",
-        "System.Core": "",
-        "System.Collections": "",
-        "System.IO": "",
-        "System.Linq": "",
-        "System.Net": "",
-        "System.Net.Http": "",
-        "System.Net.Primitives": "",
-        "System.Text.Encoding": "",
-        "System.Text.Encoding.Extensions": "",
-        "System.Globalization": ""
-      }
-    },
     "netstandard1.0": {
       "dependencies": {
-        "NETStandard.Library": "1.6.0",
-        "System.Net.Http": "4.0.0"
+        "System.Net.Http": "4.0.0",
+        "System.Linq": "4.1.0"
       },
       "imports": [
         "dnxcore50",

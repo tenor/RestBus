@@ -44,7 +44,7 @@ namespace RestBus.RabbitMQ.Client
         {
             this.clientSettings = clientSettings;
 
-            if(String.IsNullOrEmpty(queueName))
+            if (String.IsNullOrEmpty(queueName))
             {
                 queueName = SynchronizedRandom.Instance.Next().ToString();
             }
@@ -71,7 +71,7 @@ namespace RestBus.RabbitMQ.Client
             }
         }
 
-        public ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage>  taskSource)
+        public ExpectedResponse PrepareForResponse(string correlationId, BasicProperties basicProperties, AmqpModelContainer model, HttpRequestMessage request, TimeSpan requestTimeout, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage> taskSource)
         {
             //Set Reply to queue
             basicProperties.ReplyTo = callbackQueueName;
@@ -276,7 +276,11 @@ namespace RestBus.RabbitMQ.Client
                     consumerSignal.Dispose();
 
                     //Examine exception if it were set and rethrow it
+#if NETCORE
+                    Interlocked.MemoryBarrier();
+#else
                     Thread.MemoryBarrier(); //Ensure we have the non-cached version of consumerSignalException
+#endif
                     if (consumerSignalException != null)
                     {
                         throw consumerSignalException;

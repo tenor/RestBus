@@ -17,24 +17,34 @@
   },
 
   "dependencies": {
-    "NETStandard.Library": "1.6.0",
     "RabbitMQ.Client": "4.0.1-rc1",
+    "RestBus.Client": "0.5.2",
     "RestBus.Common": {
-      "version": "0.6.3.1",
-      "type": "default"
-    }
+      "version": "0.6.3",
+      "target": "package"
+    },
   },
 
   "frameworks": {
     "net451": {
       "dependencies": {
+      },
+      "frameworkAssemblies": {
+        "System.Runtime": ""
       }
     },
-    "netstandard1.6": {
+    "netstandard1.5": {
+      "buildOptions": {
+        "define": [ "NETCORE" ]
+      },
       "imports": [
-        "dnxcore50"
+        "dnxcore50",
+        "portable-net45+win8"
       ],
       "dependencies": {
+        "System.Net.Http": "4.1.0",
+        "System.Threading": "4.0.11",
+        "System.Threading.ThreadPool": "4.0.10"
       }
     }
   }

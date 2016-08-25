@@ -41,7 +41,7 @@ namespace RestBus.RabbitMQ.Subscription
         /// Initislizes a new instance of the <see cref="RestBusSubscriber"/>
         /// </summary>
         /// <param name="messageMapper">The <see cref="IMessageMapper"/> used by the subscriber.</param>
-        public RestBusSubscriber(IMessageMapper messageMapper ) : this(messageMapper, null)
+        public RestBusSubscriber(IMessageMapper messageMapper) : this(messageMapper, null)
         {
         }
 
@@ -122,7 +122,7 @@ namespace RestBus.RabbitMQ.Subscription
                 {
                     subscriberChannel.Close();
                 }
-                catch 
+                catch
                 {
                 }
             }
@@ -198,7 +198,7 @@ namespace RestBus.RabbitMQ.Subscription
         public MessageContext Dequeue()
         {
             if (disposed) throw new ObjectDisposedException(GetType().FullName);
-            if(workConsumer == null || subscriberConsumer == null) throw new InvalidOperationException("Start the subscriber prior to calling Dequeue");
+            if (workConsumer == null || subscriberConsumer == null) throw new InvalidOperationException("Start the subscriber prior to calling Dequeue");
 
             //TODO: Test what happens if either of these consumers are cancelled by the server, should consumer.Cancelled be handled?
             //In that scenario, requestQueued.Wait below should throw an exception and try to reconnect.
@@ -314,7 +314,7 @@ namespace RestBus.RabbitMQ.Subscription
                 }
             }
             //Reject message if deserialization failed.
-            else if (!wasDeserialized && Settings.AckBehavior != SubscriberAckBehavior.Automatic )
+            else if (!wasDeserialized && Settings.AckBehavior != SubscriberAckBehavior.Automatic)
             {
                 consumer.Model.BasicReject(item.DeliveryTag, false);
                 return false;
@@ -387,7 +387,7 @@ namespace RestBus.RabbitMQ.Subscription
             }
         }
 
-        public void SendResponse(MessageContext context, HttpResponsePacket response )
+        public void SendResponse(MessageContext context, HttpResponsePacket response)
         {
             if (disposed) throw new ObjectDisposedException(GetType().FullName);
 
@@ -395,7 +395,7 @@ namespace RestBus.RabbitMQ.Subscription
             if (dispatch != null)
             {
                 //Ack request
-                if(Settings.AckBehavior != SubscriberAckBehavior.Automatic && dispatch.Consumer.Model.IsOpen)
+                if (Settings.AckBehavior != SubscriberAckBehavior.Automatic && dispatch.Consumer.Model.IsOpen)
                 {
                     dispatch.Consumer.Model.BasicAck(dispatch.Delivery.DeliveryTag, false);
 
@@ -414,7 +414,11 @@ namespace RestBus.RabbitMQ.Subscription
             if (_subscriberPool.Connection == null)
             {
                 //TODO: Log this -- it technically shouldn't happen. Also translate to a HTTP Unreachable because it means StartCallbackQueueConsumer didn't create a connection
+#if NETCORE
+                throw new InvalidOperationException("This is Bad");
+#else
                 throw new ApplicationException("This is Bad");
+#endif
             }
 
             //Add/Update Subscriber-Id header
@@ -435,7 +439,7 @@ namespace RestBus.RabbitMQ.Subscription
             }
             finally
             {
-                if(model != null)
+                if (model != null)
                 {
                     model.Close();
                 }
