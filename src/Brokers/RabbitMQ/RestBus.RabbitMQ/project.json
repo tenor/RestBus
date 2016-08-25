@@ -1,0 +1,41 @@
+﻿{
+  "version": "0.6.9.1",
+  "description": "RabbitMQ broker for RestBus",
+  "authors": [ "Sunny Ahuwanya", "LonghronShen" ],
+  "copyright": "Copyright © Sunny Ahuwanya 2014-2016",
+
+  "title": "RestBus.RabbitMQ",
+  "packOptions": {
+    "owners": [ "Sunny Ahuwanya" ],
+    "summary": "RestBus.RabbitMQ",
+    "tags": [ "RestBus", "RabbitMQ", "netcore", "core" ],
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/LonghronShen/RestBus"
+    },
+    "projectUrl": "http://www.restbus.org"
+  },
+
+  "dependencies": {
+    "NETStandard.Library": "1.6.0",
+    "RabbitMQ.Client": "4.0.1-rc1",
+    "RestBus.Common": {
+      "version": "0.6.3.1",
+      "type": "default"
+    }
+  },
+
+  "frameworks": {
+    "net451": {
+      "dependencies": {
+      }
+    },
+    "netstandard1.6": {
+      "imports": [
+        "dnxcore50"
+      ],
+      "dependencies": {
+      }
+    }
+  }
+}
