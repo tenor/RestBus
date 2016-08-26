@@ -1,0 +1,13 @@
+﻿{
+  "server": "Microsoft.AspNet.Server.Kestrel"
+}
+
+/* To run a standalone message broker listening service,
+  replace "server" property with one below.
+*/
+
+/*
+{
+  "server": "RestBus.AspNet"
+}
+*/
