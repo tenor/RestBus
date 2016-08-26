@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "0.6.9.1-rc1",
   "description": "RabbitMQ broker for RestBus",
   "authors": [ "Sunny Ahuwanya", "LonghronShen" ],
@@ -16,6 +16,13 @@
     "projectUrl": "http://www.restbus.org"
   },
 
+  "buildOptions": {
+    "preserveCompilationContext": true,
+    "debugType": "portable",
+    "define": [],
+    "keyFile": "../../../../tools/key.snk"
+  },
+
   "dependencies": {
     "RabbitMQ.Client": "4.0.1-rc1",
     "RestBus.Client": "0.5.2",
@@ -27,7 +34,10 @@
       "dependencies": {
       },
       "frameworkAssemblies": {
-        "System.Runtime": ""
+        "System.Runtime": {
+          "version": "",
+          "type": "build"
+        }
       }
     },
     "netstandard1.5": {

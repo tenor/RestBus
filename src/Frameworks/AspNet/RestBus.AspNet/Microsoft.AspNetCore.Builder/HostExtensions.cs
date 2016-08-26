@@ -8,6 +8,7 @@ using RestBus.AspNet;
 using RestBus.AspNet.Server;
 using RestBus.Common;
 using System;
+using System.Linq;
 using System.Diagnostics;
 
 namespace Microsoft.AspNetCore.Builder
@@ -40,8 +41,7 @@ namespace Microsoft.AspNetCore.Builder
             if (app == null) throw new ArgumentNullException("app");
             if (subscriber == null) throw new ArgumentNullException("subscriber");
 
-            if (!skipRestBusServerCheck &&
-                app.ApplicationServices.GetRequiredService<Server>() != null)
+            if (!skipRestBusServerCheck && Server.InstanceCount > 0)
             {
                 //The application is running RestBusServer, so exit
                 return;
@@ -52,25 +52,12 @@ namespace Microsoft.AspNetCore.Builder
             var _loggerFactory = app.ApplicationServices.GetRequiredService<ILoggerFactory>();
             var diagnosticSource = app.ApplicationServices.GetRequiredService<DiagnosticSource>();
             var httpContextFactory = app.ApplicationServices.GetRequiredService<IHttpContextFactory>();
-            var applicationLifetime = app.ApplicationServices.GetRequiredService<ApplicationLifetime>();
 
             //TODO: Work on counting instances (all hosts + server)  and adding the count to the logger name e.g RestBus.AspNet (2), consider including the typename as well.
             var application = new HostingApplication(appFunc, _loggerFactory.CreateLogger(typeof(Server).FullName), diagnosticSource, httpContextFactory);
+            var server = app.ApplicationServices.GetRequiredService<Server>();
 
-            var host = new RestBusHost<HostingApplication.Context>(subscriber, application, applicationLifetime, _loggerFactory);
-
-            //Register host for disposal
-            var appLifeTime = app.ApplicationServices.GetRequiredService<IApplicationLifetime>();
-
-            //appLifeTime.ApplicationStopping.Register(() =>
-            //{
-            //    //TODO: Make ApplicationStopping event stop dequeueing items (StopPollingQueue)
-            //    host.Dispose();
-            //});
-            appLifeTime.ApplicationStopped.Register(() => host.Dispose());
-
-            //Start host
-            host.Start();
+            server.Start(application, subscriber);
         }
 
     }

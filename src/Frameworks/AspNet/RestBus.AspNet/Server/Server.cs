@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
+using System.Threading;
+using RestBus.Common;
 
 namespace RestBus.AspNet.Server
 {
@@ -16,6 +18,8 @@ namespace RestBus.AspNet.Server
 
         internal const string ConfigServerArgumentName = "server"; // The argument passed to Microsoft.AspNetCore..Hosting.Program.Main()
         internal const string ConfigServerAssembly = "RestBus.AspNet"; // The server assembly name passed to Microsoft.AspNetCore..Hosting.Program.Main()
+
+        internal static int InstanceCount;
 
         private readonly IApplicationLifetime _applicationLifetime;
         private readonly ILogger _logger;
@@ -47,9 +51,16 @@ namespace RestBus.AspNet.Server
             this._logger = logFactory.CreateLogger<Server>();
 
             this.Features = features;
+
+            Interlocked.Add(ref InstanceCount, 1);
         }
 
         public void Start<TContext>(IHttpApplication<TContext> application)
+        {
+            this.Start(application, null);
+        }
+
+        public void Start<TContext>(IHttpApplication<TContext> application, IRestBusSubscriber subscriber)
         {
             //TODO: Code a better way to prevent same server from starting twice.
             if (_disposables != null)
@@ -62,30 +73,53 @@ namespace RestBus.AspNet.Server
 
             try
             {
-                var information = (ServerInformation)Features.Get<IServerInformation>();
+                var information = this.Features.Get<IServerInformation>();
 
-                if (information.Subscriber == null)
+                if (information?.Subscriber == null)
                 {
-                    throw new InvalidOperationException($"RestBus subscriber could not be found. To use the RestBus server, call app.{nameof(ServerExtensions.ConfigureRestBusServer)} in Startup.Configure method and specify a subscriber to use.");
+                    if (subscriber != null)
+                    {
+                        information = new ServerInformation()
+                        {
+                            Subscriber = subscriber
+                        };
+                        //information.Subscriber = subscriber;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"RestBus subscriber could not be found. To use the RestBus server, call app.{nameof(ServerExtensions.ConfigureRestBusServer)} in Startup.Configure method and specify a subscriber to use.");
+                    }
+                }
+                else
+                {
+                    subscriber = information.Subscriber;
                 }
 
                 //TODO: Add _logger properly
-
                 this._logger.LogInformation($"{nameof(Server)} is starting the RestBus host.");
-                var host = new RestBusHost<TContext>(information.Subscriber, application, this._applicationLifetime, this._logFactory);
-                _disposables.Push(host);
+                var host = new RestBusHost<TContext>(subscriber, application, this._applicationLifetime, this._logFactory);
 
+                //Register host for disposal
                 //TODO: Make IApplicationLifeTime.Stopping to stop polling the queue.
+                this._applicationLifetime.ApplicationStopping.Register(() =>
+                {
+                    //TODO: Make ApplicationStopping event stop dequeueing items (StopPollingQueue)
+                    host.Dispose();
+                });
+                this._applicationLifetime.ApplicationStopped.Register(() => host.Dispose());
+
+                _disposables.Push(host);
 
                 host.Start();
 
-                foreach (var name in information.Subscriber.ConnectionNames)
+                foreach (var name in subscriber.ConnectionNames)
                 {
                     information.AddAddress(name);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                this._logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
                 Dispose();
                 throw;
             }

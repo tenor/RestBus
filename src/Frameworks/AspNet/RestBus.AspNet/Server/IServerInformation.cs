@@ -10,6 +10,8 @@ namespace RestBus.AspNet.Server
 
         IRestBusSubscriber Subscriber { get; }
 
+        void AddAddress(string address);
+
     }
 
 }

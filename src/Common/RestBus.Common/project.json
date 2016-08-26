@@ -3,11 +3,19 @@
   "description": "RestBus.Common",
   "authors": [ "Sunny Ahuwanya" ],
   "copyright": "Copyright ?Sunny Ahuwanya 2016",
+
   "packOptions": {
     "owners": [ "Sunny Ahuwanya" ],
     "projectUrl": "http://www.restbus.org",
     "iconUrl": "https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png",
     "tags": [ "asp.net aspnet aspnetcore amqp rabbitmq messaging queueing restbus rest http services webservices microservices" ]
+  },
+
+  "buildOptions": {
+    "preserveCompilationContext": true,
+    "debugType": "portable",
+    "define": [],
+    "keyFile": "../../../tools/key.snk"
   },
 
   "dependencies": {
