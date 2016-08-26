@@ -1,5 +1,10 @@
 {
-  "projects": [ "Frameworks", "Common" ],
+  "projects": [
+    "Frameworks",
+    "Frameworks/AspNet",
+    "Common",
+    "Brokers/RabbitMQ/RestBus.RabbitMQ"
+  ],
   "sdk": {
     "version": "1.0.0-preview2-003121"
   }
