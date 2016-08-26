@@ -17,7 +17,7 @@ namespace RestBus.RabbitMQ.Client
         //TODO: Consider moving this to Common
         internal static Version VERSION_1_1 = new Version("1.1");
 
-        internal static void WaitForResponse (HttpRequestMessage request, ExpectedResponse arrival, TimeSpan requestTimeout, AmqpModelContainer model, bool closeModel, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage> taskSource, Action cleanup)
+        internal static void WaitForResponse(HttpRequestMessage request, ExpectedResponse arrival, TimeSpan requestTimeout, AmqpModelContainer model, bool closeModel, CancellationToken cancellationToken, TaskCompletionSource<HttpResponseMessage> taskSource, Action cleanup)
         {
             //Spawning a new task to wait on the MRESlim is slower than using ThreadPool.RegisterWaitForSingleObject
             //
@@ -73,7 +73,11 @@ namespace RestBus.RabbitMQ.Client
                     {
                         //TODO: Investigate, this memorybarrier might be unnecessary since the thread is released from the threadpool
                         //after deserializationException and responsePacket is set.
-                        Thread.MemoryBarrier(); //Ensure non-cached versions of arrival are read
+#if NETCORE
+                        Interlocked.MemoryBarrier();
+#else
+                        Thread.MemoryBarrier(); //Ensure we have the non-cached version of consumerSignalException
+#endif
                         try
                         {
                             //TODO: Check Cancelation Token when it's implemented
@@ -106,7 +110,7 @@ namespace RestBus.RabbitMQ.Client
 #endif
         }
 
-        internal static void ReadAndSignalDelivery (ExpectedResponse expected, BasicDeliverEventArgs evt)
+        internal static void ReadAndSignalDelivery(ExpectedResponse expected, BasicDeliverEventArgs evt)
         {
             try
             {

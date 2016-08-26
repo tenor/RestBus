@@ -1,5 +1,5 @@
 {
-  "version": "0.6.3.1",
+  "version": "0.6.3.2",
   "description": "RestBus.Common",
   "authors": [ "Sunny Ahuwanya" ],
   "copyright": "Copyright ?Sunny Ahuwanya 2016",
@@ -18,28 +18,76 @@
       "dependencies": {
       },
       "frameworkAssemblies": {
-        "mscorlib": "",
-        "Microsoft.CSharp": "",
-        "System.Runtime": "",
-        "System.Runtime.Extensions": "",
-        "System.Threading": "",
-        "System.Threading.Tasks": "",
-        "System.Core": "",
-        "System.Collections": "",
-        "System.IO": "",
-        "System.Linq": "",
-        "System.Net": "",
-        "System.Net.Http": "",
-        "System.Net.Primitives": "",
-        "System.Text.Encoding": "",
-        "System.Text.Encoding.Extensions": "",
-        "System.Globalization": ""
+        "mscorlib": {
+          "version": "",
+          "type": "build"
+        },
+        "Microsoft.CSharp": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Runtime": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Runtime.Extensions": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Threading": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Threading.Tasks": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Core": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Collections": {
+          "version": "",
+          "type": "build"
+        },
+        "System.IO": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Linq": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net.Http": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net.Primitives": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Text.Encoding": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Text.Encoding.Extensions": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Globalization": {
+          "version": "",
+          "type": "build"
+        }
       }
     },
     "netstandard1.0": {
       "dependencies": {
-        "NETStandard.Library": "1.6.0",
-        "System.Net.Http": "4.0.0"
+        "System.Net.Http": "4.0.0",
+        "System.Linq": "4.1.0"
       },
       "imports": [
         "dnxcore50",
