@@ -22,7 +22,7 @@ namespace Examples
             var servers = host.Start();
 
             //Create client
-            BasicMessageMapper msgMapper = new BasicMessageMapper("amqp://192.168.0.230:5672", "test");
+            BasicMessageMapper msgMapper = new BasicMessageMapper("amqp://192.168.0.80:5672", "test");
             //msgMapper = new QueueingMessageMapper("amqp://localhost:5672", "test"); //Uncomment this to only queue messages.
 
             RestBusClient client = new RestBusClient(msgMapper);
