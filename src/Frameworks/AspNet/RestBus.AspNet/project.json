@@ -1,5 +1,5 @@
 {
-  "version": "0.6.3.5",
+  "version": "0.6.3.6",
   "description": "ASP.NET Core (ASP.NET 5) framework support for RestBus",
   "authors": [ "Sunny Ahuwanya" ],
   "copyright": "Copyright ?Sunny Ahuwanya 2016",
@@ -56,7 +56,10 @@
         "dnxcore50",
         "dotnet5.6",
         "portable-net45+win8"
-      ]
+      ],
+      "buildOptions": {
+        "define": [ "NETCORE" ]
+      }
     }
   }
 }

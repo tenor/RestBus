@@ -10,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace RestBus.AspNet
 {
-    internal class ServiceMessage : IFeatureCollection,
-                                 IHttpRequestFeature,
-                                 IHttpResponseFeature,
-                                 IHttpConnectionFeature
+
+    internal class ServiceMessage
+        : IFeatureCollection, IHttpRequestFeature, IHttpResponseFeature, IHttpConnectionFeature
     {
+
         int featureRevision;
         object _currentIHttpRequestFeature;
         object _currentIHttpResponseFeature;
@@ -25,8 +25,10 @@ namespace RestBus.AspNet
         string _pathBase;
         string _path;
         string _queryString;
+
         readonly object _onStartingSync = new object();
         readonly object _onCompletedSync = new object();
+
         internal List<KeyValuePair<Func<object, Task>, object>> _onStarting;
         internal List<KeyValuePair<Func<object, Task>, object>> _onCompleted;
         internal Exception _applicationException;
@@ -325,7 +327,7 @@ namespace RestBus.AspNet
         bool IHttpResponseFeature.HasStarted
         {
             get
-            {                
+            {
                 return HasResponseStarted;
             }
         }
@@ -342,12 +344,17 @@ namespace RestBus.AspNet
 
         public TFeature Get<TFeature>()
         {
-            throw new NotImplementedException();
+            var v = ((IFeatureCollection)this)[typeof(TFeature)];
+            if (v is TFeature)
+            {
+                return (TFeature)v;
+            }
+            return default(TFeature);
         }
 
         public void Set<TFeature>(TFeature instance)
         {
-            throw new NotImplementedException();
+            ((IFeatureCollection)this)[typeof(TFeature)] = instance;
         }
 
         #endregion
