@@ -49,6 +49,7 @@ namespace Microsoft.Extensions.DependencyInjection
             serverFeatures.Set<IServerInformation>(information);
             serverFeatures.Set<IServerAddressesFeature>(information);
             services.AddSingleton(serverFeatures);
+            services.AddTransient<Server>();
             return services;
         }
 
