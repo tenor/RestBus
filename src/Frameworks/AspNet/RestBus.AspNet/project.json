@@ -1,5 +1,5 @@
 {
-  "version": "0.6.3.2",
+  "version": "0.6.3.3",
   "description": "ASP.NET Core (ASP.NET 5) framework support for RestBus",
   "authors": [ "Sunny Ahuwanya" ],
   "copyright": "Copyright ?Sunny Ahuwanya 2016",

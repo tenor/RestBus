@@ -71,6 +71,7 @@ namespace RestBus.AspNet.Server
 
                 //TODO: Add _logger properly
 
+                this._logger.LogInformation($"{nameof(Server)} is starting the RestBus host.");
                 var host = new RestBusHost<TContext>(information.Subscriber, application, this._applicationLifetime, this._logFactory);
                 _disposables.Push(host);
 

@@ -47,6 +47,7 @@ namespace RestBus.AspNet
                 throw new InvalidOperationException("RestBus host has already started!");
             }
 
+            this.logger.LogInformation($"{nameof(RestBusHost<TContext>)} is starting.");
             subscriber.Start();
 
             Task.Factory.StartNew(RunLoop, creationOptions: TaskCreationOptions.LongRunning);
@@ -76,10 +77,12 @@ namespace RestBus.AspNet
                 {
                     if (!this.applicationLifetime.ApplicationStopping.IsCancellationRequested)
                     {
+                        this.logger.LogInformation($"Calling {nameof(subscriber.Dequeue)}.");
                         context = subscriber.Dequeue();
                     }
                     else
                     {
+                        this.logger.LogInformation($"An ApplicationStopping cancellation is requested by {applicationLifetime.GetType().FullName}.");
                         break;
                     }
                 }
@@ -103,6 +106,7 @@ namespace RestBus.AspNet
                 }
 
                 var cancellationToken = CancellationToken.None;
+                this.logger.LogInformation($"Starting a new process for {context.CorrelationId}.");
                 Task.Factory.StartNew((Func<object, Task>)Process, Tuple.Create(context, cancellationToken), cancellationToken);
             }
         }
@@ -122,7 +126,7 @@ namespace RestBus.AspNet
             }
             catch (Exception ex)
             {
-                //TODO: SHouldn't occur (the called method should be safe): Log execption and return a server error
+                //TODO: Shouldn't occur (the called method should be safe): Log execption and return a server error
                 this.logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
@@ -204,7 +208,7 @@ namespace RestBus.AspNet
                 {
                     subscriber.SendResponse(restbusContext, responsePkt);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     //TODO: Log SendResponse error
                     this.logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
