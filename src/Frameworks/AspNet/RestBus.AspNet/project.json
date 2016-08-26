@@ -1,5 +1,5 @@
 {
-  "version": "0.6.3.4",
+  "version": "0.6.3.5",
   "description": "ASP.NET Core (ASP.NET 5) framework support for RestBus",
   "authors": [ "Sunny Ahuwanya" ],
   "copyright": "Copyright ?Sunny Ahuwanya 2016",
@@ -23,7 +23,7 @@
     "Microsoft.Extensions.Logging": "1.0.0",
     "RestBus.Common": {
       "target": "package",
-      "version": "0.6.3.1"
+      "version": "0.6.3.2"
     }
   },
 
