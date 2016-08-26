@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
 
 namespace RestBus.AspNet.Server
 {
 
-    public class Server : IServer
+    public class Server
+        : IServer
     {
 
         internal const string ConfigServerArgumentName = "server"; // The argument passed to Microsoft.AspNetCore..Hosting.Program.Main()
@@ -23,7 +25,7 @@ namespace RestBus.AspNet.Server
 
         public IFeatureCollection Features { get; }
 
-        public Server(IFeatureCollection features, IApplicationLifetime applicationLifetime, ILoggerFactory logFactory)
+        public Server(RestBusFeatureCollection features, IApplicationLifetime applicationLifetime, ILoggerFactory logFactory)
         {
             if (features == null)
             {
@@ -55,6 +57,7 @@ namespace RestBus.AspNet.Server
                 // The server has already started and/or has not been cleaned up yet
                 throw new InvalidOperationException("Server has already started.");
             }
+
             _disposables = new Stack<IDisposable>();
 
             try
@@ -98,5 +101,7 @@ namespace RestBus.AspNet.Server
                 _disposables = null;
             }
         }
+
     }
+
 }

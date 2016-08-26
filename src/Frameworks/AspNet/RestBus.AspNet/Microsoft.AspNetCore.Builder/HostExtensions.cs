@@ -4,14 +4,18 @@ using Microsoft.AspNetCore.Hosting.Internal;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RestBus.AspNet;
+using RestBus.AspNet.Server;
 using RestBus.Common;
 using System;
 using System.Diagnostics;
 
-namespace RestBus.AspNet
+namespace Microsoft.AspNetCore.Builder
 {
+
     public static class HostExtensions
     {
+
         //TODO: See if it's possible to prevent middleware from being added after RunRestBusHost() is called, subsequent calls to RunRestBusHost must succeed.
 
         /// <summary>
@@ -37,7 +41,7 @@ namespace RestBus.AspNet
             if (subscriber == null) throw new ArgumentNullException("subscriber");
 
             if (!skipRestBusServerCheck &&
-                app.ApplicationServices.GetRequiredService<Server.Server>() != null)
+                app.ApplicationServices.GetRequiredService<Server>() != null)
             {
                 //The application is running RestBusServer, so exit
                 return;
@@ -51,14 +55,18 @@ namespace RestBus.AspNet
             var applicationLifetime = app.ApplicationServices.GetRequiredService<ApplicationLifetime>();
 
             //TODO: Work on counting instances (all hosts + server)  and adding the count to the logger name e.g RestBus.AspNet (2), consider including the typename as well.
-            var application = new HostingApplication(appFunc, _loggerFactory.CreateLogger(Server.Server.ConfigServerAssembly), diagnosticSource, httpContextFactory);
+            var application = new HostingApplication(appFunc, _loggerFactory.CreateLogger(typeof(Server).FullName), diagnosticSource, httpContextFactory);
 
             var host = new RestBusHost<HostingApplication.Context>(subscriber, application, applicationLifetime, _loggerFactory);
 
             //Register host for disposal
             var appLifeTime = app.ApplicationServices.GetRequiredService<IApplicationLifetime>();
 
-            appLifeTime.ApplicationStopping.Register(() => host.Dispose()); //TODO: Make ApplicationStopping event stop dequeueing items (StopPollingQueue)
+            //appLifeTime.ApplicationStopping.Register(() =>
+            //{
+            //    //TODO: Make ApplicationStopping event stop dequeueing items (StopPollingQueue)
+            //    host.Dispose();
+            //});
             appLifeTime.ApplicationStopped.Register(() => host.Dispose());
 
             //Start host
@@ -66,4 +74,5 @@ namespace RestBus.AspNet
         }
 
     }
+
 }
