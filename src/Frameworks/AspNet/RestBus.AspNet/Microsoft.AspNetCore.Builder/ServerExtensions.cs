@@ -1,18 +1,21 @@
-﻿using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Http.Features;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Features;
+using RestBus.AspNet.Server;
 using RestBus.Common;
 using System;
 
-namespace RestBus.AspNet.Server
+namespace Microsoft.AspNetCore.Builder
 {
+
     public static class ServerExtensions
     {
+
         /// <summary>
         /// Configures the RestBus server to use a specified subscriber
         /// </summary>
         /// <param name="app">The Application builder</param>
         /// <param name="subscriber">The RestBus subscriber</param>
-        public static void ConfigureRestBusServer( this IApplicationBuilder app, IRestBusSubscriber subscriber )
+        public static void ConfigureRestBusServer(this IApplicationBuilder app, IRestBusSubscriber subscriber)
         {
             if (app == null) throw new ArgumentNullException("app");
             if (subscriber == null) throw new ArgumentNullException("subscriber");
@@ -21,10 +24,12 @@ namespace RestBus.AspNet.Server
             if (feature == null) return; //Application isn't running RestBus server so return
 
             var serverInfo = feature as ServerInformation;
-            if(serverInfo != null)
+            if (serverInfo != null)
             {
                 serverInfo.Subscriber = subscriber;
             }
         }
+
     }
+
 }

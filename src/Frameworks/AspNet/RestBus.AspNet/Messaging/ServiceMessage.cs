@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNet.Http;
-using Microsoft.AspNet.Http.Features;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using RestBus.Common;
 using System;
 using System.Collections;
@@ -10,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace RestBus.AspNet
 {
-    internal class ServiceMessage : IFeatureCollection,
-                                 IHttpRequestFeature,
-                                 IHttpResponseFeature,
-                                 IHttpConnectionFeature
+
+    internal class ServiceMessage
+        : IFeatureCollection, IHttpRequestFeature, IHttpResponseFeature, IHttpConnectionFeature
     {
+
         int featureRevision;
         object _currentIHttpRequestFeature;
         object _currentIHttpResponseFeature;
@@ -25,8 +25,10 @@ namespace RestBus.AspNet
         string _pathBase;
         string _path;
         string _queryString;
+
         readonly object _onStartingSync = new object();
         readonly object _onCompletedSync = new object();
+
         internal List<KeyValuePair<Func<object, Task>, object>> _onStarting;
         internal List<KeyValuePair<Func<object, Task>, object>> _onCompleted;
         internal Exception _applicationException;
@@ -99,7 +101,6 @@ namespace RestBus.AspNet
             //Set connection feature properties
             ((IHttpConnectionFeature)this).RemoteIpAddress = IPAddress.IPv6Any;
             ((IHttpConnectionFeature)this).LocalIpAddress = null;
-            ((IHttpConnectionFeature)this).IsLocal = false;
         }
 
         #region IFeatureCollection Implementation
@@ -326,7 +327,7 @@ namespace RestBus.AspNet
         bool IHttpResponseFeature.HasStarted
         {
             get
-            {                
+            {
                 return HasResponseStarted;
             }
         }
@@ -341,6 +342,21 @@ namespace RestBus.AspNet
             OnCompleted(callback, state);
         }
 
+        public TFeature Get<TFeature>()
+        {
+            var v = ((IFeatureCollection)this)[typeof(TFeature)];
+            if (v is TFeature)
+            {
+                return (TFeature)v;
+            }
+            return default(TFeature);
+        }
+
+        public void Set<TFeature>(TFeature instance)
+        {
+            ((IFeatureCollection)this)[typeof(TFeature)] = instance;
+        }
+
         #endregion
 
         #region IHttpConnectionFeature Implementation
@@ -352,8 +368,9 @@ namespace RestBus.AspNet
 
         int IHttpConnectionFeature.LocalPort { get; set; }
 
-        bool IHttpConnectionFeature.IsLocal { get; set; }
+        public string RawTarget { get; set; }
 
+        public string ConnectionId { get; set; }
         #endregion
     }
 }

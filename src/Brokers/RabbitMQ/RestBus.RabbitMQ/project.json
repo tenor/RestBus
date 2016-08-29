@@ -1,0 +1,58 @@
+{
+  "version": "0.6.9.3-rc1",
+  "description": "RabbitMQ broker for RestBus",
+  "authors": [ "Sunny Ahuwanya", "LonghronShen" ],
+  "copyright": "Copyright © Sunny Ahuwanya 2014-2016",
+
+  "title": "RestBus.RabbitMQ",
+  "packOptions": {
+    "owners": [ "Sunny Ahuwanya" ],
+    "summary": "RestBus.RabbitMQ",
+    "tags": [ "RestBus", "RabbitMQ", "netcore", "core" ],
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/LonghronShen/RestBus"
+    },
+    "projectUrl": "http://www.restbus.org"
+  },
+
+  "buildOptions": {
+    "preserveCompilationContext": true,
+    "debugType": "portable",
+    "define": [],
+    "keyFile": "../../../../tools/key.snk"
+  },
+
+  "dependencies": {
+    "RabbitMQ.Client": "4.0.1-rc1",
+    "RestBus.Client": "0.5.2",
+    "RestBus.Common": "0.6.3.2"
+  },
+
+  "frameworks": {
+    "net451": {
+      "dependencies": {
+      },
+      "frameworkAssemblies": {
+        "System.Runtime": {
+          "version": "",
+          "type": "build"
+        }
+      }
+    },
+    "netstandard1.5": {
+      "buildOptions": {
+        "define": [ "NETCORE" ]
+      },
+      "imports": [
+        "dnxcore50",
+        "portable-net45+win8"
+      ],
+      "dependencies": {
+        "System.Net.Http": "4.1.0",
+        "System.Threading": "4.0.11",
+        "System.Threading.ThreadPool": "4.0.10"
+      }
+    }
+  }
+}

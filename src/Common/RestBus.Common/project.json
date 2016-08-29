@@ -1,13 +1,107 @@
 {
-  "frameworks": {
-    ".NETPortable,Version=v4.5,Profile=Profile7": { },
-    "dotnet5.2": {
-      "dependencies": {
-      }
-    }
+  "version": "0.6.3.2",
+  "description": "RestBus.Common",
+  "authors": [ "Sunny Ahuwanya" ],
+  "copyright": "Copyright ?Sunny Ahuwanya 2016",
+
+  "packOptions": {
+    "owners": [ "Sunny Ahuwanya" ],
+    "projectUrl": "http://www.restbus.org",
+    "iconUrl": "https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png",
+    "tags": [ "asp.net aspnet aspnetcore amqp rabbitmq messaging queueing restbus rest http services webservices microservices" ]
   },
 
-  "runtimes": {
-    "win-anycpu": { }
+  "buildOptions": {
+    "preserveCompilationContext": true,
+    "debugType": "portable",
+    "define": [],
+    "keyFile": "../../../tools/key.snk"
+  },
+
+  "dependencies": {
+  },
+
+  "frameworks": {
+    "portable45-net45+win8": {
+      "dependencies": {
+      },
+      "frameworkAssemblies": {
+        "mscorlib": {
+          "version": "",
+          "type": "build"
+        },
+        "Microsoft.CSharp": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Runtime": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Runtime.Extensions": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Threading": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Threading.Tasks": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Core": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Collections": {
+          "version": "",
+          "type": "build"
+        },
+        "System.IO": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Linq": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net.Http": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Net.Primitives": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Text.Encoding": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Text.Encoding.Extensions": {
+          "version": "",
+          "type": "build"
+        },
+        "System.Globalization": {
+          "version": "",
+          "type": "build"
+        }
+      }
+    },
+    "netstandard1.0": {
+      "dependencies": {
+        "System.Net.Http": "4.0.0",
+        "System.Linq": "4.1.0"
+      },
+      "imports": [
+        "dnxcore50",
+        "dotnet5.6",
+        "portable-net45+win8"
+      ]
+    }
   }
 }

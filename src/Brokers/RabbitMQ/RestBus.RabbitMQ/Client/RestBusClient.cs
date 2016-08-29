@@ -1,3 +1,4 @@
+using RabbitMQ.Client;
 using RabbitMQ.Client.Framing;
 using RestBus.Client;
 using RestBus.Common;

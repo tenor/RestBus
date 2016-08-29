@@ -1,7 +1,11 @@
 {
-    "sdk": {
-      "version": "1.0.0-rc2-16357",
-        "runtime": "clr",
-        "architecture": "x64"
-    }
+  "projects": [
+    "Frameworks",
+    "Frameworks/AspNet",
+    "Common",
+    "Brokers/RabbitMQ/RestBus.RabbitMQ"
+  ],
+  "sdk": {
+    "version": "1.0.0-preview2-003121"
+  }
 }

@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNet.Hosting.Server;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Logging;
 using RestBus.Common;
 using System;
 using System.Net;
@@ -7,25 +10,32 @@ using System.Threading.Tasks;
 
 namespace RestBus.AspNet
 {
+
     //TODO: Describe what this class does
-    internal class RestBusHost<TContext> : IDisposable
+    internal class RestBusHost<TContext>
+        : IDisposable
     {
+
         private readonly IRestBusSubscriber subscriber;
         private readonly IHttpApplication<TContext> application;
-        InterlockedBoolean hasStarted;
-        volatile bool disposed;
+        private readonly IApplicationLifetime applicationLifetime;
+        private readonly ILogger logger;
+
+        private InterlockedBoolean hasStarted;
+        private volatile bool disposed;
 
         /// <summary>
         /// Initializes a new instance of <see cref="RestBusHost{TContext}"/>
         /// </summary>
         /// <param name="subscriber">The RestBus Subscriber</param>
         /// <param name="application">The HttpApplication</param>
-        internal RestBusHost(IRestBusSubscriber subscriber, IHttpApplication<TContext> application)
+        internal RestBusHost(IRestBusSubscriber subscriber, IHttpApplication<TContext> application, IApplicationLifetime applicationLifetime, ILoggerFactory logFactory)
         {
             this.subscriber = subscriber;
             this.application = application;
+            this.applicationLifetime = applicationLifetime;
+            this.logger = logFactory.CreateLogger<RestBusHost<TContext>>();
         }
-
 
         /// <summary>
         /// Starts the host
@@ -37,10 +47,10 @@ namespace RestBus.AspNet
                 throw new InvalidOperationException("RestBus host has already started!");
             }
 
+            this.logger.LogInformation($"{nameof(RestBusHost<TContext>)} is starting.");
             subscriber.Start();
 
             Task.Factory.StartNew(RunLoop, creationOptions: TaskCreationOptions.LongRunning);
-
         }
 
         /// <summary>
@@ -55,7 +65,6 @@ namespace RestBus.AspNet
             }
         }
 
-
         /// <summary>
         /// Main loop which dequeues requests and spawns new tasks to process them.
         /// </summary>
@@ -66,14 +75,23 @@ namespace RestBus.AspNet
             {
                 try
                 {
-                    context = subscriber.Dequeue();
+                    if (!this.applicationLifetime.ApplicationStopping.IsCancellationRequested)
+                    {
+                        this.logger.LogInformation($"Calling {nameof(subscriber.Dequeue)}.");
+                        context = subscriber.Dequeue();
+                    }
+                    else
+                    {
+                        this.logger.LogInformation($"An ApplicationStopping cancellation is requested by {applicationLifetime.GetType().FullName}.");
+                        break;
+                    }
                 }
                 catch (Exception e)
                 {
                     if (!(e is ObjectDisposedException || e is OperationCanceledException))
                     {
                         //TODO: Log exception: Don't know what else to expect here
-
+                        this.logger.LogError(e.Message + Environment.NewLine + e.StackTrace);
                     }
 
                     //Exit method if host has been disposed
@@ -88,8 +106,8 @@ namespace RestBus.AspNet
                 }
 
                 var cancellationToken = CancellationToken.None;
+                this.logger.LogInformation($"Starting a new process for {context.CorrelationId}.");
                 Task.Factory.StartNew((Func<object, Task>)Process, Tuple.Create(context, cancellationToken), cancellationToken);
-
             }
         }
 
@@ -108,7 +126,8 @@ namespace RestBus.AspNet
             }
             catch (Exception ex)
             {
-                //TODO: SHouldn't occur (the called method should be safe): Log execption and return a server error
+                //TODO: Shouldn't occur (the called method should be safe): Log execption and return a server error
+                this.logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
 
@@ -189,9 +208,10 @@ namespace RestBus.AspNet
                 {
                     subscriber.SendResponse(restbusContext, responsePkt);
                 }
-                catch
+                catch (Exception ex)
                 {
                     //TODO: Log SendResponse error
+                    this.logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
                 }
 
                 //Call OnCompleted callbacks
@@ -219,10 +239,10 @@ namespace RestBus.AspNet
         private static ServiceMessage CreateResponse(HttpStatusCode status, string reasonPhrase, string body = null)
         {
             var msg = new ServiceMessage();
-            ((Microsoft.AspNet.Http.Features.IHttpResponseFeature)msg).StatusCode = (int)status;
-            ((Microsoft.AspNet.Http.Features.IHttpResponseFeature)msg).ReasonPhrase = reasonPhrase;
+            ((IHttpResponseFeature)msg).StatusCode = (int)status;
+            ((IHttpResponseFeature)msg).ReasonPhrase = reasonPhrase;
 
-            if(body != null)
+            if (body != null)
             {
                 msg.CreateResponseBody();
                 var buffer = System.Text.Encoding.UTF8.GetBytes(body);
@@ -293,6 +313,7 @@ namespace RestBus.AspNet
         {
             msg._applicationException = ex;
             //TODO: Log Application error
+            this.logger.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
         }
         #endregion
     }

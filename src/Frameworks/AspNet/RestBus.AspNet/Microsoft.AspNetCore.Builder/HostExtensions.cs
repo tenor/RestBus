@@ -1,17 +1,22 @@
-﻿using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Hosting;
-using Microsoft.AspNet.Hosting.Internal;
-using Microsoft.AspNet.Http;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Internal;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RestBus.AspNet;
+using RestBus.AspNet.Server;
 using RestBus.Common;
 using System;
+using System.Linq;
 using System.Diagnostics;
 
-namespace RestBus.AspNet
+namespace Microsoft.AspNetCore.Builder
 {
+
     public static class HostExtensions
     {
+
         //TODO: See if it's possible to prevent middleware from being added after RunRestBusHost() is called, subsequent calls to RunRestBusHost must succeed.
 
         /// <summary>
@@ -36,8 +41,7 @@ namespace RestBus.AspNet
             if (app == null) throw new ArgumentNullException("app");
             if (subscriber == null) throw new ArgumentNullException("subscriber");
 
-            if (!skipRestBusServerCheck && 
-                app.ApplicationServices.GetRequiredService<IHostingEnvironment>().Configuration[Server.Server.ConfigServerArgumentName] == Server.Server.ConfigServerAssembly)
+            if (!skipRestBusServerCheck && Server.InstanceCount > 0)
             {
                 //The application is running RestBusServer, so exit
                 return;
@@ -50,19 +54,12 @@ namespace RestBus.AspNet
             var httpContextFactory = app.ApplicationServices.GetRequiredService<IHttpContextFactory>();
 
             //TODO: Work on counting instances (all hosts + server)  and adding the count to the logger name e.g RestBus.AspNet (2), consider including the typename as well.
-            var application = new HostingApplication(appFunc, _loggerFactory.CreateLogger(Server.Server.ConfigServerAssembly), diagnosticSource, httpContextFactory);
+            var application = new HostingApplication(appFunc, _loggerFactory.CreateLogger(typeof(Server).FullName), diagnosticSource, httpContextFactory);
+            var server = app.ApplicationServices.GetRequiredService<Server>();
 
-            var host = new RestBusHost<HostingApplication.Context>(subscriber, application);
-
-            //Register host for disposal
-            var appLifeTime = app.ApplicationServices.GetRequiredService<IApplicationLifetime>();
-
-            appLifeTime.ApplicationStopping.Register(() => host.Dispose()); //TODO: Make ApplicationStopping event stop dequeueing items (StopPollingQueue)
-            appLifeTime.ApplicationStopped.Register(() => host.Dispose());
-
-            //Start host
-            host.Start();
+            server.Start(application, subscriber);
         }
 
     }
+
 }

@@ -1,10 +1,17 @@
-﻿using Microsoft.AspNet.Server.Features;
+﻿using Microsoft.AspNetCore.Hosting.Server.Features;
 using RestBus.Common;
 
 namespace RestBus.AspNet.Server
 {
-    interface IServerInformation : IServerAddressesFeature
+
+    public interface IServerInformation
+        : IServerAddressesFeature
     {
+
         IRestBusSubscriber Subscriber { get; }
+
+        void AddAddress(string address);
+
     }
+
 }
