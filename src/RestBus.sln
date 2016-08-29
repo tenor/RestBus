@@ -26,6 +26,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestBus.Common.Tests", "Tes
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "RestBus.RabbitMQ", "Brokers\RabbitMQ\RestBus.RabbitMQ\RestBus.RabbitMQ.xproj", "{3D3DB299-98AD-4E82-A36F-ADD37C8055A3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Exanples.Core", "Exanples.Core", "{8D5E1F65-0DBF-4F77-9540-F7C88949D57C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
