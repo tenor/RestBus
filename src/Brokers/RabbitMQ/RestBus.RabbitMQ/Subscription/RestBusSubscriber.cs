@@ -416,11 +416,8 @@ namespace RestBus.RabbitMQ.Subscription
             if (_subscriberPool.Connection == null)
             {
                 //TODO: Log this -- it technically shouldn't happen. Also translate to a HTTP Unreachable because it means StartCallbackQueueConsumer didn't create a connection
-#if NETCORE
+
                 throw new InvalidOperationException("This is Bad");
-#else
-                throw new ApplicationException("This is Bad");
-#endif
             }
 
             //Add/Update Subscriber-Id header

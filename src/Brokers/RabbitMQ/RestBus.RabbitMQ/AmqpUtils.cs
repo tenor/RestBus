@@ -63,11 +63,7 @@ namespace RestBus.RabbitMQ
         {
             byte[] buffer = new byte[8];
             Common.SynchronizedRandom.Instance.NextBytes(buffer);
-#if NETCORE
             var base64str = Convert.ToBase64String(buffer);
-#else
-            var base64str = Convert.ToBase64String(buffer, Base64FormattingOptions.None);
-#endif
 
             //Return a url-safe variant of Base64 where + becomes ~, / becomes - and there is no padding (=)
             return base64str.Replace('+', '~').Replace('/', '-').TrimEnd('=');

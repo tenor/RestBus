@@ -276,11 +276,9 @@ namespace RestBus.RabbitMQ.Client
                     consumerSignal.Dispose();
 
                     //Examine exception if it were set and rethrow it
-#if NETCORE
-                    Interlocked.MemoryBarrier();
-#else
-                    Thread.MemoryBarrier(); //Ensure we have the non-cached version of consumerSignalException
-#endif
+
+                    Interlocked.MemoryBarrier(); //Ensure we have the non-cached version of consumerSignalException
+
                     if (consumerSignalException != null)
                     {
                         throw consumerSignalException;

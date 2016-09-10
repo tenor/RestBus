@@ -93,19 +93,11 @@ namespace RestBus.RabbitMQ
             amqpUri = amqpUri.Trim();
 
             int startIndex;
-#if NETCORE
-            if (amqpUri.Length > 8 && amqpUri.StartsWith("amqps://", StringComparison.CurrentCultureIgnoreCase))
-#else
-            if(amqpUri.Length > 8 && amqpUri.StartsWith("amqps://", StringComparison.InvariantCultureIgnoreCase))
-#endif
+            if(amqpUri.Length > 8 && amqpUri.StartsWith("amqps://", StringComparison.OrdinalIgnoreCase))
             {
                 startIndex = 8;
             }
-#if NETCORE
-            else if (amqpUri.Length > 7 && amqpUri.StartsWith("amqp://", StringComparison.CurrentCultureIgnoreCase))
-#else
-            else if (amqpUri.Length > 7 && amqpUri.StartsWith("amqp://", StringComparison.InvariantCultureIgnoreCase))
-#endif
+            else if (amqpUri.Length > 7 && amqpUri.StartsWith("amqp://", StringComparison.OrdinalIgnoreCase))
             {
                 startIndex = 7;
             }

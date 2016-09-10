@@ -73,11 +73,9 @@ namespace RestBus.RabbitMQ.Client
                     {
                         //TODO: Investigate, this memorybarrier might be unnecessary since the thread is released from the threadpool
                         //after deserializationException and responsePacket is set.
-#if NETCORE
-                        Interlocked.MemoryBarrier();
-#else
-                        Thread.MemoryBarrier(); //Ensure we have the non-cached version of consumerSignalException
-#endif
+
+                        Interlocked.MemoryBarrier(); //Ensure we have the non-cached version of consumerSignalException
+
                         try
                         {
                             //TODO: Check Cancelation Token when it's implemented
