@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{C74E1968-D1E8-470F-BD25-B466858249E2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>RestBus.RabbitMQ</RootNamespace>
+    <AssemblyName>RestBus.RabbitMQ</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\RestBus.RabbitMQ.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\RestBus.RabbitMQ.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\..\..\..\tools\key.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="RabbitMQ.Client, Version=4.0.0.0, Culture=neutral, PublicKeyToken=89e7d7c5feba84ce, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\RabbitMQ.Client.4.0.2\lib\net451\RabbitMQ.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ChannelPooling\AmqpChannelPooler.cs" />
+    <Compile Include="AmqpUtils.cs" />
+    <Compile Include="BasicMessageMapper.cs" />
+    <Compile Include="ChannelPooling\AmqpModelContainer.cs" />
+    <Compile Include="ChannelPooling\ChannelFlags.cs" />
+    <Compile Include="ChannelPooling\RPCModelContainer.cs" />
+    <Compile Include="Client\CallbackQueueRPCStrategy.cs" />
+    <Compile Include="Client\ClientAckBehavior.cs" />
+    <Compile Include="Client\ClientSettings.cs" />
+    <Compile Include="Client\ConnectionManager.cs" />
+    <Compile Include="Client\IRPCStrategy.cs" />
+    <Compile Include="Client\RPCStrategyHelpers.cs" />
+    <Compile Include="Client\DirectReplyToRPCStrategy.cs" />
+    <Compile Include="Client\ExpectedResponse.cs" />
+    <Compile Include="Client\RestBusClient.cs" />
+    <Compile Include="Consumer\ConcurrentQueueingConsumer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Client\RabbitMQMessagingProperties.cs" />
+    <Compile Include="Subscription\MessageDispatch.cs" />
+    <Compile Include="Subscription\RestBusSubscriber.cs" />
+    <Compile Include="Subscription\SubscriberAckBehavior.cs" />
+    <Compile Include="Subscription\SubscriberSettings.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Common\RestBus.Client\RestBus.Client.csproj">
+      <Project>{e7b5b8e6-ed13-4204-9536-f51c46430fe1}</Project>
+      <Name>RestBus.Client</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Common\RestBus.Common\RestBus.Common.csproj">
+      <Project>{ca13aff8-be69-416c-9cf2-a8029f9ac60c}</Project>
+      <Name>RestBus.Common</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
