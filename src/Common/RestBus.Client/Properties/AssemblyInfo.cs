@@ -26,5 +26,5 @@ using System.Resources;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("0.5.3.0")]
 [assembly: AssemblyFileVersion("0.5.3.0")]
-[assembly: AssemblyInformationalVersion("0.5.3")]
+[assembly: AssemblyInformationalVersion("0.5.3")] //Remember to update version in project.json
 
