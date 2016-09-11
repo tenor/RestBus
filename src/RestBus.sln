@@ -24,9 +24,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{C97A1E16
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestBus.Common.Tests", "Tests\RestBus.Common.Tests\RestBus.Common.Tests.csproj", "{C841383B-8CE1-4946-B04E-9EB8AC8323F8}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "RestBus.RabbitMQ", "Brokers\RabbitMQ\RestBus.RabbitMQ\RestBus.RabbitMQ.xproj", "{3D3DB299-98AD-4E82-A36F-ADD37C8055A3}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Exanples.Core", "Exanples.Core", "{8D5E1F65-0DBF-4F77-9540-F7C88949D57C}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "RestBus.RabbitMQ", "Brokers\RabbitMQ\RestBus.RabbitMQ\RestBus.RabbitMQ.xproj", "{62F314D9-56D5-406E-8865-3DBF5453625D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -62,10 +62,10 @@ Global
 		{C841383B-8CE1-4946-B04E-9EB8AC8323F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C841383B-8CE1-4946-B04E-9EB8AC8323F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C841383B-8CE1-4946-B04E-9EB8AC8323F8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3D3DB299-98AD-4E82-A36F-ADD37C8055A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3D3DB299-98AD-4E82-A36F-ADD37C8055A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3D3DB299-98AD-4E82-A36F-ADD37C8055A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3D3DB299-98AD-4E82-A36F-ADD37C8055A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62F314D9-56D5-406E-8865-3DBF5453625D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62F314D9-56D5-406E-8865-3DBF5453625D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62F314D9-56D5-406E-8865-3DBF5453625D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62F314D9-56D5-406E-8865-3DBF5453625D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
