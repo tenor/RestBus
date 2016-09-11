@@ -1,58 +1,41 @@
 {
-  "version": "0.6.9.3-rc1",
+  "version": "0.7.0-beta",
   "description": "RabbitMQ broker for RestBus",
-  "authors": [ "Sunny Ahuwanya", "LonghronShen" ],
-  "copyright": "Copyright © Sunny Ahuwanya 2014-2016",
-
-  "title": "RestBus.RabbitMQ",
-  "packOptions": {
-    "owners": [ "Sunny Ahuwanya" ],
-    "summary": "RestBus.RabbitMQ",
-    "tags": [ "RestBus", "RabbitMQ", "netcore", "core" ],
-    "repository": {
-      "type": "git",
-      "url": "https://github.com/LonghronShen/RestBus"
-    },
-    "projectUrl": "http://www.restbus.org"
-  },
-
+  "authors": [ "Sunny Ahuwanya" ],
   "buildOptions": {
-    "preserveCompilationContext": true,
-    "debugType": "portable",
-    "define": [],
-    "keyFile": "../../../../tools/key.snk"
+    "xmlDoc": true
   },
-
   "dependencies": {
-    "RabbitMQ.Client": "4.0.1-rc1",
-    "RestBus.Client": "0.5.2",
-    "RestBus.Common": "0.6.3.2"
+    "RabbitMQ.Client": "4.0.2",
+    "RestBus.Common": "0.6.4",
+    "RestBus.Client": "0.5.3",
+    "NETStandard.Library": "1.6.0"
   },
-
   "frameworks": {
     "net451": {
       "dependencies": {
       },
       "frameworkAssemblies": {
-        "System.Runtime": {
-          "version": "",
-          "type": "build"
-        }
       }
     },
     "netstandard1.5": {
-      "buildOptions": {
-        "define": [ "NETCORE" ]
-      },
-      "imports": [
-        "dnxcore50",
-        "portable-net45+win8"
-      ],
       "dependencies": {
         "System.Net.Http": "4.1.0",
-        "System.Threading": "4.0.11",
+        "System.Runtime": "4.1.0",
         "System.Threading.ThreadPool": "4.0.10"
-      }
+      },
+      "imports": "dnxcore50"
+    }
+  },
+  "packOptions": {
+    "projectUrl": "http://www.restbus.org",
+    "iconUrl": "https://github.com/tenor/RestBus/raw/master/tools/content/images/restbus_icon-64px.png",
+    "requireLicenseAcceptance": false,
+    "owners": [ "Sunny Ahuwanya" ],
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/tenor/RestBus.git",
+      "tags": "restbus rabbitmq amqp messaging queue queueing rest http services webservices microservices"
     }
   }
 }
