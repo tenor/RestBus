@@ -38,6 +38,7 @@ namespace RestBus.AspNet
             req.Protocol = "HTTP/" + request.Version;
             req.QueryString = uri.Query;
             req.Method = request.Method;
+            req.RawTarget = request.Resource;
 
             if (request.Content != null && request.Content.Length > 0)
             {

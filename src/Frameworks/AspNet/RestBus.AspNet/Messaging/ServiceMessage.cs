@@ -33,6 +33,8 @@ namespace RestBus.AspNet
         internal List<KeyValuePair<Func<object, Task>, object>> _onCompleted;
         internal Exception _applicationException;
 
+        static SequenceGenerator connectionIdSeqGen = new SequenceGenerator(DateTime.UtcNow.Ticks, true);
+
         internal bool HasResponseStarted
         {
             get
@@ -101,6 +103,7 @@ namespace RestBus.AspNet
             //Set connection feature properties
             ((IHttpConnectionFeature)this).RemoteIpAddress = IPAddress.IPv6Any;
             ((IHttpConnectionFeature)this).LocalIpAddress = null;
+            ((IHttpConnectionFeature)this).ConnectionId = connectionIdSeqGen.GetNext().ToString();
         }
 
         #region IFeatureCollection Implementation
