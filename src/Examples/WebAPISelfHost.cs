@@ -20,7 +20,7 @@ namespace Examples
             var startup = new Startup();
 
             string baseAddress = null;
-            //baseAddress = "http://localhost:9000/"; //Uncomment this line to also listen via HTTP on localhost:9000
+            baseAddress = "http://localhost:9000/"; //Uncomment this line to also listen via HTTP on localhost:9000
 
             //Start WebAPI OWIN host 
             servers.Add(WebApp.Start(url: baseAddress, startup: startup.Configuration));
