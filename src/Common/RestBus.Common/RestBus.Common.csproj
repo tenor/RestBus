@@ -68,6 +68,11 @@
     <None Include="project.json" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>echo copying output files to .NET Core framework folders
+xcopy $(TargetDir)*.* $(TargetDir)netstandard1.1 /Y /I /Q
+xcopy $(TargetDir)*.* $(TargetDir)portable45-net45+win8+wpa81 /Y /I /Q</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
