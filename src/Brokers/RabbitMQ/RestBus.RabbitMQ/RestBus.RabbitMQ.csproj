@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C74E1968-D1E8-470F-BD25-B466858249E2}</ProjectGuid>
+    <ProjectGuid>{91B9078A-9DC7-4CF9-9FF7-BB3E5CF6D8EF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RestBus.RabbitMQ</RootNamespace>

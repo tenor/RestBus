@@ -1,0 +1,3 @@
+There are two projects in here. RestBus.RabbitMQ.csproj supports older .NET 4.5 projects while RestBus.RabbitMQ.xproj supports .NET Core.
+The RestBus solution includes RestBus.RabbitMQ.xproj and nuget packages are built from RestBus.RabbitMQ.xproj.
+RestBus.RabbitMQ.csproj (along with packages.config) will be removed at a later time when project.json deprecation is sorted out.
