@@ -1,13 +1,14 @@
 {
+  "version": "0.6.4",
   "frameworks": {
-    ".NETPortable,Version=v4.5,Profile=Profile111": { },
-    "dotnet5.2": {
+    ".NETPortable,Version=v4.5,Profile=Profile111": {},
+    "netstandard1.1": {
       "dependencies": {
       }
     }
   },
 
   "runtimes": {
-    "win-anycpu": { }
+    "win-anycpu": {}
   }
 }
